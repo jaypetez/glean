@@ -11,7 +11,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 COPY --from=ghcr.io/astral-sh/uv:0.5.13 /uv /usr/local/bin/uv
 
 WORKDIR /app
-COPY pyproject.toml ./
+COPY pyproject.toml README.md ./
 COPY src ./src
 
 RUN uv venv /opt/venv \
