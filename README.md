@@ -1,6 +1,21 @@
-# glean
+<h1 align="center">glean</h1>
 
-> Self-hosted, pluggable personal agent that gleans signal from RSS, scraping, search, and APIs — processes it with any LLM, then delivers on a schedule to whatever sink you wire up.
+<p align="center">
+  <em>Self-hosted, pluggable personal agent that gleans signal from RSS, scraping, search, and APIs — processes it with any LLM, then delivers on a schedule to whatever sink you wire up.</em>
+</p>
+
+<p align="center">
+  <img src="./assets/glean-hero.svg" alt="glean: pluggable sources flow into a central LLM pipeline (dedup, rank, summarize, digest) which posts scheduled digests to chat sinks" width="100%">
+</p>
+
+<p align="center">
+  <a href="https://github.com/jaypetez/glean/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/jaypetez/glean/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/jaypetez/glean/actions/workflows/codeql.yml"><img alt="CodeQL" src="https://github.com/jaypetez/glean/actions/workflows/codeql.yml/badge.svg"></a>
+  <a href="./LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+  <a href="https://www.python.org/downloads/"><img alt="Python 3.12+" src="https://img.shields.io/badge/python-3.12+-3776ab.svg"></a>
+  <a href="https://github.com/jaypetez/glean/pkgs/container/glean"><img alt="ghcr.io image" src="https://img.shields.io/badge/ghcr.io-glean-24292f?logo=docker&logoColor=white"></a>
+  <a href="https://github.com/jaypetez/glean/discussions"><img alt="Discussions" src="https://img.shields.io/badge/discussions-open-7c3aed.svg"></a>
+</p>
 
 `glean` is a small Python daemon that runs as a Docker container. You describe **feeds** in a YAML file — each one is a recipe of `sources → LLM pipeline → sink → schedule`. It deduplicates, ranks, summarizes, and posts a clean digest. One container, many topics, many sinks.
 

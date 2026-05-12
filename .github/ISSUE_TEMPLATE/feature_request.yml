@@ -1,0 +1,55 @@
+name: Feature request
+description: Suggest a new source, LLM provider, sink, or behavior
+title: "[feat] "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea. For non-trivial features please open this issue **before** sending a PR so we can align on direction.
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of change is this?
+      options:
+        - New source plugin
+        - New LLM provider
+        - New sink
+        - New pipeline stage
+        - CLI / config ergonomics
+        - Observability / ops
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the use case. "I want X because Y" beats "please add X".
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed shape
+      description: Rough sketch — config snippet, CLI flag, plugin interface. Doesn't need to be final.
+      render: yaml
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Anything you tried or ruled out, and why.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-flight
+      options:
+        - label: I searched existing issues and the roadmap in DESIGN.md.
+          required: true
+        - label: I'm willing to help test / review the change.
+          required: false

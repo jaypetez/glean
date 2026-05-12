@@ -1,0 +1,375 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 480" role="img"
+     aria-label="glean animated diagram: sources feed a central LLM pipeline that posts digests to a chat sink"
+     preserveAspectRatio="xMidYMid meet" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+  <title>glean — pluggable sources → LLM pipeline → digest sinks</title>
+
+  <defs>
+    <!-- background gradient -->
+    <radialGradient id="bg" cx="50%" cy="40%" r="75%">
+      <stop offset="0%"  stop-color="#10172a"/>
+      <stop offset="60%" stop-color="#0b1020"/>
+      <stop offset="100%" stop-color="#070a14"/>
+    </radialGradient>
+
+    <!-- subtle dot grid -->
+    <pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r="1" fill="#1f2a44"/>
+    </pattern>
+
+    <!-- glow filter -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.8" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="softglow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- core ring gradient -->
+    <radialGradient id="core" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"  stop-color="#22d3ee" stop-opacity="0.35"/>
+      <stop offset="60%" stop-color="#7c3aed" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#0b1020" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- packet (the digest leaving the core) -->
+    <radialGradient id="packet" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"  stop-color="#fafafa" stop-opacity="1"/>
+      <stop offset="60%" stop-color="#7dd3fc" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#7dd3fc" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- input paths: each source -> core left edge (~ 580, 240) -->
+    <path id="p-rss"    d="M 200 90  C 360 90,  420 220, 580 240" fill="none"/>
+    <path id="p-hn"     d="M 200 170 C 360 170, 440 230, 580 240" fill="none"/>
+    <path id="p-reddit" d="M 200 250 C 360 250, 460 245, 580 245" fill="none"/>
+    <path id="p-search" d="M 200 330 C 360 330, 460 260, 580 250" fill="none"/>
+    <path id="p-scrape" d="M 200 410 C 360 410, 440 270, 580 255" fill="none"/>
+
+    <!-- output path: core right edge -> telegram window -->
+    <path id="p-out" d="M 700 240 C 820 240, 900 240, 980 240" fill="none"/>
+
+    <!-- reusable source chip -->
+    <symbol id="chip" overflow="visible">
+      <rect x="-78" y="-22" width="156" height="44" rx="22" ry="22"
+            fill="#0e1730" stroke="#243154" stroke-width="1"/>
+    </symbol>
+
+    <style><![CDATA[
+      .label    { fill: #cbd5e1; font-size: 14px; letter-spacing: 0.02em; }
+      .label-sm { fill: #94a3b8; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; }
+      .wordmark { fill: #f8fafc; font-size: 30px; font-weight: 700; letter-spacing: 0.04em; }
+      .tag      { fill: #94a3b8; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; }
+      .stage    { fill: #cbd5e1; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+      .chat-line  { fill: #cbd5e1; font-size: 13px; }
+      .chat-meta  { fill: #64748b; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; }
+      .wire      { stroke: #2a3a64; stroke-width: 1.4; fill: none; opacity: 0.55; }
+      .wire-out  { stroke: #7dd3fc; stroke-width: 1.6; fill: none; opacity: 0.45; }
+      .sink-bg   { fill: #0e1730; stroke: #243154; stroke-width: 1; }
+      .sink-bar  { fill: #111c3a; }
+
+      @media (prefers-color-scheme: light) {
+        .label    { fill: #1f2937; }
+        .label-sm { fill: #475569; }
+        .wordmark { fill: #0f172a; }
+        .tag      { fill: #475569; }
+        .stage    { fill: #1e293b; }
+        .chat-line{ fill: #1f2937; }
+        .chat-meta{ fill: #475569; }
+        .wire     { stroke: #94a3b8; opacity: 0.7; }
+        .wire-out { stroke: #2563eb; opacity: 0.55; }
+        .sink-bg  { fill: #ffffff; stroke: #cbd5e1; }
+        .sink-bar { fill: #f1f5f9; }
+      }
+    ]]></style>
+  </defs>
+
+  <!-- background -->
+  <rect width="1200" height="480" fill="url(#bg)"/>
+  <rect width="1200" height="480" fill="url(#dots)" opacity="0.45"/>
+  <g id="bg-light-override">
+    <rect class="bg-light" width="1200" height="480" fill="#f8fafc" opacity="0">
+      <!-- in light mode, the radialGradient bg looks fine — leave overlay off -->
+    </rect>
+  </g>
+
+  <!-- ============ wires (drawn first, behind everything) ============ -->
+  <g>
+    <use href="#p-rss"    class="wire"/>
+    <use href="#p-hn"     class="wire"/>
+    <use href="#p-reddit" class="wire"/>
+    <use href="#p-search" class="wire"/>
+    <use href="#p-scrape" class="wire"/>
+    <use href="#p-out"    class="wire-out"/>
+  </g>
+
+  <!-- ============ source chips ============ -->
+  <g>
+    <!-- RSS -->
+    <g transform="translate(120,90)">
+      <use href="#chip"/>
+      <!-- rss glyph -->
+      <g transform="translate(-58,-9)">
+        <circle cx="2" cy="16" r="2.5" fill="#fb923c"/>
+        <path d="M2 6 a10 10 0 0 1 10 10" stroke="#fb923c" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        <path d="M2 0 a16 16 0 0 1 16 16" stroke="#fb923c" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+      </g>
+      <text x="-26" y="5" class="label">RSS / Atom</text>
+    </g>
+
+    <!-- Hacker News -->
+    <g transform="translate(120,170)">
+      <use href="#chip"/>
+      <g transform="translate(-58,-12)">
+        <rect width="22" height="22" rx="4" fill="#f97316"/>
+        <text x="11" y="16" text-anchor="middle" font-size="13" font-weight="700" fill="#0b1020">Y</text>
+      </g>
+      <text x="-26" y="5" class="label">Hacker News</text>
+    </g>
+
+    <!-- Reddit -->
+    <g transform="translate(120,250)">
+      <use href="#chip"/>
+      <g transform="translate(-58,-11)">
+        <circle cx="11" cy="11" r="11" fill="#ef4444"/>
+        <circle cx="11" cy="12" r="6.5" fill="none" stroke="#0b1020" stroke-width="1.4"/>
+        <circle cx="7.5" cy="11" r="1.1" fill="#0b1020"/>
+        <circle cx="14.5" cy="11" r="1.1" fill="#0b1020"/>
+        <path d="M8 14 q3 2 6 0" stroke="#0b1020" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+      </g>
+      <text x="-26" y="5" class="label">Reddit</text>
+    </g>
+
+    <!-- Web Search -->
+    <g transform="translate(120,330)">
+      <use href="#chip"/>
+      <g transform="translate(-58,-11)">
+        <circle cx="9" cy="9" r="7" fill="none" stroke="#22d3ee" stroke-width="2.2"/>
+        <line x1="14" y1="14" x2="20" y2="20" stroke="#22d3ee" stroke-width="2.2" stroke-linecap="round"/>
+      </g>
+      <text x="-26" y="5" class="label">Web Search</text>
+    </g>
+
+    <!-- Scraper -->
+    <g transform="translate(120,410)">
+      <use href="#chip"/>
+      <g transform="translate(-58,-11)">
+        <rect x="0" y="2" width="22" height="18" rx="3" fill="none" stroke="#a78bfa" stroke-width="2"/>
+        <line x1="0" y1="8" x2="22" y2="8" stroke="#a78bfa" stroke-width="2"/>
+        <circle cx="3.5" cy="5" r="1" fill="#a78bfa"/>
+        <circle cx="7" cy="5" r="1" fill="#a78bfa"/>
+      </g>
+      <text x="-26" y="5" class="label">Scraper</text>
+    </g>
+  </g>
+
+  <!-- ============ traveling particles (sources → core) ============ -->
+  <g filter="url(#glow)">
+    <!-- RSS particle -->
+    <circle r="4.5" fill="#fb923c" opacity="0">
+      <animate attributeName="opacity"
+               values="0;0;1;1;0;0" keyTimes="0;0.15;0.2;0.5;0.55;1"
+               dur="6s" repeatCount="indefinite"/>
+      <animateMotion dur="6s" begin="0s" repeatCount="indefinite"
+                     keyPoints="0;0;1;1" keyTimes="0;0.2;0.5;1" calcMode="linear">
+        <mpath href="#p-rss"/>
+      </animateMotion>
+    </circle>
+
+    <!-- HN particle -->
+    <circle r="4.5" fill="#f97316" opacity="0">
+      <animate attributeName="opacity"
+               values="0;0;1;1;0;0" keyTimes="0;0.18;0.23;0.53;0.58;1"
+               dur="6s" repeatCount="indefinite"/>
+      <animateMotion dur="6s" begin="0.25s" repeatCount="indefinite"
+                     keyPoints="0;0;1;1" keyTimes="0;0.2;0.5;1" calcMode="linear">
+        <mpath href="#p-hn"/>
+      </animateMotion>
+    </circle>
+
+    <!-- Reddit particle -->
+    <circle r="4.5" fill="#ef4444" opacity="0">
+      <animate attributeName="opacity"
+               values="0;0;1;1;0;0" keyTimes="0;0.2;0.25;0.55;0.6;1"
+               dur="6s" repeatCount="indefinite"/>
+      <animateMotion dur="6s" begin="0.5s" repeatCount="indefinite"
+                     keyPoints="0;0;1;1" keyTimes="0;0.2;0.5;1" calcMode="linear">
+        <mpath href="#p-reddit"/>
+      </animateMotion>
+    </circle>
+
+    <!-- Search particle -->
+    <circle r="4.5" fill="#22d3ee" opacity="0">
+      <animate attributeName="opacity"
+               values="0;0;1;1;0;0" keyTimes="0;0.22;0.27;0.57;0.62;1"
+               dur="6s" repeatCount="indefinite"/>
+      <animateMotion dur="6s" begin="0.75s" repeatCount="indefinite"
+                     keyPoints="0;0;1;1" keyTimes="0;0.2;0.5;1" calcMode="linear">
+        <mpath href="#p-search"/>
+      </animateMotion>
+    </circle>
+
+    <!-- Scraper particle -->
+    <circle r="4.5" fill="#a78bfa" opacity="0">
+      <animate attributeName="opacity"
+               values="0;0;1;1;0;0" keyTimes="0;0.24;0.29;0.59;0.64;1"
+               dur="6s" repeatCount="indefinite"/>
+      <animateMotion dur="6s" begin="1s" repeatCount="indefinite"
+                     keyPoints="0;0;1;1" keyTimes="0;0.2;0.5;1" calcMode="linear">
+        <mpath href="#p-scrape"/>
+      </animateMotion>
+    </circle>
+  </g>
+
+  <!-- ============ core: glean LLM pipeline ============ -->
+  <g transform="translate(640,240)">
+    <!-- soft halo -->
+    <circle r="140" fill="url(#core)"/>
+
+    <!-- outer pulse ring -->
+    <circle r="100" fill="none" stroke="#22d3ee" stroke-width="1.2" opacity="0.5">
+      <animate attributeName="r"       values="100;108;100" dur="6s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.35;0.7;0.35" dur="6s" repeatCount="indefinite"/>
+    </circle>
+
+    <!-- inner ring (stages live on it) -->
+    <circle r="70" fill="none" stroke="#3b4a78" stroke-width="1" opacity="0.7"/>
+
+    <!-- counter-rotating dashed ring for a touch of motion -->
+    <circle r="115" fill="none" stroke="#7c3aed" stroke-width="0.8" stroke-dasharray="2 8" opacity="0.55">
+      <animateTransform attributeName="transform" type="rotate"
+                        from="0 0 0" to="360 0 0" dur="24s" repeatCount="indefinite"/>
+    </circle>
+
+    <!-- wordmark -->
+    <text class="tag" text-anchor="middle" y="-14">LLM PIPELINE</text>
+    <text class="wordmark" text-anchor="middle" y="14">glean</text>
+    <text class="label-sm" text-anchor="middle" y="34">ollama · anthropic · openai</text>
+
+    <!-- stage nodes on the inner ring: dedup (top), rank (right), summarize (bottom), digest (left) -->
+    <!-- dedup -->
+    <g transform="translate(0,-70)">
+      <circle r="6" fill="#1f2a44" stroke="#7dd3fc" stroke-width="1.6">
+        <animate attributeName="fill"    values="#1f2a44;#7dd3fc;#1f2a44" keyTimes="0;0.5;1"
+                 dur="6s" begin="2.0s" repeatCount="indefinite"/>
+        <animate attributeName="r"       values="6;8.5;6" keyTimes="0;0.5;1"
+                 dur="6s" begin="2.0s" repeatCount="indefinite"/>
+      </circle>
+      <text class="stage" text-anchor="middle" y="-12">dedup</text>
+    </g>
+    <!-- rank -->
+    <g transform="translate(70,0)">
+      <circle r="6" fill="#1f2a44" stroke="#a78bfa" stroke-width="1.6">
+        <animate attributeName="fill" values="#1f2a44;#a78bfa;#1f2a44" keyTimes="0;0.5;1"
+                 dur="6s" begin="2.4s" repeatCount="indefinite"/>
+        <animate attributeName="r"    values="6;8.5;6" keyTimes="0;0.5;1"
+                 dur="6s" begin="2.4s" repeatCount="indefinite"/>
+      </circle>
+      <text class="stage" x="14" y="4">rank</text>
+    </g>
+    <!-- summarize -->
+    <g transform="translate(0,70)">
+      <circle r="6" fill="#1f2a44" stroke="#22d3ee" stroke-width="1.6">
+        <animate attributeName="fill" values="#1f2a44;#22d3ee;#1f2a44" keyTimes="0;0.5;1"
+                 dur="6s" begin="2.8s" repeatCount="indefinite"/>
+        <animate attributeName="r"    values="6;8.5;6" keyTimes="0;0.5;1"
+                 dur="6s" begin="2.8s" repeatCount="indefinite"/>
+      </circle>
+      <text class="stage" text-anchor="middle" y="22">summarize</text>
+    </g>
+    <!-- digest -->
+    <g transform="translate(-70,0)">
+      <circle r="6" fill="#1f2a44" stroke="#fb923c" stroke-width="1.6">
+        <animate attributeName="fill" values="#1f2a44;#fb923c;#1f2a44" keyTimes="0;0.5;1"
+                 dur="6s" begin="3.2s" repeatCount="indefinite"/>
+        <animate attributeName="r"    values="6;8.5;6" keyTimes="0;0.5;1"
+                 dur="6s" begin="3.2s" repeatCount="indefinite"/>
+      </circle>
+      <text class="stage" text-anchor="end" x="-14" y="4">digest</text>
+    </g>
+  </g>
+
+  <!-- ============ outgoing digest packet ============ -->
+  <g filter="url(#softglow)">
+    <circle r="9" fill="url(#packet)" opacity="0">
+      <animate attributeName="opacity"
+               values="0;0;1;1;0;0" keyTimes="0;0.6;0.62;0.92;0.95;1"
+               dur="6s" repeatCount="indefinite"/>
+      <animateMotion dur="6s" begin="0s" repeatCount="indefinite"
+                     keyPoints="0;0;1;1" keyTimes="0;0.6;0.95;1" calcMode="linear">
+        <mpath href="#p-out"/>
+      </animateMotion>
+    </circle>
+  </g>
+
+  <!-- ============ sink: chat window ============ -->
+  <g transform="translate(980,140)">
+    <!-- window -->
+    <rect class="sink-bg" width="180" height="200" rx="12" ry="12"/>
+    <!-- title bar -->
+    <rect class="sink-bar" width="180" height="28" rx="12" ry="12"/>
+    <rect class="sink-bar" y="14" width="180" height="14"/>
+    <!-- traffic lights -->
+    <circle cx="14" cy="14" r="3.4" fill="#22c55e"/>
+    <circle cx="26" cy="14" r="3.4" fill="#3b4a78" opacity="0.6"/>
+    <circle cx="38" cy="14" r="3.4" fill="#3b4a78" opacity="0.6"/>
+    <text class="chat-meta" x="90" y="18" text-anchor="middle">#ai-news</text>
+
+    <!-- chat lines -->
+    <g transform="translate(14,52)">
+      <!-- existing line 1 -->
+      <g opacity="0.55">
+        <rect width="152" height="34" rx="8" ry="8" fill="#111c3a"/>
+        <text class="chat-line" x="10" y="14">🧠 AI news this hour</text>
+        <text class="chat-meta" x="10" y="28">3 items · qwen2.5:7b</text>
+      </g>
+
+      <!-- existing line 2 -->
+      <g transform="translate(0,44)" opacity="0.75">
+        <rect width="152" height="34" rx="8" ry="8" fill="#111c3a"/>
+        <text class="chat-line" x="10" y="14">🛡️ CVE digest</text>
+        <text class="chat-meta" x="10" y="28">2 items · claude-sonnet</text>
+      </g>
+
+      <!-- incoming line — glows when the packet arrives ~ t=5.7s -->
+      <g transform="translate(0,88)">
+        <rect width="152" height="34" rx="8" ry="8" fill="#111c3a" stroke="#7dd3fc" stroke-width="1">
+          <animate attributeName="stroke-opacity"
+                   values="0;0;0;1;0.3;0" keyTimes="0;0.5;0.92;0.95;0.99;1"
+                   dur="6s" repeatCount="indefinite"/>
+          <animate attributeName="fill"
+                   values="#111c3a;#111c3a;#111c3a;#16315a;#111c3a;#111c3a"
+                   keyTimes="0;0.5;0.92;0.95;0.99;1"
+                   dur="6s" repeatCount="indefinite"/>
+        </rect>
+        <g opacity="0">
+          <animate attributeName="opacity"
+                   values="0;0;0;1;1;1" keyTimes="0;0.5;0.94;0.96;0.99;1"
+                   dur="6s" repeatCount="indefinite"/>
+          <text class="chat-line" x="10" y="14">📰 r/LocalLLaMA top-of-day</text>
+          <text class="chat-meta" x="10" y="28">5 items · qwen2.5:7b</text>
+        </g>
+      </g>
+    </g>
+  </g>
+
+  <!-- ============ section labels ============ -->
+  <g>
+    <text class="tag" x="120" y="36">SOURCES</text>
+    <text class="tag" x="640" y="92" text-anchor="middle">CORE</text>
+    <text class="tag" x="1070" y="120" text-anchor="middle">SINK</text>
+  </g>
+
+  <!-- footer caption -->
+  <text class="label-sm" x="600" y="458" text-anchor="middle">
+    pluggable sources  ·  any LLM  ·  scheduled digests  ·  any sink
+  </text>
+</svg>

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or discussion
+    url: https://github.com/jaypetez/glean/discussions
+    about: Open a Discussion for usage questions, design ideas, or anything that isn't a concrete bug or feature.
+  - name: Security vulnerability
+    url: https://github.com/jaypetez/glean/security/advisories/new
+    about: Report security issues privately. Please do not open a public issue.
