@@ -6,6 +6,6 @@ In short: be respectful, assume good faith, and keep discussion focused on the w
 
 ## Reporting
 
-If you experience or witness behavior that violates this code, contact the maintainer privately at **jayson@shoe4africa.org**. Reports are handled confidentially. Project maintainers who do not follow or enforce the Code of Conduct in good faith may face temporary or permanent repercussions as determined by other members of the project's leadership.
+If you experience or witness behavior that violates this code, contact the maintainer privately at **jaysoo.petersen@gmail.com**. Reports are handled confidentially. Project maintainers who do not follow or enforce the Code of Conduct in good faith may face temporary or permanent repercussions as determined by other members of the project's leadership.
 
 The full text, enforcement guidelines, and FAQ are at the link above.

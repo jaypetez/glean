@@ -13,7 +13,7 @@
 
 **Please do not file public issues for security problems.**
 
-Report privately via GitHub's [Private Vulnerability Reporting](https://github.com/jaypetez/glean/security/advisories/new) (preferred), or email **jayson@shoe4africa.org** with `[glean security]` in the subject.
+Report privately via GitHub's [Private Vulnerability Reporting](https://github.com/jaypetez/glean/security/advisories/new) (preferred), or email **jaysoo.petersen@gmail.com** with `[glean security]` in the subject.
 
 Include:
 
