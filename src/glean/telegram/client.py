@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import timedelta
 from typing import Literal
 
 from telegram import Bot, LinkPreviewOptions
@@ -62,7 +63,8 @@ class TelegramSender:
                 )
                 return
             except RetryAfter as exc:
-                wait = float(exc.retry_after) + 0.5
+                ra = exc.retry_after
+                wait = (ra.total_seconds() if isinstance(ra, timedelta) else float(ra)) + 0.5
                 logger.warning(
                     "telegram_rate_limited",
                     chat_id=chat_id,

@@ -1,0 +1,65 @@
+name: Bug report
+description: Something isn't working
+title: "[bug] "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. **Do not paste secrets** — redact bot tokens, API keys, and chat IDs.
+        For security issues see [SECURITY.md](https://github.com/jaypetez/glean/blob/main/SECURITY.md) — please don't file them here.
+
+  - type: input
+    id: version
+    attributes:
+      label: glean version
+      description: Output of `glean version` (or the image tag you're running).
+      placeholder: "0.1.0 / sha-abc1234"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: how-running
+    attributes:
+      label: How are you running it?
+      options:
+        - docker compose (bundled)
+        - docker (standalone)
+        - local python (uv / pip)
+        - other
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what did you see instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal repro
+      description: The smallest `feeds.yaml` snippet that triggers the bug. Redact secrets.
+      render: yaml
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Set `LOG_LEVEL=debug` and `LOG_FORMAT=json` if you can. Redact secrets.
+      render: shell
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-flight
+      options:
+        - label: I searched existing issues and didn't find a duplicate.
+          required: true
+        - label: I removed all secrets (tokens, keys, chat IDs) from the snippets above.
+          required: true

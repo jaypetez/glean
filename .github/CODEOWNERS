@@ -1,0 +1,11 @@
+# CODEOWNERS for glean
+#
+# Anyone listed here is automatically requested for review when matching
+# files change in a PR. Combined with branch protection's
+# "require code owner reviews" setting, this means PRs to main need
+# approval from the owner before merging.
+#
+# Format: <path-pattern>  <@user(s)>
+
+# Default owner — everything in the repo.
+*  @jaypetez
