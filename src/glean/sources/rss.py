@@ -58,7 +58,8 @@ class RSSSource:
                 pp = entry.get(key)
                 if pp:
                     try:
-                        published_at = datetime(*pp[:6], tzinfo=UTC)
+                        y, mo, d, h, mi, s = (int(x) for x in pp[:6])
+                        published_at = datetime(y, mo, d, h, mi, s, tzinfo=UTC)
                         break
                     except (TypeError, ValueError):
                         pass

@@ -11,7 +11,7 @@ from typing import Annotated
 import typer
 
 from glean import __version__
-from glean.config import load_config
+from glean.config import Config, load_config
 from glean.config.loader import ConfigError
 from glean.logging import configure_logging, get_logger
 
@@ -49,7 +49,7 @@ LogLevelOpt = Annotated[
 ]
 
 
-def _load_or_exit(path: Path):
+def _load_or_exit(path: Path) -> Config:
     try:
         return load_config(path)
     except ConfigError as exc:

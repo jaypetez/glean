@@ -4,6 +4,7 @@ import os
 from typing import ClassVar
 
 import anthropic
+from anthropic.types import TextBlock
 
 from glean.llm.common import (
     item_as_prompt_context,
@@ -40,7 +41,7 @@ class AnthropicProvider:
             max_tokens=max_tokens,
             messages=[{"role": "user", "content": user}],
         )
-        text_parts = [b.text for b in resp.content if getattr(b, "type", None) == "text"]
+        text_parts = [b.text for b in resp.content if isinstance(b, TextBlock)]
         return "".join(text_parts).strip()
 
     async def rank(self, item: Item, prompt: str) -> float:

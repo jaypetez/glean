@@ -60,7 +60,7 @@ class StageSpec(BaseModel):
         (name, params), = raw.items()
         if not isinstance(params, dict):
             params = {"value": params}
-        return cls(name=name, params=params)
+        return cls(name=name, params=params)  # type: ignore[arg-type]
 
 
 class FeedConfig(BaseModel):
