@@ -1,0 +1,41 @@
+services:
+  glean:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/jaypetez/glean:latest
+    container_name: glean
+    restart: unless-stopped
+    depends_on:
+      - ollama
+    env_file:
+      - .env
+    environment:
+      TZ: ${TZ:-UTC}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - ./data:/data
+      - ./feeds.yaml:/etc/glean/feeds.yaml:ro
+    networks:
+      - glean
+    ports:
+      - "127.0.0.1:9090:9090"   # health endpoint (loopback only)
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: glean-ollama
+    restart: unless-stopped
+    volumes:
+      - ollama-models:/root/.ollama
+    networks:
+      - glean
+    # Uncomment to expose Ollama to the host:
+    # ports:
+    #   - "11434:11434"
+
+volumes:
+  ollama-models:
+
+networks:
+  glean:
+    driver: bridge

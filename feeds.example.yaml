@@ -1,0 +1,92 @@
+# glean feed configuration.
+# Copy to feeds.yaml and edit. Reference env vars with ${VAR}.
+
+defaults:
+  llm:
+    provider: ollama
+    model: qwen2.5:7b
+    base_url: http://ollama:11434
+  render:
+    style: html
+    link_preview: false
+    max_items: 10
+  bootstrap: skip-and-mark
+  failure:
+    alert_after: 3
+    ops_chat_id: ${TELEGRAM_OPS_CHAT_ID}
+
+feeds:
+  - name: ai-news-daily
+    schedule: "every 1h"
+    chat_id: ${TELEGRAM_CHAT_AI}
+    sources:
+      - type: rss
+        url: https://simonwillison.net/atom/everything/
+      - type: rss
+        url: https://hnrss.org/newest?q=ai
+      - type: rss
+        url: http://export.arxiv.org/rss/cs.AI
+    pipeline:
+      - dedup
+      - rank:
+          prompt: |
+            You are filtering an AI-news digest. Score 0-1 how relevant this is to
+            a working engineer who already follows mainstream AI news.
+            Drop celebrity / funding-only items. Boost releases, research, tools.
+          min_relevance: 0.55
+      - summarize:
+          prompt: |
+            One-sentence summary for a Telegram digest. Lead with the verb.
+            <=25 words. No marketing fluff.
+      - digest:
+          intro: "🧠 <b>AI news this hour</b>"
+
+  - name: security-cves
+    schedule: "daily 09:00"
+    chat_id: ${TELEGRAM_CHAT_SEC}
+    llm:
+      provider: anthropic
+      model: claude-haiku-4-5
+    sources:
+      - type: rss
+        url: https://nvd.nist.gov/feeds/xml/cve/misc/nvd-rss.xml
+      - type: rss
+        url: https://github.com/advisories.atom
+    pipeline:
+      - dedup
+      - rank:
+          prompt: "Score 0-1: is this CVE relevant to a Python+Node+Docker stack?"
+          min_relevance: 0.4
+      - summarize:
+          prompt: "Affected package, severity, exploit path. <=30 words."
+      - digest:
+          intro: "🛡️ <b>Security advisories — daily</b>"
+
+  - name: show-hn
+    schedule: "every 3h"
+    chat_id: ${TELEGRAM_CHAT_HN}
+    sources:
+      - type: hn
+        query: "show hn"
+        min_points: 25
+    pipeline:
+      - dedup
+      - summarize:
+          prompt: "What does this project do, in one line?"
+      - digest:
+          intro: "🚀 <b>Show HN — last 3h</b>"
+
+  - name: localllama
+    schedule: "daily 18:00"
+    chat_id: ${TELEGRAM_CHAT_AI}
+    sources:
+      - type: reddit
+        subreddit: LocalLLaMA
+        sort: top
+        timeframe: day
+    pipeline:
+      - dedup
+      - summarize:
+          prompt: "Summarize this Reddit post in one line."
+      - digest:
+          intro: "🦙 <b>r/LocalLLaMA — top of day</b>"

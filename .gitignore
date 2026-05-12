@@ -1,0 +1,15 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+data/
+*.db
+*.db-journal
+dist/
+build/
+*.egg-info/
+feeds.yaml
