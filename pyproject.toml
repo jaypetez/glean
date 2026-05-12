@@ -37,7 +37,7 @@ dependencies = [
 dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
-    "respx>=0.21",
+    "respx>=0.23.1",
     "ruff>=0.7",
     "mypy>=1.13",
     "types-PyYAML",
