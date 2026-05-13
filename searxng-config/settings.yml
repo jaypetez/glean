@@ -1,0 +1,66 @@
+# Minimal SearXNG configuration for use with glean.
+#
+# This is a private, single-user instance  keep it that way:
+#   - server.limiter: false (no need for bot protection)
+#   - server.public_instance: false (no public-facing features)
+#   - search.formats includes "json" (required by glean)
+#
+# To customize:
+#   - Add/remove engines below  see https://docs.searxng.org/admin/settings/settings_engine.html
+#   - Generate a secret_key with: openssl rand -hex 32 (set SEARXNG_SECRET in .env)
+#
+# Reference: https://docs.searxng.org/admin/settings/settings.html
+
+use_default_settings: true
+
+general:
+  instance_name: "glean-search"
+  privacypolicy_url: false
+  donation_url: false
+  contact_url: false
+
+search:
+  formats:
+    - html
+    - json      # REQUIRED  enables the JSON API that glean uses
+  safe_search: 0
+  default_lang: "en"
+  autocomplete: ""
+
+server:
+  secret_key: ""          # leave empty  set via SEARXNG_SECRET env var
+  limiter: false          # private instance  no need for bot protection
+  public_instance: false  # disables public-facing features
+  image_proxy: false
+
+ui:
+  static_use_hash: true
+  default_locale: en
+
+# Recommended engine set: reliable for private use, minimal blocking risk.
+# Enable/disable engines as you wish. The defaults from the upstream image
+# include 100+ more engines you can switch on.
+engines:
+  - name: duckduckgo
+    engine: duckduckgo
+    categories: general
+    timeout: 3.0
+    disabled: false
+
+  - name: brave
+    engine: brave
+    categories: general
+    timeout: 3.0
+    disabled: false
+
+  - name: mojeek
+    engine: mojeek
+    categories: general
+    timeout: 3.0
+    disabled: false
+
+  - name: startpage
+    engine: startpage
+    categories: general
+    timeout: 4.0
+    disabled: false

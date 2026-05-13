@@ -8,6 +8,7 @@
 | `OPENAI_API_KEY` | If used | OpenAI provider API key |
 | `BRAVE_API_KEY` | If used | Brave Search API key |
 | `TAVILY_API_KEY` | If used | Tavily Search API key |
+| `SEARXNG_SECRET` | If using SearXNG | Secret key for the optional SearXNG service |
 | `TZ` | No | Timezone (default: `UTC`) |
 | `LOG_LEVEL` | No | Logging level (default: `INFO`) |
 | `LOG_FORMAT` | No | Set to `json` for JSON logs |
