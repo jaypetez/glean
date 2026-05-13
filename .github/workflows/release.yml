@@ -88,9 +88,6 @@ jobs:
           - os: ubuntu-24.04-arm
             artifact: glean-linux-arm64
             ext: ""
-          - os: macos-13
-            artifact: glean-macos-x86_64
-            ext: ""
           - os: macos-14
             artifact: glean-macos-arm64
             ext: ""
