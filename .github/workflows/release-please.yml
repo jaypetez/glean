@@ -1,5 +1,14 @@
 name: release-please
 
+# IMPORTANT: This workflow needs "Allow GitHub Actions to create and approve
+# pull requests" enabled at:
+#   Settings → Actions → General → Workflow permissions
+# Without it, the action fails with:
+#   "GitHub Actions is not permitted to create or approve pull requests"
+#
+# Alternative: set RELEASE_PLEASE_TOKEN to a personal access token (or fine-grained
+# token) with contents:write + pull-requests:write on this repo.
+
 on:
   push:
     branches: [main]
