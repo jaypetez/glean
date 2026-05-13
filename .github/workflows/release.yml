@@ -150,7 +150,8 @@ jobs:
 
       - name: Install nfpm
         run: |
-          curl -fsSL https://github.com/goreleaser/nfpm/releases/latest/download/nfpm_linux_amd64.tar.gz | tar xz -C /usr/local/bin nfpm
+          NFPM_VERSION=2.41.1
+          curl -fsSL "https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/nfpm_${NFPM_VERSION}_linux_amd64.tar.gz" | tar xz -C /usr/local/bin nfpm
 
       - name: Build .deb, .rpm, .apk
         run: |
