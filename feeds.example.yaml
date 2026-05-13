@@ -16,6 +16,30 @@ defaults:
     ops_chat_id: ${TELEGRAM_OPS_CHAT_ID}
 
 feeds:
+  # Example: fan out a feed to Telegram + a file archive + a webhook
+  # - name: example-multi-sink
+  #   schedule: "every 1h"
+  #   sinks:
+  #     - type: telegram
+  #       chat_id: ${TELEGRAM_CHAT_AI}
+  #     - type: file
+  #       path: /data/glean-archive.jsonl
+  #       format: jsonl
+  #       required: false
+  #     - type: webhook
+  #       url: https://example.com/hook
+  #       auth_bearer: ${WEBHOOK_TOKEN}
+  #       required: false
+  #   sources:
+  #     - type: rss
+  #       url: https://simonwillison.net/atom/everything/
+  #   pipeline:
+  #     - dedup
+  #     - summarize:
+  #         prompt: "One-sentence summary."
+  #     - digest:
+  #         intro: "🧠 <b>AI news</b>"
+
   - name: ai-news-daily
     schedule: "every 1h"
     chat_id: ${TELEGRAM_CHAT_AI}
