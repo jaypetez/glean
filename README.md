@@ -161,7 +161,7 @@ All commands accept `--config <path>` (default `/etc/glean/feeds.yaml`) and `--d
 
 ## Adding a new source plugin
 
-A source is a class implementing `Source` (`fetch(ctx) -> list[Item]`) and decorated with `@register_source("yourtype")`. See `src/glean/sources/rss.py` for the smallest example, and [`docs/plugins.md`](./docs/plugins.md) for the full author's guide.
+A source is a class implementing `Source` (`fetch(ctx) -> list[Item]`) and decorated with `@register_source("yourtype")`. See `src/glean/sources/rss.py` for the smallest example, and [`docs/plugins/source.md`](./docs/plugins/source.md) for the full author's guide.
 
 ## Adding a new LLM provider
 
@@ -179,7 +179,7 @@ pytest -q
 
 ## Contributing
 
-Issues and PRs welcome. For non-trivial changes please open an issue first to align on direction. See [`docs/plugins.md`](./docs/plugins.md) for how to add sources / LLM providers (and eventually sinks).
+Issues and PRs welcome. For non-trivial changes please open an issue first to align on direction. See [`docs/plugins/source.md`](./docs/plugins/source.md) and [`docs/plugins/llm.md`](./docs/plugins/llm.md) for how to add sources / LLM providers (and eventually sinks).
 
 ## License
 

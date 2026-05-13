@@ -1,0 +1,66 @@
+site_name: glean
+site_description: Self-hosted, pluggable personal agent that gleans signal from RSS, scraping, search, and APIs.
+site_url: https://jaypetez.github.io/glean
+repo_url: https://github.com/jaypetez/glean
+repo_name: jaypetez/glean
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - content.code.annotate
+    - search.highlight
+    - search.share
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Installation: getting-started/install.md
+      - Quickstart: getting-started/quickstart.md
+  - Configuration:
+      - Overview: config/overview.md
+      - feeds.yaml Reference: config/feeds.md
+      - Schedule Syntax: config/schedules.md
+      - Environment Variables: config/env.md
+  - Plugins:
+      - Writing a Source: plugins/source.md
+      - Writing an LLM Provider: plugins/llm.md
+  - Operations:
+      - Docker: ops/docker.md
+      - Troubleshooting: ops/troubleshooting.md
+  - Contributing: contributing.md
+  - Changelog: changelog.md
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - toc:
+      permalink: true

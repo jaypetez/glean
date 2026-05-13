@@ -423,8 +423,11 @@ glean/
 │   ├── unit/
 │   └── integration/
 └── docs/
-    ├── plugins.md                  # author a new Source/Provider
-    └── troubleshooting.md
+    ├── plugins/
+    │   ├── source.md               # author a new Source
+    │   └── llm.md                  # author a new LLMProvider
+    └── ops/
+        └── troubleshooting.md
 ```
 
 ---
