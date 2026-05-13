@@ -8,7 +8,10 @@
 | `scraper` | `urls: [list of article URLs]`                                  |
 | `hn`      | `query`, `tags` (default `story`), `min_points`, `window_hours` |
 | `reddit`  | `subreddit`, `sort` (`top`/`new`/`hot`), `timeframe`, `limit`   |
-| `search`  | `query`, `engine` (`brave`/`tavily`/`searxng`), `limit`         |
+| `search`  | `query`, `engine` (`brave`/`tavily`/`searxng`/`serper`/`exa`/`mwmbl`), `limit` |
+
+Search backend kwargs are forwarded to the selected engine. For SearXNG, set
+`categories` or `safesearch` explicitly when you do not want instance defaults.
 
 ## Pipeline stages
 

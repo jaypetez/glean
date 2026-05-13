@@ -8,7 +8,7 @@ glean is a small Python daemon that runs as a Docker container. You describe **f
 
 ## Features
 
-- **Pluggable sources** — RSS/Atom, web scraping, Hacker News, Reddit, web search (Brave / Tavily / SearXNG)
+- **Pluggable sources** — RSS/Atom, web scraping, Hacker News, Reddit, web search (Brave / Tavily / SearXNG / Serper / Exa / MWMBL)
 - **Pluggable LLM** — Ollama (default), Anthropic, OpenAI. Per-feed provider/model
 - **Per-feed pipeline** — declare stages in YAML: `dedup → rank → summarize → digest`
 - **Smart dedup** — SQLite-backed, persists across restarts

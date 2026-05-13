@@ -40,6 +40,30 @@ feeds:
   #     - digest:
   #         intro: "🧠 <b>AI news</b>"
 
+  # Example: web search backends. Serper and Exa read API keys from env;
+  # MWMBL is free and does not require an API key.
+  # - name: search-examples
+  #   schedule: "daily 09:00"
+  #   chat_id: ${TELEGRAM_CHAT_AI}
+  #   sources:
+  #     - type: search
+  #       query: "Google-quality AI results"
+  #       engine: serper
+  #     - type: search
+  #       query: "semantic search examples"
+  #       engine: exa
+  #       search_type: neural
+  #       include_text: true
+  #     - type: search
+  #       query: "open web search"
+  #       engine: mwmbl
+  #   pipeline:
+  #     - dedup
+  #     - summarize:
+  #         prompt: "One-sentence summary."
+  #     - digest:
+  #         intro: "🔎 <b>Search examples</b>"
+
   - name: ai-news-daily
     schedule: "every 1h"
     chat_id: ${TELEGRAM_CHAT_AI}
