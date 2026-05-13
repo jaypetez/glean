@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import dataclasses
 import os
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar
 
 import httpx
 
-from glean.config.schema import Config, FeedConfig, RenderConfig, StageSpec
+from glean.config.schema import Config, FeedConfig, LLMConfig, RenderConfig, StageSpec
 from glean.llm import build_provider
 from glean.llm.base import LLMProvider
 from glean.logging import get_logger
@@ -28,6 +30,11 @@ if TYPE_CHECKING:
     from glean.state import StateStore
 
 logger = get_logger(__name__)
+
+
+def _llm_key(cfg: LLMConfig) -> str:
+    """Stable string key for the LLM cache, also used as Item.llm_key."""
+    return f"{cfg.provider}:{cfg.model}:{cfg.base_url or ''}"
 
 
 class _InjectedTelegramSink:
@@ -82,7 +89,7 @@ class Runner:
         self.telegram = telegram
         self.http = http or httpx.AsyncClient(timeout=30.0)
         self._owns_http = http is None
-        self._llm_cache: dict[tuple[str, str, str | None], LLMProvider] = {}
+        self._llm_cache: dict[str, LLMProvider] = {}
         self._sinks_cache: dict[str, list[Sink]] = {}
 
     async def aclose(self) -> None:
@@ -100,10 +107,27 @@ class Runner:
 
     def _get_llm(self, feed: FeedConfig) -> LLMProvider:
         cfg = feed.effective_llm(self.config.defaults)
-        key = (cfg.provider, cfg.model, cfg.base_url)
+        return self._get_llm_from_config(cfg)
+
+    def _get_llm_from_config(self, cfg: LLMConfig) -> LLMProvider:
+        key = _llm_key(cfg)
         if key not in self._llm_cache:
             self._llm_cache[key] = build_provider(cfg.model_dump(exclude_none=True))
         return self._llm_cache[key]
+
+    def _llm_resolver(self, feed: FeedConfig) -> Callable[[Item], LLMProvider]:
+        """Return a per-item LLM resolver. Falls back to feed default if item.llm_key missing."""
+        default = self._get_llm(feed)
+        has_overrides = any("llm" in spec for spec in feed.sources)
+        if not has_overrides:
+            return lambda _item: default
+
+        def resolver(item: Item) -> LLMProvider:
+            if item.llm_key and item.llm_key in self._llm_cache:
+                return self._llm_cache[item.llm_key]
+            return default
+
+        return resolver
 
     def _build_sinks_for(self, feed: FeedConfig) -> list[Sink]:
         """Build (and cache) the list of sinks for a feed."""
@@ -224,12 +248,13 @@ class Runner:
                 logger.info("no_new_items", feed=name)
                 return result
 
-            llm = self._get_llm(feed)
+            default_llm = self._get_llm(feed)
+            llm_for = self._llm_resolver(feed)
             intro: str = ""
 
             for stage in feed.pipeline:
                 new_items, intro = await self._run_stage(
-                    feed, stage, new_items, llm, intro, result
+                    feed, stage, new_items, llm_for, default_llm, intro, result
                 )
                 if not new_items:
                     break
@@ -314,6 +339,11 @@ class Runner:
             try:
                 source = build_source(spec)
                 items = await source.fetch(ctx)
+                if llm_spec := spec.get("llm"):
+                    cfg = LLMConfig.model_validate(llm_spec)
+                    key = _llm_key(cfg)
+                    self._get_llm_from_config(cfg)
+                    items = [dataclasses.replace(item, llm_key=key) for item in items]
                 out.extend(items)
             except Exception as exc:
                 logger.warning(
@@ -329,7 +359,8 @@ class Runner:
         feed: FeedConfig,
         stage: StageSpec,
         items: list[Item],
-        llm: LLMProvider,
+        llm_for: Callable[[Item], LLMProvider],
+        default_llm: LLMProvider,
         intro: str,
         result: RunResult,
     ) -> tuple[list[Item], str]:
@@ -352,7 +383,7 @@ class Runner:
             kept, dropped = await rank_stage(
                 feed.name,
                 items,
-                llm,
+                llm_for,
                 prompt=params.get("prompt", ""),
                 min_relevance=float(params.get("min_relevance", 0.5)),
             )
@@ -361,14 +392,14 @@ class Runner:
 
         if name == "summarize":
             return await summarize_stage(
-                feed.name, items, llm, prompt=params.get("prompt", "")
+                feed.name, items, llm_for, prompt=params.get("prompt", "")
             ), intro
 
         if name == "digest":
             base = params.get("intro", "")
             llm_prompt = params.get("prompt")
             if llm_prompt:
-                base = await digest_intro(feed.name, items, llm, prompt=llm_prompt)
+                base = await digest_intro(feed.name, items, default_llm, prompt=llm_prompt)
             return items, base
 
         logger.warning("unknown_stage", stage=name, feed=feed.name)

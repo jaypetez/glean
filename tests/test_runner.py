@@ -157,3 +157,95 @@ async def test_dry_run_no_writes(tmp_path: Path, write_yaml) -> None:
     finally:
         await runner.aclose()
         await state.close()
+
+
+async def test_per_source_llm_dispatched_in_full_pipeline(
+    tmp_path: Path, write_yaml, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Items from source A use llm A; items from source B use llm B during summarize."""
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "fake")
+
+    calls: dict[str, list[str]] = {"cheap": [], "expensive": []}
+
+    @register_provider("track_cheap")
+    class TrackCheap:
+        name = "track_cheap"
+
+        def __init__(self, **_: object) -> None:
+            self.model = "cheap"
+
+        async def rank(self, item: Item, prompt: str) -> float:
+            return 0.9
+
+        async def summarize(self, item: Item, prompt: str) -> str:
+            calls["cheap"].append(item.canonical_url)
+            return f"cheap:{item.title}"
+
+        async def digest(self, items: list[Item], prompt: str) -> str:
+            return ""
+
+        async def aclose(self) -> None:
+            pass
+
+    @register_provider("track_expensive")
+    class TrackExpensive:
+        name = "track_expensive"
+
+        def __init__(self, **_: object) -> None:
+            self.model = "expensive"
+
+        async def rank(self, item: Item, prompt: str) -> float:
+            return 0.9
+
+        async def summarize(self, item: Item, prompt: str) -> str:
+            calls["expensive"].append(item.canonical_url)
+            return f"expensive:{item.title}"
+
+        async def digest(self, items: list[Item], prompt: str) -> str:
+            return ""
+
+        async def aclose(self) -> None:
+            pass
+
+    cfg_yaml = textwrap.dedent(
+        """
+        defaults:
+          llm: {provider: track_cheap, model: cheap}
+        feeds:
+          - name: t1
+            schedule: "every 1h"
+            chat_id: -1
+            sources:
+              - type: fake
+                items:
+                  - {url: "https://cheap/1", title: "C1"}
+                llm: {provider: track_cheap, model: cheap}
+              - type: fake
+                items:
+                  - {url: "https://exp/1", title: "E1"}
+                llm: {provider: track_expensive, model: expensive}
+            pipeline:
+              - dedup
+              - summarize:
+                  prompt: "sum"
+              - digest:
+                  intro: "intro"
+        """
+    )
+    cfg = load_config(write_yaml(cfg_yaml))
+    state = StateStore(tmp_path / "s.db")
+    await state.open()
+    await state.set_bootstrapped("t1")
+    fake_tg = FakeTelegram()
+    runner = Runner(cfg, state, telegram=fake_tg)  # type: ignore[arg-type]
+    try:
+        result = await runner.run_feed("t1")
+    finally:
+        await runner.aclose()
+        await state.close()
+
+    assert result.error is None
+    assert "https://cheap/1" in calls["cheap"]
+    assert "https://exp/1" in calls["expensive"]
+    assert "https://cheap/1" not in calls["expensive"]
+    assert "https://exp/1" not in calls["cheap"]

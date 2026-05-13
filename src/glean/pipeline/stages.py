@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from glean.logging import get_logger
@@ -26,7 +27,7 @@ async def dedup_stage(feed: str, items: list[Item], state: StateStore) -> list[I
 async def rank_stage(
     feed: str,
     items: list[Item],
-    llm: LLMProvider,
+    llm_for: Callable[[Item], LLMProvider],
     *,
     prompt: str,
     min_relevance: float,
@@ -39,7 +40,7 @@ async def rank_stage(
     async def score(item: Item) -> Item:
         async with sem:
             try:
-                s = await llm.rank(item, prompt)
+                s = await llm_for(item).rank(item, prompt)
             except Exception as exc:
                 logger.warning(
                     "rank_failed",
@@ -61,7 +62,7 @@ async def rank_stage(
 async def summarize_stage(
     feed: str,
     items: list[Item],
-    llm: LLMProvider,
+    llm_for: Callable[[Item], LLMProvider],
     *,
     prompt: str,
 ) -> list[Item]:
@@ -72,7 +73,7 @@ async def summarize_stage(
     async def one(item: Item) -> Item:
         async with sem:
             try:
-                summary = await llm.summarize(item, prompt)
+                summary = await llm_for(item).summarize(item, prompt)
             except Exception as exc:
                 logger.warning(
                     "summarize_failed",

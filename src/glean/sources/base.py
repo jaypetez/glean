@@ -26,6 +26,9 @@ class Item:
 
     llm_summary: str | None = None
     relevance: float | None = None
+    # Per-source LLM routing key set by Runner._fetch_all when source has llm: override.
+    # Format: "provider:model:base_url" matching Runner._llm_cache keys.
+    llm_key: str | None = None
 
 
 @dataclass(slots=True)
