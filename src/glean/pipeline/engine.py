@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import time
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import httpx
 
-from glean.config.schema import Config, FeedConfig, StageSpec
+from glean.config.schema import Config, FeedConfig, RenderConfig, StageSpec
 from glean.llm import build_provider
 from glean.llm.base import LLMProvider
 from glean.logging import get_logger
@@ -17,6 +18,7 @@ from glean.pipeline.stages import (
     rank_stage,
     summarize_stage,
 )
+from glean.sinks import SendContext, Sink, build_sink
 from glean.sources import FetchContext, build_source
 from glean.sources.base import Item
 from glean.telegram import TelegramSender, render_digest
@@ -25,6 +27,31 @@ if TYPE_CHECKING:
     from glean.state import StateStore
 
 logger = get_logger(__name__)
+
+
+class _InjectedTelegramSink:
+    type: ClassVar[str] = "telegram"
+
+    def __init__(
+        self,
+        sender: TelegramSender,
+        chat_id: str | int,
+        *,
+        required: bool = True,
+    ) -> None:
+        self._sender = sender
+        self.chat_id = chat_id
+        self.required = required
+
+    async def send(self, ctx: SendContext) -> None:
+        await self._sender.send_digest(
+            self.chat_id,
+            ctx.messages,
+            style=ctx.render.style,
+            link_preview=ctx.render.link_preview,
+        )
+
+    async def aclose(self) -> None: ...
 
 
 @dataclass(slots=True)
@@ -46,7 +73,7 @@ class Runner:
         self,
         config: Config,
         state: StateStore,
-        telegram: TelegramSender | None,
+        telegram: TelegramSender | None = None,
         http: httpx.AsyncClient | None = None,
     ) -> None:
         self.config = config
@@ -55,8 +82,13 @@ class Runner:
         self.http = http or httpx.AsyncClient(timeout=30.0)
         self._owns_http = http is None
         self._llm_cache: dict[tuple[str, str, str | None], LLMProvider] = {}
+        self._sinks_cache: dict[str, list[Sink]] = {}
 
     async def aclose(self) -> None:
+        for sink_list in self._sinks_cache.values():
+            for sink in sink_list:
+                with contextlib.suppress(Exception):
+                    await sink.aclose()
         for provider in self._llm_cache.values():
             with contextlib.suppress(Exception):
                 await provider.aclose()
@@ -71,6 +103,91 @@ class Runner:
         if key not in self._llm_cache:
             self._llm_cache[key] = build_provider(cfg.model_dump(exclude_none=True))
         return self._llm_cache[key]
+
+    def _build_sinks_for(self, feed: FeedConfig) -> list[Sink]:
+        """Build (and cache) the list of sinks for a feed."""
+        if feed.name in self._sinks_cache:
+            return self._sinks_cache[feed.name]
+
+        sinks: list[Sink] = []
+        for spec in feed.effective_sinks(self.config.defaults):
+            if self._can_use_injected_telegram(spec):
+                chat_id = spec.get("chat_id", feed.chat_id)
+                if chat_id is None:
+                    raise RuntimeError("telegram sink missing chat_id")
+                required = spec.get("required", True)
+                if not isinstance(required, bool):
+                    raise ValueError("telegram sink 'required' must be a boolean")
+                telegram = self.telegram
+                if telegram is None:
+                    raise RuntimeError("telegram sender not configured")
+                sinks.append(_InjectedTelegramSink(telegram, chat_id, required=required))
+            else:
+                sinks.append(build_sink(spec))
+
+        self._sinks_cache[feed.name] = sinks
+        return sinks
+
+    def _can_use_injected_telegram(self, spec: dict[str, object]) -> bool:
+        # Token or unknown Telegram options need the real plugin constructor.
+        return (
+            self.telegram is not None
+            and spec.get("type") == "telegram"
+            and "token" not in spec
+            and set(spec) <= {"type", "chat_id", "required"}
+        )
+
+    async def _dispatch_sinks(
+        self,
+        feed: FeedConfig,
+        items: list[Item],
+        messages: list[str],
+        intro: str,
+        render_cfg: RenderConfig,
+    ) -> None:
+        """Send to all configured sinks. Required failures raise; optional just log."""
+        sinks = self._build_sinks_for(feed)
+        if not sinks:
+            if self.telegram is None:
+                raise RuntimeError("feed has no sinks and no telegram sender configured")
+            if feed.chat_id is None:
+                raise RuntimeError("feed has no sinks and no chat_id configured")
+            await self.telegram.send_digest(
+                feed.chat_id,
+                messages,
+                style=render_cfg.style,
+                link_preview=render_cfg.link_preview,
+            )
+            return
+
+        ctx = SendContext(
+            feed=feed.name,
+            items=items,
+            messages=messages,
+            intro=intro,
+            render=render_cfg,
+        )
+        results = await asyncio.gather(
+            *(sink.send(ctx) for sink in sinks),
+            return_exceptions=True,
+        )
+
+        required_errors: list[str] = []
+        for sink, result in zip(sinks, results, strict=True):
+            if isinstance(result, BaseException):
+                if not isinstance(result, Exception):
+                    raise result
+                err = f"{type(result).__name__}: {result}"
+                if sink.required:
+                    logger.error("sink_failed", feed=feed.name, sink=sink.type, err=err)
+                    required_errors.append(f"{sink.type}: {err}")
+                else:
+                    logger.warning(
+                        "sink_failed_optional", feed=feed.name, sink=sink.type, err=err
+                    )
+
+        if required_errors:
+            raise RuntimeError(f"required sinks failed: {'; '.join(required_errors)}")
 
     async def run_feed(self, name: str, *, dry_run: bool = False) -> RunResult:
         started = time.monotonic()
@@ -140,22 +257,19 @@ class Runner:
                     "dry_run", feed=name, would_send=len(messages), items=ranked_count
                 )
             else:
-                if self.telegram is None:
-                    raise RuntimeError("telegram sender not configured")
-                await self.telegram.send_digest(
-                    feed.chat_id,
-                    messages,
-                    style=render_cfg.style,
-                    link_preview=render_cfg.link_preview,
-                )
+                await self._dispatch_sinks(feed, new_items, messages, intro, render_cfg)
                 await self.state.mark_seen(name, new_items, sent=True)
                 await self.state.set_bootstrapped(name)
                 recovery = await self.state.record_success(name)
                 if recovery:
                     fc = feed.effective_failure(self.config.defaults)
-                    if fc.ops_chat_id:
+                    if fc.ops_chat_id and self.telegram is not None:
                         await self.telegram.send_text(
                             fc.ops_chat_id, f"✅ <b>{name}</b> recovered."
+                        )
+                    elif fc.ops_chat_id:
+                        logger.warning(
+                            "recovery_alert_skipped", feed=name, reason="telegram_missing"
                         )
                 result.sent = len(new_items)
 

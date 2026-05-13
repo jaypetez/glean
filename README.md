@@ -116,7 +116,14 @@ feeds:
 | `summarize` | LLM writes a 1-line summary, attached to each item.          |
 | `digest`    | Sets the digest header. Optionally LLM-synthesized.          |
 
-Send goes implicitly at the end.
+Send goes implicitly at the end. `chat_id` remains shorthand for the built-in Telegram sink; use `sinks:` for explicit fan-out.
+
+```yaml
+# under a feed:
+sinks:
+  - type: telegram
+    chat_id: ${TELEGRAM_CHAT_AI}
+```
 
 ### Schedules
 
@@ -158,15 +165,14 @@ From v1.0, the following surfaces are stable within major versions:
 
 - **`feeds.yaml` schema** — field names, types, and defaults. New optional fields may be added; no removal without a deprecation cycle.
 - **CLI commands and flags** — command names and option names are stable. No renames without a deprecated alias for one minor version.
-- **Plugin protocols** — `Source.fetch` and `LLMProvider.rank/summarize/digest` method signatures are locked. New optional methods get default implementations.
+- **Plugin protocols** - `Source.fetch`, `LLMProvider.rank/summarize/digest`, and `Sink.send` method signatures are locked. New optional methods get default implementations.
 - **Environment variable names** — `GLEAN_CONFIG`, `GLEAN_DB`, `TELEGRAM_BOT_TOKEN`, etc.
 
 Breaking changes require a major version bump and are documented in release notes with a migration guide.
 
 ## Roadmap
 
-- More sinks: email (SMTP), webhook (POST any URL), Slack, Discord, file/append-only log.
-- A `Sink` protocol so `telegram/` becomes the first plugin under `sinks/`, not a special case.
+- More first-party sinks: email (SMTP), webhook (POST any URL), Slack, Discord, file/append-only log.
 - Inbound Telegram (and other) commands — `/pause <feed>`, `/run <feed>` from the chat itself.
 - Embedding-based semantic dedup ("we already covered this story 2 days ago").
 - Per-feed prompt versioning + A/B testing.
@@ -178,6 +184,10 @@ A source is a class implementing `Source` (`fetch(ctx) -> list[Item]`) and decor
 ## Adding a new LLM provider
 
 An LLM provider implements `rank` / `summarize` / `digest` and is registered with `@register_provider("yourname")`. See `src/glean/llm/ollama_provider.py`.
+
+## Adding a new sink plugin
+
+A sink implements `send(ctx: SendContext) -> None` / `aclose()` and is registered with `@register_sink("yourtype")`. See `src/glean/sinks/telegram.py`.
 
 ## Development
 

@@ -49,7 +49,7 @@ The plugin author's guides are in [`docs/plugins/source.md`](./docs/plugins/sour
 
 - **Source:** subclass `Source`, implement `fetch(ctx) -> list[Item]`, decorate with `@register_source("yourtype")`. Smallest example: `src/glean/sources/rss.py`.
 - **LLM provider:** implement `rank` / `summarize` / `digest`, decorate with `@register_provider("yourname")`. Smallest example: `src/glean/llm/ollama_provider.py`.
-- **Sink:** the `Sink` protocol is on the roadmap; if you're keen, the design lives in [`DESIGN.md`](./DESIGN.md). Open an issue and we'll align before you start.
+- **Sink:** implement `send(ctx)` / `aclose()`, decorate with `@register_sink("yourtype")`. Smallest example: `src/glean/sinks/telegram.py`.
 
 Every new plugin needs:
 

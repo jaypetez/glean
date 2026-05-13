@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class LLMConfig(BaseModel):
@@ -68,7 +68,8 @@ class FeedConfig(BaseModel):
 
     name: str = Field(min_length=1, pattern=r"^[a-z0-9][a-z0-9._-]*$")
     schedule: str
-    chat_id: str | int
+    chat_id: str | int | None = None
+    sinks: list[dict[str, Any]] | None = Field(default=None, min_length=1)
     sources: list[dict[str, Any]] = Field(min_length=1)
     pipeline: list[StageSpec] = Field(min_length=1)
     llm: LLMConfig | None = None
@@ -84,11 +85,25 @@ class FeedConfig(BaseModel):
             return v
         return [StageSpec.from_raw(x) if not isinstance(x, StageSpec) else x for x in v]
 
+    @model_validator(mode="after")
+    def _ensure_sinks(self) -> Self:
+        if self.sinks is not None:
+            return self
+        if self.chat_id is not None:
+            self.sinks = [{"type": "telegram", "chat_id": self.chat_id}]
+            return self
+        raise ValueError("feed must have either 'chat_id' or 'sinks'")
+
     def effective_llm(self, defaults: Defaults) -> LLMConfig:
         return self.llm or defaults.llm
 
     def effective_render(self, defaults: Defaults) -> RenderConfig:
         return self.render or defaults.render
+
+    def effective_sinks(self, defaults: Defaults) -> list[dict[str, Any]]:
+        if self.sinks is None:
+            raise ValueError("feed must have either 'chat_id' or 'sinks'")
+        return self.sinks
 
     def effective_bootstrap(self, defaults: Defaults) -> str:
         return self.bootstrap or defaults.bootstrap
