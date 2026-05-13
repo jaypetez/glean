@@ -34,3 +34,33 @@ def write_yaml(tmp_path: Path):
         return path
 
     return _write
+
+
+@pytest.fixture
+async def http_client():
+    """Async httpx client for source/llm tests."""
+    import httpx
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        yield client
+
+
+@pytest.fixture
+async def state_store(tmp_db: Path):
+    """Open a StateStore for tests that need ETag caching."""
+    from glean.state.store import StateStore
+
+    store = StateStore(tmp_db)
+    await store.open()
+    try:
+        yield store
+    finally:
+        await store.close()
+
+
+@pytest.fixture
+def fetch_context(http_client, state_store):
+    """A FetchContext suitable for source.fetch() calls."""
+    from glean.sources.base import FetchContext
+
+    return FetchContext(feed_name="test", http=http_client, state=state_store)
