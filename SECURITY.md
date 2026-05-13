@@ -2,12 +2,12 @@
 
 ## Supported versions
 
-`glean` is pre-1.0. Only the latest tagged release on `main` receives fixes. If you're running an older image, please update before reporting.
+Only the latest tagged release receives fixes. If you're running an older version, please update before reporting.
 
 | Version    | Supported |
 |------------|-----------|
-| `main` / latest tag | yes |
-| Anything older       | no  |
+| 1.x        | ✅ yes    |
+| < 1.0      | ❌ no     |
 
 ## Reporting a vulnerability
 

@@ -21,7 +21,7 @@
 
 ## Status
 
-**v0.1** — early. Today's shipped sink is Telegram; the architecture is sink-agnostic and more sinks (email, webhook, Slack, Discord, file) are roadmap. See [DESIGN.md](./DESIGN.md) for the long view.
+**v1.0** — stable core surfaces. Today's shipped sink is Telegram; the architecture is sink-agnostic and more sinks (email, webhook, Slack, Discord, file) are roadmap. See [DESIGN.md](./DESIGN.md) for the long view.
 
 ## Why
 
@@ -150,6 +150,17 @@ All commands accept `--config <path>` (default `/etc/glean/feeds.yaml`) and `--d
 - **Logs:** structured key=value to stderr in dev, JSON when `LOG_FORMAT=json`.
 - **Telegram rate limits:** the sender retries on `RetryAfter` automatically.
 - **LLM failures during ranking:** items with failed scores are dropped (treated as `0.0`). Summarize failures fall back to the source-provided summary.
+
+## Stability guarantee
+
+From v1.0, the following surfaces are stable within major versions:
+
+- **`feeds.yaml` schema** — field names, types, and defaults. New optional fields may be added; no removal without a deprecation cycle.
+- **CLI commands and flags** — command names and option names are stable. No renames without a deprecated alias for one minor version.
+- **Plugin protocols** — `Source.fetch` and `LLMProvider.rank/summarize/digest` method signatures are locked. New optional methods get default implementations.
+- **Environment variable names** — `GLEAN_CONFIG`, `GLEAN_DB`, `TELEGRAM_BOT_TOKEN`, etc.
+
+Breaking changes require a major version bump and are documented in release notes with a migration guide.
 
 ## Roadmap
 
