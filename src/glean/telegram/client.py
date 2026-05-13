@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import timedelta
-from typing import Literal
+from typing import Any, Literal
 
 from telegram import Bot, LinkPreviewOptions
 from telegram.constants import ParseMode
@@ -21,8 +21,14 @@ _PARSE_MODE_MAP: dict[str, str | None] = {
 
 
 class TelegramSender:
-    def __init__(self, token: str) -> None:
-        self._bot = Bot(token=token)
+    def __init__(self, token: str, *, base_url: str | None = None) -> None:
+        kwargs: dict[str, Any] = {"token": token}
+        if base_url:
+            # python-telegram-bot expects base_url/base_file_url to include the /bot prefix.
+            normalized = base_url.rstrip("/")
+            kwargs["base_url"] = f"{normalized}/bot"
+            kwargs["base_file_url"] = f"{normalized}/file/bot"
+        self._bot = Bot(**kwargs)
 
     async def send_digest(
         self,

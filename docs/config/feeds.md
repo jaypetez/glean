@@ -31,14 +31,17 @@ sinks:
     chat_id: ${TELEGRAM_CHAT_AI}
 ```
 
+<<<<<<< HEAD
 Built-in sink types:
 
 | Type       | Required args | Optional args |
 |------------|---------------|---------------|
-| `telegram` | `chat_id` | `token`, `required` |
+| `telegram` | `chat_id` | `token`, `base_url`, `required` |
 | `discord`  | `webhook_url` | `username`, `avatar_url`, `timeout_s`, `required` |
 | `ntfy`     | `topic` | `base_url`, `token`, `priority`, `tags`, `timeout_s`, `required` |
 | `slack`    | `webhook_url` | `channel`, `username`, `icon_emoji`, `timeout_s`, `required` |
+
+The `base_url` for the `telegram` sink overrides the Telegram Bot API endpoint (defaults to `TELEGRAM_BASE_URL` env var if not set). Useful for pointing at a self-hosted Bot API or a mock server during testing.
 
 ## Schedule syntax
 

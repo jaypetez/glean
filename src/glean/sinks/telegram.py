@@ -23,6 +23,7 @@ class TelegramSink:
         chat_id: str | int,
         *,
         token: str | None = None,
+        base_url: str | None = None,
         required: bool = True,
     ) -> None:
         self.chat_id = chat_id
@@ -32,7 +33,8 @@ class TelegramSink:
             raise ValueError(
                 "telegram sink requires a token (set TELEGRAM_BOT_TOKEN or pass 'token' in YAML)"
             )
-        self._sender = TelegramSender(resolved_token)
+        resolved_base_url = base_url or os.environ.get("TELEGRAM_BASE_URL")
+        self._sender = TelegramSender(resolved_token, base_url=resolved_base_url)
 
     async def send(self, ctx: SendContext) -> None:
         messages = ctx.messages or render_digest(
