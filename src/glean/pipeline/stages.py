@@ -5,6 +5,7 @@ import dataclasses
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
+from glean.config.skills import SkillConfig, render_skill_prompt, skill_output_schema
 from glean.logging import get_logger
 from glean.sources.base import Item
 
@@ -101,3 +102,66 @@ async def digest_intro(
     except Exception as exc:
         logger.warning("digest_failed", feed=feed, err=str(exc))
         return prompt
+
+
+async def apply_skill_stage(
+    feed: str,
+    items: list[Item],
+    llm_for: Callable[[Item], LLMProvider],
+    *,
+    skill: SkillConfig,
+    skill_llm: LLMProvider | None = None,
+) -> list[Item]:
+    """Run structured extraction for each item using the skill's schema.
+
+    Precedence: skill_llm (if set) > llm_for(item) > falls back inside resolver.
+    """
+    if not items:
+        return []
+    sem = asyncio.Semaphore(_SUMMARIZE_CONCURRENCY)
+    json_schema = skill_output_schema(skill)
+
+    async def one(item: Item) -> Item:
+        async with sem:
+            provider = skill_llm or llm_for(item)
+            # Defensive: third-party providers may not implement extract()
+            extract_fn = getattr(provider, "extract", None)
+            if extract_fn is None:
+                logger.warning(
+                    "skill_extract_unavailable",
+                    feed=feed,
+                    skill=skill.name,
+                    provider=type(provider).__name__,
+                )
+                return item
+
+            rendered_prompt = render_skill_prompt(skill.prompt, item)
+            try:
+                result = await extract_fn(
+                    item,
+                    rendered_prompt,
+                    json_schema,
+                    system_prompt=skill.system_prompt,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "skill_extract_failed",
+                    feed=feed,
+                    skill=skill.name,
+                    url=item.canonical_url,
+                    err=str(exc),
+                )
+                result = {}
+
+            # Auto-populate llm_summary from common summary field names so
+            # existing renderers work without changes.
+            new_summary: str | None = item.llm_summary
+            for key in ("summary", "one_liner", "tldr"):
+                value = result.get(key)
+                if isinstance(value, str) and value.strip():
+                    new_summary = value
+                    break
+
+            return dataclasses.replace(item, structured=result, llm_summary=new_summary)
+
+    return list(await asyncio.gather(*(one(i) for i in items)))
