@@ -55,6 +55,60 @@ jobs:
           files: coverage.xml
           fail_ci_if_error: false
 
+  e2e:
+    name: End-to-end (docker compose)
+    runs-on: ubuntu-latest
+    needs: lint-test
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: '0.5.13'
+
+      - name: Install pytest deps for harness
+        run: uv sync --locked --all-extras
+
+      - name: Build & start E2E stack
+        run: |
+          docker compose -f docker-compose.e2e.yml build
+          docker compose -f docker-compose.e2e.yml up -d
+
+      - name: Wait for healthchecks
+        run: |
+          for url in http://localhost:8001/health http://localhost:11434/health http://localhost:8002/health; do
+            success=false
+            for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+              if curl -fsS "$url" > /dev/null 2>&1; then
+                echo "✅ $url ready"
+                success=true
+                break
+              fi
+              echo "⏳ waiting for $url (attempt $i)"
+              sleep 2
+            done
+            if [ "$success" = "false" ]; then
+              echo "❌ $url failed healthcheck after 30s"
+              exit 1
+            fi
+          done
+
+      - name: Run E2E tests
+        run: uv run pytest tests/e2e -v -m e2e
+
+      - name: Show glean logs on failure
+        if: always()
+        run: docker compose -f docker-compose.e2e.yml logs glean | tail -200
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.e2e.yml down -v
+
   docker:
     name: Build & push image
     runs-on: ubuntu-latest
