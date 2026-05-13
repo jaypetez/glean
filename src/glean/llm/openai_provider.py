@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import json
 import os
-from typing import ClassVar
+from typing import Any, ClassVar
 
 import openai
 
@@ -66,6 +67,38 @@ class OpenAIProvider:
             items_as_prompt_context(items),
             max_tokens=256,
         )
+
+    async def extract(
+        self,
+        item: Item,
+        prompt: str,
+        output_schema: dict[str, Any],
+        *,
+        system_prompt: str | None = None,
+    ) -> dict[str, Any]:
+        resp = await self._client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": system_prompt or "Extract structured data."},
+                {"role": "user", "content": f"{prompt}\n\n{item_as_prompt_context(item)}"},
+            ],
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "extraction",
+                    "schema": output_schema,
+                    "strict": True,
+                },
+            },
+            max_tokens=1024,
+            temperature=0.0,
+        )
+        raw = (resp.choices[0].message.content or "{}").strip()
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            return {}
+        return parsed if isinstance(parsed, dict) else {}
 
     async def aclose(self) -> None:
         await self._client.close()

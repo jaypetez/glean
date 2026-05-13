@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import ClassVar
+import json
+from typing import Any, ClassVar
 
 import ollama
 
@@ -71,6 +72,32 @@ class OllamaProvider:
             options={"temperature": 0.3, "num_predict": 256},
         )
         return (resp["message"]["content"] or "").strip()
+
+    async def extract(
+        self,
+        item: Item,
+        prompt: str,
+        output_schema: dict[str, Any],
+        *,
+        system_prompt: str | None = None,
+    ) -> dict[str, Any]:
+        system = (system_prompt or "").strip() or "Extract structured data as JSON."
+        user = f"{prompt}\n\n{item_as_prompt_context(item)}"
+        resp = await self._client.chat(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+            format=output_schema,
+            options={"temperature": 0.0},
+        )
+        raw = (resp["message"]["content"] or "{}").strip()
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            return {}
+        return parsed if isinstance(parsed, dict) else {}
 
     async def aclose(self) -> None:
         # ollama AsyncClient uses httpx internally; close its client

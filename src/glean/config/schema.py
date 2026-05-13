@@ -4,17 +4,8 @@ from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
-
-class LLMConfig(BaseModel):
-    # Plugins may register additional providers, so we accept any string here
-    # and defer validation to the registry at construction time.
-    model_config = ConfigDict(extra="forbid")
-
-    provider: str = "ollama"
-    model: str = "qwen2.5:7b"
-    base_url: str | None = None
-    api_key: str | None = None
-    timeout_s: float = 60.0
+from glean.config.llm import LLMConfig
+from glean.config.skills import SkillConfig
 
 
 class RenderConfig(BaseModel):
@@ -42,7 +33,7 @@ class Defaults(BaseModel):
     failure: FailureConfig = Field(default_factory=FailureConfig)
 
 
-StageName = Literal["dedup", "rank", "summarize", "digest"]
+StageName = Literal["dedup", "rank", "summarize", "digest", "apply_skill"]
 
 
 class StageSpec(BaseModel):
@@ -129,7 +120,18 @@ class Config(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     defaults: Defaults = Field(default_factory=Defaults)
+    skills: list[SkillConfig] = Field(default_factory=list)
     feeds: list[FeedConfig] = Field(min_length=1)
+
+    @field_validator("skills")
+    @classmethod
+    def _unique_skill_names(cls, v: list[SkillConfig]) -> list[SkillConfig]:
+        seen: set[str] = set()
+        for s in v:
+            if s.name in seen:
+                raise ValueError(f"duplicate skill name: {s.name!r}")
+            seen.add(s.name)
+        return v
 
     @field_validator("feeds")
     @classmethod
@@ -140,6 +142,12 @@ class Config(BaseModel):
                 raise ValueError(f"duplicate feed name: {f.name!r}")
             seen.add(f.name)
         return v
+
+    def skill(self, name: str) -> SkillConfig:
+        for s in self.skills:
+            if s.name == name:
+                return s
+        raise KeyError(f"no such skill: {name!r}")
 
     def feed(self, name: str) -> FeedConfig:
         for f in self.feeds:

@@ -143,3 +143,26 @@ async def test_openai_uses_env_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     provider = OpenAIProvider(model="gpt-4")
 
     assert provider.model == "gpt-4"
+
+
+async def test_extract_uses_response_format_json_schema() -> None:
+    provider = _provider_with_completion('{"summary": "S"}')
+
+    result = await provider.extract(
+        _item(),
+        "x",
+        {"type": "object", "properties": {"summary": {"type": "string"}}},
+    )
+
+    assert result == {"summary": "S"}
+    call = provider._client.chat.completions.create.await_args
+    assert call.kwargs["response_format"]["type"] == "json_schema"
+    assert call.kwargs["response_format"]["json_schema"]["strict"] is True
+
+
+async def test_extract_returns_empty_on_invalid_json() -> None:
+    provider = _provider_with_completion("not json")
+
+    result = await provider.extract(_item(), "x", {"type": "object", "properties": {}})
+
+    assert result == {}

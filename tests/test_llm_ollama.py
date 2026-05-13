@@ -155,3 +155,37 @@ async def test_ollama_ignores_api_key_param() -> None:
     provider = OllamaProvider(model="m1", api_key="ignored")
 
     assert provider.model == "m1"
+
+
+async def test_extract_returns_parsed_json() -> None:
+    provider = OllamaProvider(model="qwen2.5:7b")
+    provider._client = AsyncMock()
+    provider._client.chat.return_value = {
+        "message": {"content": '{"summary": "S", "score": 0.7}'}
+    }
+
+    result = await provider.extract(
+        _item(),
+        "extract this",
+        {
+            "type": "object",
+            "properties": {
+                "summary": {"type": "string"},
+                "score": {"type": "number"},
+            },
+        },
+    )
+
+    assert result == {"summary": "S", "score": 0.7}
+    call = provider._client.chat.await_args
+    assert call.kwargs["format"]["type"] == "object"
+
+
+async def test_extract_returns_empty_dict_on_invalid_json() -> None:
+    provider = OllamaProvider(model="x")
+    provider._client = AsyncMock()
+    provider._client.chat.return_value = {"message": {"content": "not json"}}
+
+    result = await provider.extract(_item(), "x", {"type": "object", "properties": {}})
+
+    assert result == {}
