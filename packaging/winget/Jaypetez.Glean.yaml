@@ -1,0 +1,30 @@
+PackageIdentifier: Jaypetez.Glean
+PackageVersion: 1.0.0
+PackageName: glean
+Publisher: Jayson Petersen
+License: MIT
+LicenseUrl: https://github.com/jaypetez/glean/blob/main/LICENSE
+ShortDescription: Self-hosted RSS/LLM digest daemon that posts to Telegram
+Description: |-
+  glean is a self-hosted Python daemon that aggregates content via RSS, scraping,
+  Hacker News, Reddit, and web search APIs. It processes items through a pluggable
+  LLM pipeline (Ollama, Anthropic, OpenAI) and delivers digests on a schedule to
+  Telegram. One container, many feeds, many chats.
+Tags:
+  - rss
+  - llm
+  - telegram
+  - digest
+  - daemon
+  - ollama
+PackageUrl: https://github.com/jaypetez/glean
+ReleaseNotesUrl: https://github.com/jaypetez/glean/releases
+ManifestType: singleton
+ManifestVersion: 1.9.0
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/jaypetez/glean/releases/download/v1.0.0/glean-windows-x86_64.exe
+    InstallerSha256: PLACEHOLDER
+    InstallerType: portable
+    Commands:
+      - glean
