@@ -19,6 +19,16 @@ feeds:
   - name: ai-news-daily
     schedule: "every 1h"
     chat_id: ${TELEGRAM_CHAT_AI}
+    # For fan-out, replace chat_id with explicit sinks, for example:
+    # sinks:
+    #   - type: telegram
+    #     chat_id: ${TELEGRAM_CHAT_AI}
+    #   - type: discord
+    #     webhook_url: ${DISCORD_WEBHOOK_URL}
+    #   - type: ntfy
+    #     topic: ai-news
+    #   - type: slack
+    #     webhook_url: ${SLACK_WEBHOOK_URL}
     sources:
       - type: rss
         url: https://simonwillison.net/atom/everything/

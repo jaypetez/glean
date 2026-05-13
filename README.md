@@ -22,7 +22,7 @@
 
 ## Status
 
-**v1.0** — stable core surfaces. Today's shipped sink is Telegram; the architecture is sink-agnostic and more sinks (email, webhook, Slack, Discord, file) are roadmap. See [DESIGN.md](./DESIGN.md) for the long view.
+**v1.0** — stable core surfaces. Shipped sinks include Telegram, Discord, ntfy.sh, and Slack; the architecture is sink-agnostic and more sinks (email, webhook, file) are roadmap. See [DESIGN.md](./DESIGN.md) for the long view.
 
 ## Why
 
@@ -123,6 +123,12 @@ Send goes implicitly at the end. `chat_id` remains shorthand for the built-in Te
 sinks:
   - type: telegram
     chat_id: ${TELEGRAM_CHAT_AI}
+  - type: discord
+    webhook_url: ${DISCORD_WEBHOOK_URL}
+  - type: ntfy
+    topic: my-topic
+  - type: slack
+    webhook_url: ${SLACK_WEBHOOK_URL}
 ```
 
 ### Schedules
@@ -172,7 +178,7 @@ Breaking changes require a major version bump and are documented in release note
 
 ## Roadmap
 
-- More first-party sinks: email (SMTP), webhook (POST any URL), Slack, Discord, file/append-only log.
+- More first-party sinks: email (SMTP), webhook (POST any URL), file/append-only log.
 - Inbound Telegram (and other) commands — `/pause <feed>`, `/run <feed>` from the chat itself.
 - Embedding-based semantic dedup ("we already covered this story 2 days ago").
 - Per-feed prompt versioning + A/B testing.

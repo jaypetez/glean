@@ -31,6 +31,15 @@ sinks:
     chat_id: ${TELEGRAM_CHAT_AI}
 ```
 
+Built-in sink types:
+
+| Type       | Required args | Optional args |
+|------------|---------------|---------------|
+| `telegram` | `chat_id` | `token`, `required` |
+| `discord`  | `webhook_url` | `username`, `avatar_url`, `timeout_s`, `required` |
+| `ntfy`     | `topic` | `base_url`, `token`, `priority`, `tags`, `timeout_s`, `required` |
+| `slack`    | `webhook_url` | `channel`, `username`, `icon_emoji`, `timeout_s`, `required` |
+
 ## Schedule syntax
 
 | String              | Meaning                                |
