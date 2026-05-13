@@ -19,29 +19,122 @@
 | `summarize` | LLM writes a 1-line summary, attached to each item.         |
 | `digest`    | Sets the digest header. Optionally LLM-synthesized.         |
 
-## Sink configuration
+## Sinks
 
-`chat_id` is backwards-compatible shorthand for a Telegram sink. Use `sinks:` when a feed should declare output destinations explicitly or fan out to multiple sinks.
+Each feed delivers its digest to one or more **sinks**. Configure them with the
+`sinks:` list at the feed level:
 
 ```yaml
-chat_id: ${TELEGRAM_CHAT_AI}
-# equivalent to:
-sinks:
-  - type: telegram
-    chat_id: ${TELEGRAM_CHAT_AI}
+feeds:
+  - name: ai-news
+    schedule: "every 1h"
+    sinks:
+      - type: telegram
+        chat_id: ${TELEGRAM_CHAT_AI}
+      - type: discord
+        webhook_url: ${DISCORD_WEBHOOK_AI}
+        required: false       # failure here doesn't trigger ops alerts
+      - type: file
+        path: /data/glean-archive.jsonl
+        format: jsonl
+    sources: [...]
+    pipeline: [...]
 ```
 
-<<<<<<< HEAD
-Built-in sink types:
+### Backwards compatibility
 
-| Type       | Required args | Optional args |
-|------------|---------------|---------------|
-| `telegram` | `chat_id` | `token`, `base_url`, `required` |
-| `discord`  | `webhook_url` | `username`, `avatar_url`, `timeout_s`, `required` |
-| `ntfy`     | `topic` | `base_url`, `token`, `priority`, `tags`, `timeout_s`, `required` |
-| `slack`    | `webhook_url` | `channel`, `username`, `icon_emoji`, `timeout_s`, `required` |
+The legacy single-sink syntax still works:
 
-The `base_url` for the `telegram` sink overrides the Telegram Bot API endpoint (defaults to `TELEGRAM_BASE_URL` env var if not set). Useful for pointing at a self-hosted Bot API or a mock server during testing.
+```yaml
+feeds:
+  - name: ai-news
+    chat_id: ${TELEGRAM_CHAT_AI}    # shorthand for sinks: [{type: telegram, chat_id: ...}]
+    sources: [...]
+    pipeline: [...]
+```
+
+### Sink reference
+
+#### `telegram`
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `chat_id` | yes | Chat ID (negative for groups, positive for users) |
+| `token` | no | Bot token (defaults to `TELEGRAM_BOT_TOKEN` env var) |
+| `base_url` | no | Override Telegram API base URL (for self-hosted Bot API or testing). Defaults to `TELEGRAM_BASE_URL` env var when set. |
+| `required` | no | Default `true` |
+
+#### `discord`
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `webhook_url` | yes | Discord webhook URL |
+| `username` | no | Override webhook username |
+| `avatar_url` | no | Override webhook avatar |
+| `required` | no | Default `true` |
+
+#### `slack`
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `webhook_url` | yes | Slack incoming webhook URL |
+| `channel` | no | Override default channel (e.g., `#news`) |
+| `username` | no | Override webhook username |
+| `icon_emoji` | no | Override webhook icon (e.g., `:robot_face:`) |
+| `required` | no | Default `true` |
+
+#### `ntfy`
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `topic` | yes | ntfy topic name |
+| `base_url` | no | Defaults to `https://ntfy.sh` |
+| `token` | no | Bearer token for private servers |
+| `priority` | no | Message priority (1-5) |
+| `tags` | no | List of tag strings |
+| `required` | no | Default `true` |
+
+#### `webhook`
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `url` | yes | Target URL |
+| `method` | no | HTTP method (default `POST`) |
+| `headers` | no | Additional headers as a dict |
+| `auth_bearer` | no | Bearer token (added as `Authorization` header) |
+| `auth_basic` | no | `[username, password]` for basic auth |
+| `required` | no | Default `true` |
+
+The webhook payload is JSON:
+
+```json
+{
+  "feed": "ai-news",
+  "intro": "AI news this hour",
+  "messages": ["..."],
+  "items": [{"title": "...", "url": "...", "summary": "...", "source_type": "rss", ...}]
+}
+```
+
+#### `file`
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `path` | yes | Local file path (parent dirs created automatically) |
+| `format` | no | One of `text`, `jsonl`, `markdown` (default `text`) |
+| `required` | no | Default `true` |
+
+### Multiple sinks (fan-out)
+
+When a feed has multiple sinks, glean sends to all of them in parallel using
+`asyncio.gather`. Failure semantics:
+
+- **Required sink fails** → counts as a feed failure (increments
+  `consecutive_failures`, may trigger ops alert)
+- **Optional sink fails** (`required: false`) → logged as warning only
+
+This lets you mirror outputs (Telegram + Discord) where one is primary and
+one is best-effort, or write archive files alongside live notifications.
 
 ## Schedule syntax
 
