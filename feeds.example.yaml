@@ -15,7 +15,108 @@ defaults:
     alert_after: 3
     ops_chat_id: ${TELEGRAM_OPS_CHAT_ID}
 
+skills:
+  # 1. Deal finder — for shopping/product RSS feeds
+  - name: deal-finder
+    description: "Extract structured deal information."
+    system_prompt: |
+      You are a deal analysis assistant. Extract factual deal details only.
+      Never guess prices that are not explicitly stated.
+    prompt: |
+      Extract deal information from:
+
+      Title: {title}
+      Content: {body}
+    output_schema:
+      item_title: str
+      original_price: "str | None"
+      sale_price: "str | None"
+      discount_percent: "float | None"
+      expires_at: "str | None"
+      deal_quality: str               # excellent / good / average / skip
+      summary: str                    # ≤20 word one-liner
+
+  # 2. CVE extractor — for security advisory feeds
+  - name: cve-extractor
+    description: "Extract structured CVE/security advisory details."
+    system_prompt: |
+      You are a security analyst. Extract factual vulnerability details.
+      Use 'unknown' for any field not explicitly stated.
+    prompt: |
+      Extract security advisory details:
+
+      Title: {title}
+      Content: {body}
+      Source: {source_name}
+    output_schema:
+      cve_id: "str | None"            # CVE-YYYY-NNNNN or null
+      severity: str                   # critical / high / medium / low / unknown
+      affected_packages: "list[str]"
+      exploit_available: bool
+      patch_available: bool
+      affected_stacks: "list[str]"    # e.g. ["python", "docker", "node"]
+      summary: str
+
+  # 3. Paper digest — for arXiv/academic RSS feeds
+  - name: paper-digest
+    description: "Extract structured fields from academic paper abstracts."
+    system_prompt: |
+      You are a research analyst distilling papers for practitioners.
+      Focus on practical implications, not academic framing.
+    prompt: |
+      Extract paper details from the abstract:
+
+      Title: {title}
+      Abstract: {body}
+    output_schema:
+      key_contribution: str           # ≤15 words
+      methodology: str                # ≤10 words
+      practical_relevance: str        # ≤15 words
+      limitations: "str | None"
+      requires_gpu: bool
+      summary: str
+
+  # 4. Job posting extractor — for job board RSS/scraper feeds
+  - name: job-posting
+    description: "Extract structured job posting fields."
+    prompt: |
+      Extract job posting details from:
+
+      Title: {title}
+      Content: {body}
+    output_schema:
+      role: str
+      company: "str | None"
+      location: str                   # city / Remote / Hybrid
+      remote_ok: bool
+      salary_range: "str | None"
+      seniority: str                  # junior / mid / senior / staff / unknown
+      tech_stack: "list[str]"
+      summary: str
+
 feeds:
+  - name: example-multi-llm-with-skill
+    schedule: "every 1h"
+    chat_id: ${TELEGRAM_CHAT_AI}
+    sources:
+      # noisy aggregator on the cheap local model
+      - type: rss
+        url: https://hnrss.org/newest?q=AI
+        llm: { provider: ollama, model: qwen2.5:7b }
+
+      # curated subreddit on a premium model
+      - type: reddit
+        subreddit: LocalLLaMA
+        sort: top
+        timeframe: hour
+        llm: { provider: anthropic, model: claude-haiku-4-5 }
+    pipeline:
+      - dedup
+      - apply_skill:
+          skill: paper-digest      # uses each item's per-source LLM
+      - digest:
+          intro: "🧠 <b>AI digest</b>"
+
   # Example: fan out a feed to Telegram + a file archive + a webhook
   # - name: example-multi-sink
   #   schedule: "every 1h"
