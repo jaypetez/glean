@@ -1,0 +1,29 @@
+# Feed configuration for E2E testing.
+# Pointed at mock services running in docker-compose.e2e.yml.
+defaults:
+  llm:
+    provider: ollama
+    model: mock-model
+    base_url: http://mock-ollama:11434
+  render:
+    style: html
+    max_items: 10
+  bootstrap: send-all   # send all items immediately for E2E (no skip-and-mark wait)
+  failure:
+    alert_after: 99   # don't trigger alerts during testing
+
+feeds:
+  - name: e2e-feed
+    schedule: "every 10s"   # fast tick for testing
+    sinks:
+      - type: telegram
+        chat_id: "1234"
+    sources:
+      - type: rss
+        url: http://mock-rss:8002/feed.xml
+    pipeline:
+      - dedup
+      - summarize:
+          prompt: "Summarize in one short sentence."
+      - digest:
+          intro: "<b>E2E test digest</b>"

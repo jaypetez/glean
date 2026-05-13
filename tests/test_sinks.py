@@ -187,6 +187,27 @@ async def test_chat_id_only_feed_synthesizes_telegram_sink_and_uses_injected_sen
     assert fake_tg.sent == [(-1, ["legacy"])]
 
 
+async def test_telegram_base_url_env_uses_sink_constructor(monkeypatch) -> None:
+    monkeypatch.setenv("TELEGRAM_BASE_URL", "http://mock-telegram:8001")
+    cfg = _config_with_sink_specs([{"type": "telegram", "chat_id": -1}])
+    feed, render_cfg = _feed_and_render(cfg)
+    built_specs: list[dict[str, Any]] = []
+
+    def fake_build_sink(spec: dict[str, Any]) -> FakeSink:
+        built_specs.append(spec)
+        return FakeSink(name="telegram-plugin")
+
+    monkeypatch.setattr("glean.pipeline.engine.build_sink", fake_build_sink)
+    fake_tg = FakeTelegram()
+    runner = Runner(cfg, state=object(), telegram=fake_tg)  # type: ignore[arg-type]
+
+    await runner._dispatch_sinks(feed, [], ["message"], "intro", render_cfg)
+
+    assert built_specs == [{"type": "telegram", "chat_id": -1}]
+    assert fake_tg.sent == []
+    assert FakeSink.calls == [("telegram-plugin", "sink-test", ["message"])]
+
+
 async def test_optional_injected_telegram_sink_failure_is_swallowed() -> None:
     cfg = _config_with_sink_specs(
         [{"type": "telegram", "chat_id": -1, "required": False}]
