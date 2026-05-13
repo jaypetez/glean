@@ -12,6 +12,18 @@ defaults:
   failure:
     alert_after: 99   # don't trigger alerts during testing
 
+skills:
+  - name: e2e-extractor
+    description: "E2E mock skill — extracts a summary and a score."
+    prompt: |
+      Extract from:
+      TITLE: {title}
+      BODY: {body}
+    output_schema:
+      summary: str
+      score: float
+      tags: "list[str]"
+
 feeds:
   - name: e2e-feed
     schedule: "every 10s"   # fast tick for testing
@@ -44,3 +56,22 @@ feeds:
           prompt: "Summarize in one short sentence."
       - digest:
           intro: "<b>E2E search digest</b>"
+
+  - name: e2e-skills-feed
+    schedule: "every 10s"
+    sinks:
+      - type: telegram
+        chat_id: "9999"
+    sources:
+      - type: rss
+        url: http://mock-rss:8002/feed.xml
+        llm:
+          provider: ollama
+          model: mock-special
+          base_url: http://mock-ollama:11434
+    pipeline:
+      - dedup
+      - apply_skill:
+          skill: e2e-extractor
+      - digest:
+          intro: "<b>E2E skills digest</b>"
