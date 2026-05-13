@@ -22,7 +22,7 @@
 
 ## Status
 
-**v1.0** — stable core surfaces. Six shipped sinks (Telegram, Discord, Slack, ntfy.sh, Webhook, File), six search backends (SearXNG self-hosted + Brave / Tavily / Serper / Exa / MWMBL), three LLM providers (Ollama, Anthropic, OpenAI), and a four-layer plugin system (Source, Sink, LLM Provider, Search Backend) — all extendable in a single file.
+**v1.0** — stable core surfaces. Six shipped sinks (Telegram, Discord, Slack, ntfy.sh, Webhook, File), six search backends (SearXNG self-hosted + Brave / Tavily / Serper / Exa / MWMBL), three LLM providers (Ollama, Anthropic, OpenAI), per-source LLM dispatch (each source can use its own model), reusable structured **skills** that produce JSON output, and a four-layer plugin system (Source, Sink, LLM Provider, Search Backend) — all extendable in a single file.
 
 See [DESIGN.md](./DESIGN.md) for the long view.
 
@@ -34,16 +34,24 @@ The longer game: any "periodically pull X, process with an LLM, deliver to Y" wo
 
 ## Features
 
-- **Pluggable sources** — RSS/Atom, web scraping, Hacker News, Reddit, web search (SearXNG / Brave / Tavily / Serper / Exa / MWMBL). Add your own in one file. See [`docs/plugins/source.md`](./docs/plugins/source.md).
-- **Pluggable sinks** — Telegram, Discord, Slack, ntfy.sh, generic Webhook, File (text/JSONL/markdown). Fan out a single feed to multiple sinks; mark some as `required: false` to swallow non-critical failures. See [`docs/plugins/sink.md`](./docs/plugins/sink.md).
-- **Pluggable LLM** — Ollama (default), Anthropic, OpenAI. Per-feed provider/model: local for the noisy feed, Claude for the important one. See [`docs/plugins/llm.md`](./docs/plugins/llm.md).
-- **Per-source LLM models** — each source within a feed can use its own LLM. Cheap local model for noisy RSS, Claude Haiku for the curated subreddit, premium Sonnet for the security feed. See [`docs/config/per-source-llm.md`](./docs/config/per-source-llm.md).
-- **Reusable structured skills** — define named extraction templates with JSON output schemas, then reference them from any feed. Built-in examples: deal-finder, CVE extractor, paper digest, job posting. See [`docs/config/skills.md`](./docs/config/skills.md).
-- **Pluggable web search** — six backends including the self-hosted [SearXNG](./docs/getting-started/search.md) for users who don't want cloud API keys. See [`docs/plugins/search.md`](./docs/plugins/search.md).
-- **Per-feed pipeline** — declare stages in YAML: `dedup → rank → summarize → digest`. Reorder freely. Skip stages you don't want.
+### Core pipeline
+- **Per-feed pipeline** — declare stages in YAML: `dedup → rank → summarize → apply_skill → digest`. Reorder freely. Skip stages you don't want.
 - **Smart dedup** — SQLite-backed (WAL mode), persists across restarts. New feed? Indexed silently on first tick — no surprise 200-item dump.
 - **Friendly schedules** — `every 1h`, `every 15m`, `daily 09:00`, or raw cron.
 - **Failure-aware** — exponential backoff in-tick, ops-chat alert after N consecutive failures, auto-clear on recovery. Optional sinks don't trigger alerts.
+
+### Pluggable layers
+- **Sources** — RSS/Atom, web scraping, Hacker News, Reddit, web search (SearXNG / Brave / Tavily / Serper / Exa / MWMBL). Add your own in one file. See [`docs/plugins/source.md`](./docs/plugins/source.md).
+- **Sinks** — Telegram, Discord, Slack, ntfy.sh, generic Webhook, File (text/JSONL/markdown). Fan out a single feed to multiple sinks; mark some as `required: false` to swallow non-critical failures. See [`docs/plugins/sink.md`](./docs/plugins/sink.md).
+- **LLM providers** — Ollama (default), Anthropic, OpenAI. Per-feed provider/model. See [`docs/plugins/llm.md`](./docs/plugins/llm.md).
+- **Web search backends** — six engines including the self-hosted [SearXNG](./docs/getting-started/search.md) for users who don't want cloud API keys. See [`docs/plugins/search.md`](./docs/plugins/search.md).
+
+### LLM intelligence
+- **Per-source LLM models** — each source within a feed can use its own LLM. Cheap local model for noisy RSS, Claude Haiku for the curated subreddit, premium Sonnet for the security feed. Cost-optimize without splitting feeds. See [`docs/config/per-source-llm.md`](./docs/config/per-source-llm.md).
+- **Reusable structured skills** — define named extraction templates with JSON output schemas, reference them from any feed via the `apply_skill` stage. Each provider uses its native structured-output mode (Ollama `format=schema`, Anthropic forced tool-use, OpenAI `response_format` json_schema). Built-in examples: deal-finder, CVE extractor, paper digest, job posting. See [`docs/config/skills.md`](./docs/config/skills.md).
+- **LLM precedence** — `Skill LLM > Source LLM > Feed LLM > Defaults LLM`. Skills can demand specific models for tasks that require them; sources can route to cheap or premium tiers based on signal-to-noise.
+
+### Distribution & operations
 - **Cross-platform** — runs as a Docker container or a standalone binary. Linux (x86_64 + arm64), macOS (arm64), and Windows (x86_64) builds attached to every release.
 - **Hardened release** — multi-arch container (`ghcr.io/jaypetez/glean`), cosign-signed by digest, SBOM generated. `.deb`, `.rpm`, and `.apk` packages produced via nfpm.
 - **One container** — `docker compose up`. Ollama is bundled in the compose file; bring your own if you prefer.
@@ -106,6 +114,60 @@ feeds:
       - digest:
           intro: "🧠 <b>AI news this hour</b>"
 ```
+
+### Advanced feed: per-source LLM + skill + multi-sink fan-out
+
+A single feed can mix sources with different LLMs, run a structured-extraction skill, and deliver to multiple destinations with mixed required/optional semantics:
+
+```yaml
+skills:
+  - name: deal-finder
+    prompt: |
+      Extract deal info from:
+      Title: {title}
+      Content: {body}
+    output_schema:
+      sale_price: "str | None"
+      discount_percent: "float | None"
+      deal_quality: str           # excellent / good / skip
+      summary: str                # auto-fills llm_summary
+
+feeds:
+  - name: pc-deals
+    schedule: "every 30m"
+    sources:
+      - type: reddit               # cheap local model for noisy subreddit
+        subreddit: buildapcsales
+        sort: new
+        llm: { provider: ollama, model: qwen2.5:7b }
+
+      - type: rss                  # premium model for curated newsletter
+        url: https://www.dealnews.com/feed.xml
+        llm: { provider: anthropic, model: claude-haiku-4-5 }
+    pipeline:
+      - dedup
+      - apply_skill: { skill: deal-finder }
+      - rank:
+          prompt: "Score 0-1: is this an excellent deal?"
+          min_relevance: 0.6
+      - digest:
+          intro: "🛒 <b>Today's deals</b>"
+    sinks:
+      - type: telegram
+        chat_id: ${TELEGRAM_CHAT_DEALS}
+      - type: discord
+        webhook_url: ${DISCORD_WEBHOOK}
+        required: false            # don't alert if Discord webhook is dead
+      - type: file
+        path: /data/deals-archive.jsonl
+        format: jsonl              # structured fields preserved on disk
+```
+
+This single feed:
+- Pulls from two sources, each summarized by its own LLM
+- Extracts structured `{sale_price, discount_percent, deal_quality, summary}` per item via the `deal-finder` skill (each item still uses its source's LLM unless the skill itself overrides)
+- Ranks based on the skill output
+- Fans out to Telegram (required), Discord (optional), and a JSONL archive file
 
 ### Source types
 
@@ -233,11 +295,15 @@ Glean has four plugin layers, all following the same `@register_*` decorator pat
 | Plugin | Protocol method | Decorator | Author guide |
 |--------|----------------|-----------|--------------|
 | **Source** | `async fetch(ctx) -> list[Item]` | `@register_source("type")` | [`docs/plugins/source.md`](./docs/plugins/source.md) |
-| **LLM Provider** | `rank` / `summarize` / `digest` / `aclose` | `@register_provider("name")` | [`docs/plugins/llm.md`](./docs/plugins/llm.md) |
+| **LLM Provider** | `rank` / `summarize` / `digest` / `extract` / `aclose` | `@register_provider("name")` | [`docs/plugins/llm.md`](./docs/plugins/llm.md) |
 | **Sink** | `async send(ctx) -> None` / `aclose` | `@register_sink("type")` | [`docs/plugins/sink.md`](./docs/plugins/sink.md) |
 | **Search Backend** | `async search(query, *, http, limit) -> list[SearchResult]` | `@register_backend("name")` | [`docs/plugins/search.md`](./docs/plugins/search.md) |
 
 For each plugin: implement the protocol, decorate with the appropriate registration call, add an import to `_import_builtins()` in the corresponding `registry.py`, and ship a unit test.
+
+### Skills (config-time, not code)
+
+Skills are reusable extraction templates defined entirely in `feeds.yaml` — no Python required. Each skill declares a prompt, an output JSON schema, and (optionally) a specific LLM. Reference them from any feed with the `apply_skill` pipeline stage. See [`docs/config/skills.md`](./docs/config/skills.md) for the schema and [`feeds.example.yaml`](./feeds.example.yaml) for four ready-to-use examples (deal-finder, CVE extractor, paper digest, job posting).
 
 ## Development
 
@@ -267,6 +333,8 @@ Full docs are at [jaypetez.github.io/glean](https://jaypetez.github.io/glean) (b
 - [Quickstart](./docs/getting-started/quickstart.md)
 - [Web search setup](./docs/getting-started/search.md) — including SearXNG self-host
 - [feeds.yaml reference](./docs/config/feeds.md)
+- [Per-source LLM models](./docs/config/per-source-llm.md)
+- [Skills (structured extraction)](./docs/config/skills.md)
 - [Plugin authoring guides](./docs/plugins/)
 
 ## Contributing
