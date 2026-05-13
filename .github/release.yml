@@ -1,0 +1,14 @@
+changelog:
+  exclude:
+    labels: [skip-changelog]
+  categories:
+    - title: "🚀 New features"
+      labels: [feat, enhancement]
+    - title: "🐛 Bug fixes"
+      labels: [fix, bug]
+    - title: "📚 Documentation"
+      labels: [docs, documentation]
+    - title: "🔧 CI / infrastructure"
+      labels: [ci, chore, build]
+    - title: "📦 Dependencies"
+      labels: [deps, dependencies]
