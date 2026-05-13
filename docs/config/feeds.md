@@ -31,6 +31,15 @@ sinks:
     chat_id: ${TELEGRAM_CHAT_AI}
 ```
 
+### Telegram sink fields
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `chat_id` | yes | Telegram chat ID to send digests to. |
+| `token` | no | Bot token. Defaults to `TELEGRAM_BOT_TOKEN`. |
+| `base_url` | no | Override Telegram API base URL (for self-hosted Bot API or testing). Defaults to `TELEGRAM_BASE_URL` when set. |
+| `required` | no | Whether sink failure should fail the feed. Defaults to `true`. |
+
 ## Schedule syntax
 
 | String              | Meaning                                |
