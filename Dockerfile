@@ -18,10 +18,13 @@ RUN --mount=type=cache,target=/root/.cache/uv \
  && uv sync --frozen --no-dev --no-install-project
 
 # Layer 2: application code (changes often)
+# --no-editable so the venv contains a real copy of the package, not a
+# .pth file pointing back at /app/src (which would break when only /opt/venv
+# is copied to the runtime stage).
 COPY README.md ./
 COPY src ./src
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev
+    uv sync --frozen --no-dev --no-editable
 
 ### Runtime stage ###
 FROM python:3.12-slim-bookworm AS runtime
