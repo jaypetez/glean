@@ -1,0 +1,45 @@
+name: Update Scoop bucket
+
+on:
+  release:
+    types: [released]
+
+permissions:
+  contents: read
+
+jobs:
+  update-bucket:
+    name: Update Scoop manifest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update manifest
+        env:
+          BUCKET_TOKEN: ${{ secrets.SCOOP_BUCKET_TOKEN }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+
+          VERSION="${TAG#v}"
+          URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/glean-windows-x86_64.exe"
+          HASH=$(curl -fsSL "$URL" | sha256sum | cut -d' ' -f1)
+
+          WORKDIR="${RUNNER_TEMP}/scoop-glean"
+          BUCKET_DIR="${WORKDIR}/bucket"
+
+          git clone "https://x-access-token:${BUCKET_TOKEN}@github.com/jaypetez/scoop-glean.git" "${BUCKET_DIR}"
+          cd "${BUCKET_DIR}"
+
+          jq --arg v "$VERSION" --arg h "$HASH" \
+            '.version=$v | .hash=$h | .url=("https://github.com/jaypetez/glean/releases/download/v" + $v + "/glean-windows-x86_64.exe#/glean.exe")' \
+            bucket/glean.json > bucket/glean.json.tmp
+          mv bucket/glean.json.tmp bucket/glean.json
+
+          git config user.email "bot@glean"
+          git config user.name "glean-bot"
+          git add bucket/glean.json
+          if git diff --cached --quiet; then
+            echo "No manifest changes to commit"
+            exit 0
+          fi
+          git commit -m "Update to v${VERSION}"
+          git push

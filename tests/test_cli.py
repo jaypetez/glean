@@ -10,6 +10,7 @@ import pytest
 import typer
 from typer.testing import CliRunner
 
+from glean import __version__
 from glean.config.schema import Config
 from glean.state.store import StateStore
 
@@ -65,7 +66,7 @@ def test_version_command_prints_package_version() -> None:
     result = CliRunner().invoke(cli_module.app, ["version"])
 
     assert result.exit_code == 0
-    assert result.stdout.strip() == "glean 0.1.0"
+    assert result.stdout.strip() == f"glean {__version__}"
 
 
 def test_validate_config_command_reports_success(write_yaml) -> None:

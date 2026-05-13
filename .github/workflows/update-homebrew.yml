@@ -1,0 +1,98 @@
+name: Update Homebrew tap
+
+on:
+  release:
+    types: [released]
+
+permissions:
+  contents: read
+
+jobs:
+  update-tap:
+    name: Update Homebrew formula
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Update formula version and hashes
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+
+          VERSION="${TAG#v}"
+          WORKDIR="${RUNNER_TEMP}/homebrew-glean"
+          ARTIFACT_DIR="${WORKDIR}/artifacts"
+          TAP_DIR="${WORKDIR}/tap"
+
+          mkdir -p "${ARTIFACT_DIR}"
+
+          for artifact in glean-macos-arm64 glean-macos-x86_64 glean-linux-arm64 glean-linux-x86_64; do
+            curl -fsSL -o "${ARTIFACT_DIR}/${artifact}" \
+              "https://github.com/${{ github.repository }}/releases/download/${TAG}/${artifact}"
+          done
+
+          ARM64_MAC=$(sha256sum "${ARTIFACT_DIR}/glean-macos-arm64" | cut -d' ' -f1)
+          X86_64_MAC=$(sha256sum "${ARTIFACT_DIR}/glean-macos-x86_64" | cut -d' ' -f1)
+          ARM64_LINUX=$(sha256sum "${ARTIFACT_DIR}/glean-linux-arm64" | cut -d' ' -f1)
+          X86_64_LINUX=$(sha256sum "${ARTIFACT_DIR}/glean-linux-x86_64" | cut -d' ' -f1)
+
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/jaypetez/homebrew-glean.git" "${TAP_DIR}"
+          cd "${TAP_DIR}"
+
+          VERSION="${VERSION}" \
+          ARM64_MAC="${ARM64_MAC}" \
+          X86_64_MAC="${X86_64_MAC}" \
+          ARM64_LINUX="${ARM64_LINUX}" \
+          X86_64_LINUX="${X86_64_LINUX}" \
+          python - <<'PY'
+          from pathlib import Path
+          import os
+          import re
+
+          path = Path("Formula/glean.rb")
+          text = path.read_text()
+          version = os.environ["VERSION"]
+          digests = {
+              "glean-macos-arm64": os.environ["ARM64_MAC"],
+              "glean-macos-x86_64": os.environ["X86_64_MAC"],
+              "glean-linux-arm64": os.environ["ARM64_LINUX"],
+              "glean-linux-x86_64": os.environ["X86_64_LINUX"],
+          }
+
+          text, count = re.subn(r'version "[^"]+"', f'version "{version}"', text, count=1)
+          if count != 1:
+              raise SystemExit("expected to update one version line")
+
+          for artifact, digest in digests.items():
+              text, url_count = re.subn(
+                  rf'url "https://github\.com/jaypetez/glean/releases/download/v[^"]+/{re.escape(artifact)}"',
+                  f'url "https://github.com/jaypetez/glean/releases/download/v{version}/{artifact}"',
+                  text,
+                  count=1,
+              )
+              if url_count != 1:
+                  raise SystemExit(f"expected to update one url for {artifact}")
+
+              text, sha_count = re.subn(
+                  rf'(url "https://github\.com/jaypetez/glean/releases/download/v{re.escape(version)}/{re.escape(artifact)}"\n\s+sha256 ")([^"]+)(")',
+                  rf'\g<1>{digest}\g<3>',
+                  text,
+                  count=1,
+              )
+              if sha_count != 1:
+                  raise SystemExit(f"expected to update one sha256 for {artifact}")
+
+          path.write_text(text)
+          PY
+
+          git config user.email "bot@glean"
+          git config user.name "glean-bot"
+          git add Formula/glean.rb
+          if git diff --cached --quiet; then
+            echo "No formula changes to commit"
+            exit 0
+          fi
+          git commit -m "Update to v${VERSION}"
+          git push
