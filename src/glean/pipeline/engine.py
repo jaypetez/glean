@@ -11,11 +11,13 @@ from typing import TYPE_CHECKING, ClassVar
 
 import httpx
 
-from glean.config.schema import Config, FeedConfig, LLMConfig, RenderConfig, StageSpec
+from glean.config.llm import LLMConfig
+from glean.config.schema import Config, FeedConfig, RenderConfig, StageSpec
 from glean.llm import build_provider
 from glean.llm.base import LLMProvider
 from glean.logging import get_logger
 from glean.pipeline.stages import (
+    apply_skill_stage,
     dedup_stage,
     digest_intro,
     rank_stage,
@@ -402,5 +404,42 @@ class Runner:
                 base = await digest_intro(feed.name, items, default_llm, prompt=llm_prompt)
             return items, base
 
+        if name == "apply_skill":
+            return await self._run_apply_skill_stage(feed, stage, items, llm_for, intro)
+
         logger.warning("unknown_stage", stage=name, feed=feed.name)
         return items, intro
+
+    async def _run_apply_skill_stage(
+        self,
+        feed: FeedConfig,
+        stage: StageSpec,
+        items: list[Item],
+        llm_for: Callable[[Item], LLMProvider],
+        intro: str,
+    ) -> tuple[list[Item], str]:
+        params = stage.params
+        skill_name = params.get("skill")
+        if not skill_name:
+            logger.warning("apply_skill_missing_skill_param", feed=feed.name)
+            return items, intro
+        try:
+            skill = self.config.skill(skill_name)
+        except KeyError:
+            logger.warning(
+                "apply_skill_unknown_skill",
+                feed=feed.name,
+                skill=skill_name,
+            )
+            return items, intro
+        skill_llm: LLMProvider | None = None
+        if skill.llm:
+            skill_llm = self._get_llm_from_config(skill.llm)
+        new_items = await apply_skill_stage(
+            feed.name,
+            items,
+            llm_for,
+            skill=skill,
+            skill_llm=skill_llm,
+        )
+        return new_items, intro
