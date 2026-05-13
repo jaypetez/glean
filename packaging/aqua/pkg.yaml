@@ -1,0 +1,28 @@
+packages:
+  - type: github_release
+    repo_owner: jaypetez
+    repo_name: glean
+    description: Self-hosted RSS/LLM digest daemon for Telegram
+    asset: "glean-{{.OS}}-{{.Arch}}"
+    format: raw
+    files:
+      - name: glean
+    replacements:
+      linux: linux
+      darwin: macos
+      amd64: x86_64
+      arm64: arm64
+    overrides:
+      - goos: windows
+        asset: "glean-{{.OS}}-{{.Arch}}.exe"
+        replacements:
+          windows: windows
+          amd64: x86_64
+        files:
+          - name: glean
+            src: "glean-windows-x86_64.exe"
+    supported_envs:
+      - linux/amd64
+      - darwin/amd64
+      - darwin/arm64
+      - windows/amd64
