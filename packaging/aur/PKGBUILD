@@ -1,0 +1,18 @@
+# Maintainer: Jayson Petersen
+pkgname=glean-bin
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="Self-hosted RSS/LLM digest daemon that posts to Telegram"
+arch=('"'"'x86_64'"'"')
+url="https://github.com/jaypetez/glean"
+license=('"'"'MIT'"'"')
+provides=('"'"'glean'"'"')
+conflicts=('"'"'glean'"'"')
+depends=('"'"'ca-certificates'"'"')
+
+source_x86_64=("https://github.com/jaypetez/glean/releases/download/v${pkgver}/glean-linux-x86_64")
+sha256sums_x86_64=('"'"'SKIP'"'"')
+
+package() {
+    install -Dm755 "${srcdir}/glean-linux-x86_64" "${pkgdir}/usr/bin/glean"
+}

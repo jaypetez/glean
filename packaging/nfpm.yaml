@@ -1,0 +1,35 @@
+name: glean
+arch: "${ARCH}"
+platform: linux
+version: "${VERSION}"
+maintainer: "Jayson Petersen"
+description: "Self-hosted RSS/LLM digest daemon that summarizes content and posts to Telegram."
+homepage: "https://github.com/jaypetez/glean"
+license: "MIT"
+section: "utils"
+priority: "optional"
+
+contents:
+  - src: ./dist/glean-linux-${ARCH_LABEL}
+    dst: /usr/bin/glean
+    file_info:
+      mode: 0755
+
+  - src: ./feeds.example.yaml
+    dst: /etc/glean/feeds.example.yaml
+    type: config|noreplace
+
+  - src: ./packaging/glean.service
+    dst: /lib/systemd/system/glean.service
+
+scripts:
+  postinstall: ./packaging/postinstall.sh
+  preremove: ./packaging/preremove.sh
+
+overrides:
+  deb:
+    depends:
+      - ca-certificates
+  rpm:
+    depends:
+      - ca-certificates
