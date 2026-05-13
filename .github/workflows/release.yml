@@ -37,11 +37,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Image metadata
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: |
+            ghcr.io/${{ github.repository }}
+            jaypetez/glean
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -84,6 +92,9 @@ jobs:
         include:
           - os: ubuntu-22.04
             artifact: glean-linux-x86_64
+            ext: ""
+          - os: ubuntu-24.04-arm
+            artifact: glean-linux-arm64
             ext: ""
           - os: macos-13
             artifact: glean-macos-x86_64
@@ -139,6 +150,11 @@ jobs:
           pattern: glean-*
           merge-multiple: true
           path: dist/
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum * > SHA256SUMS
 
       - name: Create release
         uses: softprops/action-gh-release@v3
