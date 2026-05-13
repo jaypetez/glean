@@ -45,7 +45,7 @@ CI runs the same three steps plus a multi-arch Docker build on `main`.
 
 ## Adding plugins
 
-The plugin author's guide is in [`docs/plugins.md`](./docs/plugins.md). Short version:
+The plugin author's guides are in [`docs/plugins/source.md`](./docs/plugins/source.md) and [`docs/plugins/llm.md`](./docs/plugins/llm.md). Short version:
 
 - **Source:** subclass `Source`, implement `fetch(ctx) -> list[Item]`, decorate with `@register_source("yourtype")`. Smallest example: `src/glean/sources/rss.py`.
 - **LLM provider:** implement `rank` / `summarize` / `digest`, decorate with `@register_provider("yourname")`. Smallest example: `src/glean/llm/ollama_provider.py`.

@@ -42,6 +42,10 @@ dev = [
     "mypy>=1.13",
     "types-PyYAML",
 ]
+docs = [
+    "mkdocs-material>=9.5",
+    "mkdocstrings[python]>=0.27",
+]
 
 [project.scripts]
 glean = "glean.cli.app:app"

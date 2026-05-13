@@ -1,0 +1,58 @@
+# feeds.yaml Reference
+
+## Source types
+
+| Type      | Args                                                            |
+|-----------|-----------------------------------------------------------------|
+| `rss`     | `url`                                                           |
+| `scraper` | `urls: [list of article URLs]`                                  |
+| `hn`      | `query`, `tags` (default `story`), `min_points`, `window_hours` |
+| `reddit`  | `subreddit`, `sort` (`top`/`new`/`hot`), `timeframe`, `limit`   |
+| `search`  | `query`, `engine` (`brave`/`tavily`/`searxng`), `limit`         |
+
+## Pipeline stages
+
+| Stage       | Effect                                                       |
+|-------------|--------------------------------------------------------------|
+| `dedup`     | Drop already-seen items (by canonical URL hash).             |
+| `rank`      | LLM scores each item; drops below `min_relevance` (0..1).   |
+| `summarize` | LLM writes a 1-line summary, attached to each item.         |
+| `digest`    | Sets the digest header. Optionally LLM-synthesized.         |
+
+## Schedule syntax
+
+| String              | Meaning                                |
+|---------------------|----------------------------------------|
+| `every 30s`         | Every 30 seconds                       |
+| `every 15m`         | Every 15 minutes                       |
+| `every 1h`          | Every hour                             |
+| `daily 09:00`       | Every day at 09:00 (`$TZ`)             |
+| `@hourly`, `@daily` | Cron presets                           |
+| `0 */2 * * *`       | Any 5-field cron expression            |
+
+## LLM configuration
+
+```yaml
+llm:
+  provider: ollama          # ollama | anthropic | openai
+  model: qwen2.5:7b
+  base_url: http://ollama:11434
+  timeout_s: 60.0
+```
+
+## Render configuration
+
+```yaml
+render:
+  style: html               # html | markdown_v2 | plain
+  link_preview: false
+  max_items: 10              # 1..50
+```
+
+## Failure configuration
+
+```yaml
+failure:
+  alert_after: 3             # consecutive failures before ops-chat alert
+  ops_chat_id: ${TELEGRAM_OPS_CHAT_ID}
+```
