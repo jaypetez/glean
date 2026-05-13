@@ -44,6 +44,7 @@ nav:
       - Writing a Source: plugins/source.md
       - Writing an LLM Provider: plugins/llm.md
       - Writing a Sink: plugins/sink.md
+      - Writing a Search Backend: plugins/search.md
   - Operations:
       - Docker: ops/docker.md
       - Troubleshooting: ops/troubleshooting.md
