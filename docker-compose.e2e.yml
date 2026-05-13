@@ -1,0 +1,88 @@
+# E2E test stack: glean + mock services
+# Usage:
+#   docker compose -f docker-compose.e2e.yml up --build
+#   curl http://localhost:8001/__messages | jq
+#   docker compose -f docker-compose.e2e.yml down -v
+
+services:
+  glean:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: glean-e2e
+    init: true
+    stop_grace_period: 10s
+    environment:
+      TELEGRAM_BOT_TOKEN: fake-bot-token
+      TELEGRAM_BASE_URL: http://mock-telegram:8001
+      LOG_LEVEL: DEBUG
+      TZ: UTC
+    volumes:
+      - ./tests/e2e/feeds.e2e.yaml:/etc/glean/feeds.yaml:ro
+      - e2e-data:/data
+    depends_on:
+      mock-telegram:
+        condition: service_healthy
+      mock-ollama:
+        condition: service_healthy
+      mock-rss:
+        condition: service_healthy
+    networks:
+      - e2e
+
+  mock-telegram:
+    build:
+      context: ./tests/e2e/services
+    container_name: mock-telegram
+    command: uvicorn mock_telegram:app --host 0.0.0.0 --port 8001
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+      start_period: 5s
+    ports:
+      - "127.0.0.1:8001:8001"
+    networks:
+      - e2e
+
+  mock-ollama:
+    build:
+      context: ./tests/e2e/services
+    container_name: mock-ollama
+    command: uvicorn mock_ollama:app --host 0.0.0.0 --port 11434
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/health"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+      start_period: 5s
+    ports:
+      - "127.0.0.1:11434:11434"
+    networks:
+      - e2e
+
+  mock-rss:
+    build:
+      context: ./tests/e2e/services
+    container_name: mock-rss
+    command: uvicorn mock_rss:app --host 0.0.0.0 --port 8002
+    environment:
+      MOCK_RSS_INITIAL: "5"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+      start_period: 5s
+    ports:
+      - "127.0.0.1:8002:8002"
+    networks:
+      - e2e
+
+volumes:
+  e2e-data:
+
+networks:
+  e2e:
+    driver: bridge
