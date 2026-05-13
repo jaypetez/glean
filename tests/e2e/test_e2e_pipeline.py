@@ -9,12 +9,19 @@ import pytest
 pytestmark = pytest.mark.e2e
 
 
-def _wait_for_messages(url: str, min_count: int = 1, timeout: float = 60.0) -> list[dict]:
+def _wait_for_messages(
+    url: str,
+    min_count: int = 1,
+    timeout: float = 60.0,
+    chat_id: str | None = None,
+) -> list[dict]:
     """Poll the mock-telegram messages endpoint until at least min_count arrive."""
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         try:
             msgs = httpx.get(url, timeout=5.0).json()
+            if chat_id is not None:
+                msgs = [m for m in msgs if str(m.get("chat", {}).get("id")) == chat_id]
             if len(msgs) >= min_count:
                 return msgs
         except Exception:  # noqa: BLE001
@@ -26,7 +33,12 @@ def _wait_for_messages(url: str, min_count: int = 1, timeout: float = 60.0) -> l
 def test_glean_sends_digest_to_telegram(e2e_stack: None) -> None:
     """After the e2e stack is up, glean should send at least one digest to mock-telegram."""
     # Schedule is "every 10s" + bootstrap: send-all → first tick should fire ~immediately
-    msgs = _wait_for_messages("http://localhost:8001/__messages", min_count=1, timeout=60)
+    msgs = _wait_for_messages(
+        "http://localhost:8001/__messages",
+        min_count=1,
+        timeout=60,
+        chat_id="1234",
+    )
 
     assert len(msgs) > 0, "mock-telegram never received any messages from glean"
 

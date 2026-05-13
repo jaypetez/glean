@@ -61,6 +61,7 @@ def e2e_stack() -> Generator[None, None, None]:
         _wait_for("http://localhost:8001/health", timeout=60)
         _wait_for("http://localhost:11434/health", timeout=60)
         _wait_for("http://localhost:8002/health", timeout=60)
+        _wait_for("http://localhost:8003/health", timeout=60)
 
         yield
     finally:
@@ -91,3 +92,4 @@ def reset_mocks(e2e_stack: None) -> None:
     httpx.post("http://localhost:8001/__reset", timeout=5)
     httpx.post("http://localhost:11434/__reset", timeout=5)
     httpx.post("http://localhost:8002/__reset", timeout=5)
+    httpx.post("http://localhost:8003/__reset", timeout=5)
