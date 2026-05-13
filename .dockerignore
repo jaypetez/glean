@@ -10,6 +10,8 @@ __pycache__
 .ruff_cache
 data/
 *.db
+*.db-wal
+*.db-shm
 dist/
 build/
 .env

@@ -56,6 +56,13 @@ class StateStore:
 
     async def open(self) -> None:
         self._db = await aiosqlite.connect(self.path)
+        async with self._db.execute("PRAGMA journal_mode=WAL") as cur:
+            journal_mode = await cur.fetchone()
+        if journal_mode is None or str(journal_mode[0]).lower() != "wal":
+            await self._db.close()
+            self._db = None
+            raise RuntimeError(f"Failed to enable WAL mode for {self.path}")
+        await self._db.execute("PRAGMA synchronous=NORMAL")
         await self._db.executescript(_SCHEMA)
         await self._db.commit()
 
