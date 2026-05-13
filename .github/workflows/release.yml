@@ -75,14 +75,70 @@ jobs:
           image: "ghcr.io/${{ github.repository }}@${{ steps.build.outputs.digest }}"
           artifact-name: sbom-${{ github.ref_name }}.spdx.json
 
+  binaries:
+    name: Build binary (${{ matrix.artifact }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            artifact: glean-linux-x86_64
+            ext: ""
+          - os: macos-13
+            artifact: glean-macos-x86_64
+            ext: ""
+          - os: macos-14
+            artifact: glean-macos-arm64
+            ext: ""
+          - os: windows-latest
+            artifact: glean-windows-x86_64
+            ext: ".exe"
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: '0.5.13'
+
+      - name: Install dependencies + PyInstaller
+        run: |
+          uv venv .venv
+          uv pip install . pyinstaller
+
+      - name: Build binary
+        shell: bash
+        run: |
+          source .venv/bin/activate || . .venv/Scripts/activate
+          pyinstaller glean.spec --distpath dist/
+          mv dist/glean${{ matrix.ext }} dist/${{ matrix.artifact }}${{ matrix.ext }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/${{ matrix.artifact }}${{ matrix.ext }}
+          retention-days: 5
+
   github-release:
     name: GitHub Release
     runs-on: ubuntu-latest
-    needs: image
+    needs: [image, binaries]
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: glean-*
+          merge-multiple: true
+          path: dist/
 
       - name: Create release
         uses: softprops/action-gh-release@v3
@@ -90,6 +146,7 @@ jobs:
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
+          files: dist/*
 
   publish-pypi:
     name: Publish to PyPI
