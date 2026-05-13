@@ -43,6 +43,37 @@ services:
     # ports:
     #   - "11434:11434"
 
+  # ────────────────────────────────────────────────────────────────────────────
+  # Optional: Self-hosted SearXNG metasearch — no API key needed.
+  #
+  # 1. Uncomment this service block.
+  # 2. Generate a secret: echo "SEARXNG_SECRET=$(openssl rand -hex 32)" >> .env
+  # 3. The config template is already at ./searxng-config/settings.yml
+  # 4. Start: docker compose up -d
+  # 5. Add a search source to feeds.yaml:
+  #
+  #      sources:
+  #        - type: search
+  #          query: "your topic"
+  #          engine: searxng
+  #          base_url: http://searxng:8080
+  #
+  # See docs/getting-started/search.md for the full guide.
+  # ────────────────────────────────────────────────────────────────────────────
+  #
+  # searxng:
+  #   image: ghcr.io/searxng/searxng:latest
+  #   container_name: glean-searxng
+  #   restart: unless-stopped
+  #   environment:
+  #     SEARXNG_BASE_URL: http://searxng:8080/
+  #     SEARXNG_SECRET: ${SEARXNG_SECRET}
+  #   volumes:
+  #     - ./searxng-config:/etc/searxng:rw
+  #   networks:
+  #     - glean
+  #   # Internal network only — do NOT expose to host
+
 volumes:
   ollama-models:
 
