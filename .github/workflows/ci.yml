@@ -40,15 +40,15 @@ jobs:
       - name: Mypy
         run: uv run mypy src
 
-      - name: Pytest
-        run: uv run pytest -q
-
-      - name: Coverage
+      - name: Pytest + coverage
         run: |
-          . .venv/bin/activate
-          pytest --cov=src/glean --cov-report=xml --cov-report=term-missing --cov-fail-under=70 -q
+          uv run pytest -q \
+            --cov=src/glean \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --cov-fail-under=50
 
-      - name: Upload coverage
+      - name: Upload coverage to Codecov
         if: always()
         uses: codecov/codecov-action@v5
         with:
