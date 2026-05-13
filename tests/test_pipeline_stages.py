@@ -52,12 +52,18 @@ class _LLM:
         pass
 
 
+def _resolver(llm: _LLM) -> Callable[[Item], _LLM]:
+    return lambda _item: llm
+
+
 async def test_rank_stage_drops_below_threshold() -> None:
     items = [_item(title="A"), _item(title="B"), _item(title="C")]
     scores = {"A": 0.9, "B": 0.3, "C": 0.6}
     llm = _LLM(score_fn=lambda item, prompt: scores[item.title])
 
-    kept, dropped = await rank_stage("feed", items, llm, prompt="rank", min_relevance=0.5)
+    kept, dropped = await rank_stage(
+        "feed", items, _resolver(llm), prompt="rank", min_relevance=0.5
+    )
 
     assert len(kept) == 2
     assert {item.title for item in kept} == {"A", "C"}
@@ -75,7 +81,9 @@ async def test_rank_stage_handles_llm_exception() -> None:
 
     llm = _LLM(score_fn=fail_a)
 
-    kept, dropped = await rank_stage("feed", items, llm, prompt="r", min_relevance=0.5)
+    kept, dropped = await rank_stage(
+        "feed", items, _resolver(llm), prompt="r", min_relevance=0.5
+    )
 
     assert len(kept) == 1
     assert kept[0].title == "B"
@@ -85,7 +93,9 @@ async def test_rank_stage_handles_llm_exception() -> None:
 async def test_rank_stage_with_empty_items() -> None:
     llm = _LLM()
 
-    kept, dropped = await rank_stage("feed", [], llm, prompt="r", min_relevance=0.5)
+    kept, dropped = await rank_stage(
+        "feed", [], _resolver(llm), prompt="r", min_relevance=0.5
+    )
 
     assert kept == []
     assert dropped == []
@@ -96,7 +106,9 @@ async def test_rank_stage_sorts_by_relevance_desc() -> None:
     scores = {str(i): i / 10 for i in range(5)}
     llm = _LLM(score_fn=lambda item, prompt: scores[item.title])
 
-    kept, _ = await rank_stage("feed", items, llm, prompt="r", min_relevance=0.0)
+    kept, _ = await rank_stage(
+        "feed", items, _resolver(llm), prompt="r", min_relevance=0.0
+    )
 
     relevances = [item.relevance for item in kept]
     assert relevances == sorted(relevances, reverse=True)
@@ -106,7 +118,7 @@ async def test_summarize_stage_attaches_llm_summary() -> None:
     items = [_item(title="X")]
     llm = _LLM(summary_fn=lambda item, prompt: f"LLM: {item.title}")
 
-    out = await summarize_stage("feed", items, llm, prompt="sum")
+    out = await summarize_stage("feed", items, _resolver(llm), prompt="sum")
 
     assert out[0].llm_summary == "LLM: X"
 
@@ -119,7 +131,7 @@ async def test_summarize_stage_falls_back_on_exception() -> None:
 
     llm = _LLM(summary_fn=fail)
 
-    out = await summarize_stage("feed", items, llm, prompt="sum")
+    out = await summarize_stage("feed", items, _resolver(llm), prompt="sum")
 
     assert out[0].llm_summary == "source summary"
 
@@ -127,7 +139,7 @@ async def test_summarize_stage_falls_back_on_exception() -> None:
 async def test_summarize_stage_empty_items() -> None:
     llm = _LLM()
 
-    assert await summarize_stage("feed", [], llm, prompt="x") == []
+    assert await summarize_stage("feed", [], _resolver(llm), prompt="x") == []
 
 
 async def test_digest_intro_returns_llm_output() -> None:

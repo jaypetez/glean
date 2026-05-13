@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 
 class LLMConfig(BaseModel):
@@ -93,6 +93,16 @@ class FeedConfig(BaseModel):
             self.sinks = [{"type": "telegram", "chat_id": self.chat_id}]
             return self
         raise ValueError("feed must have either 'chat_id' or 'sinks'")
+
+    @model_validator(mode="after")
+    def _validate_source_llm_specs(self) -> Self:
+        for i, spec in enumerate(self.sources):
+            if "llm" in spec:
+                try:
+                    LLMConfig.model_validate(spec["llm"])
+                except ValidationError as exc:
+                    raise ValueError(f"sources[{i}].llm: {exc}") from exc
+        return self
 
     def effective_llm(self, defaults: Defaults) -> LLMConfig:
         return self.llm or defaults.llm
