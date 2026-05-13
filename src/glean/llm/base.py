@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import ClassVar, Protocol, runtime_checkable
+from typing import Any, ClassVar, Protocol, runtime_checkable
 
 from glean.sources.base import Item
 
@@ -18,5 +18,18 @@ class LLMProvider(Protocol):
 
     async def digest(self, items: list[Item], prompt: str) -> str:
         """Optional: synthesize a header/intro line for the digest."""
+
+    async def extract(
+        self,
+        item: Item,
+        prompt: str,
+        output_schema: dict[str, Any],
+        *,
+        system_prompt: str | None = None,
+    ) -> dict[str, Any]:
+        """Extract structured data matching output_schema (JSON Schema dict).
+
+        Returns {} on parse/extraction failure.
+        """
 
     async def aclose(self) -> None: ...

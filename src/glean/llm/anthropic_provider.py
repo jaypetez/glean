@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import ClassVar
+from typing import Any, ClassVar, cast
 
 import anthropic
 from anthropic.types import TextBlock
@@ -65,6 +65,36 @@ class AnthropicProvider:
             items_as_prompt_context(items),
             max_tokens=256,
         )
+
+    async def extract(
+        self,
+        item: Item,
+        prompt: str,
+        output_schema: dict[str, Any],
+        *,
+        system_prompt: str | None = None,
+    ) -> dict[str, Any]:
+        tool_def = {
+            "name": "extract",
+            "description": "Extract structured data from the content.",
+            "input_schema": output_schema,
+        }
+        user = f"{prompt}\n\n{item_as_prompt_context(item)}"
+        resp = await self._client.messages.create(
+            model=self.model,
+            system=system_prompt or "Extract structured data.",
+            max_tokens=1024,
+            tools=cast(Any, [tool_def]),
+            tool_choice=cast(Any, {"type": "tool", "name": "extract"}),
+            messages=cast(Any, [{"role": "user", "content": user}]),
+        )
+        for block in resp.content:
+            if getattr(block, "name", None) == "extract":
+                input_data = getattr(block, "input", None)
+                if isinstance(input_data, dict):
+                    return dict(input_data)
+                return {}
+        return {}
 
     async def aclose(self) -> None:
         await self._client.close()

@@ -80,6 +80,21 @@ def load_config(path: str | Path) -> Config:
         except ValueError as exc:
             raise ConfigError(f"feed {feed.name!r}: {exc}") from exc
 
+    skill_names = {s.name for s in cfg.skills}
+    for feed in cfg.feeds:
+        for stage in feed.pipeline:
+            if stage.name == "apply_skill":
+                skill_ref = stage.params.get("skill")
+                if skill_ref is None:
+                    raise ConfigError(
+                        f"feed {feed.name!r}: apply_skill stage missing 'skill' param"
+                    )
+                if skill_ref not in skill_names:
+                    raise ConfigError(
+                        f"feed {feed.name!r}: apply_skill references unknown skill "
+                        f"{skill_ref!r}. Defined skills: {sorted(skill_names)}"
+                    )
+
     if missing:
         raise ConfigError(
             "unresolved environment variables in config: "

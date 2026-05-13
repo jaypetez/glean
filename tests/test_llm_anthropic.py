@@ -146,3 +146,42 @@ async def test_anthropic_uses_env_api_key(monkeypatch: pytest.MonkeyPatch) -> No
     provider = AnthropicProvider(model="claude-3")
 
     assert provider.model == "claude-3"
+
+
+async def test_extract_uses_forced_tool_call() -> None:
+    provider = AnthropicProvider(model="claude-3", api_key="fake")
+    block = SimpleNamespace(name="extract", input={"summary": "S", "ok": True})
+    msg = SimpleNamespace(content=[block])
+    provider._client = SimpleNamespace(
+        messages=SimpleNamespace(create=AsyncMock(return_value=msg)),
+        close=AsyncMock(),
+    )
+
+    result = await provider.extract(
+        _item(),
+        "do it",
+        {
+            "type": "object",
+            "properties": {
+                "summary": {"type": "string"},
+                "ok": {"type": "boolean"},
+            },
+        },
+    )
+
+    assert result == {"summary": "S", "ok": True}
+    call = provider._client.messages.create.await_args
+    assert call.kwargs["tool_choice"] == {"type": "tool", "name": "extract"}
+
+
+async def test_extract_returns_empty_when_no_tool_block() -> None:
+    provider = AnthropicProvider(model="claude-3", api_key="fake")
+    msg = SimpleNamespace(content=[])
+    provider._client = SimpleNamespace(
+        messages=SimpleNamespace(create=AsyncMock(return_value=msg)),
+        close=AsyncMock(),
+    )
+
+    result = await provider.extract(_item(), "x", {"type": "object", "properties": {}})
+
+    assert result == {}
