@@ -147,7 +147,7 @@ jobs:
           chmod +x dist/glean-linux-x86_64
           VERSION="${GITHUB_REF_NAME#v}"
           for fmt in deb rpm apk; do
-            ARCH=amd64 ARCH_LABEL=x86_64 VERSION="$VERSION" \
+            VERSION="$VERSION" \
               nfpm package --config packaging/nfpm.yaml --packager "$fmt" --target dist/
           done
 

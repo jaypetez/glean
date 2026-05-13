@@ -1,5 +1,5 @@
 name: glean
-arch: "${ARCH}"
+arch: amd64
 platform: linux
 version: "${VERSION}"
 maintainer: "Jayson Petersen"
@@ -10,7 +10,7 @@ section: "utils"
 priority: "optional"
 
 contents:
-  - src: ./dist/glean-linux-${ARCH_LABEL}
+  - src: ./dist/glean-linux-x86_64
     dst: /usr/bin/glean
     file_info:
       mode: 0755
