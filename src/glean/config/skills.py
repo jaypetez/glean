@@ -2,12 +2,11 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any, Self
+from typing import Any, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-if TYPE_CHECKING:
-    from glean.config.schema import LLMConfig
+from glean.config.llm import LLMConfig
 
 # Safe type vocabulary for output_schema field types.
 _VALID_FIELD_TYPES = frozenset(

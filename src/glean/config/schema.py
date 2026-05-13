@@ -4,22 +4,8 @@ from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from glean.config.llm import LLMConfig
 from glean.config.skills import SkillConfig
-
-
-class LLMConfig(BaseModel):
-    # Plugins may register additional providers, so we accept any string here
-    # and defer validation to the registry at construction time.
-    model_config = ConfigDict(extra="forbid")
-
-    provider: str = "ollama"
-    model: str = "qwen2.5:7b"
-    base_url: str | None = None
-    api_key: str | None = None
-    timeout_s: float = 60.0
-
-
-SkillConfig.model_rebuild(_types_namespace={"LLMConfig": LLMConfig})
 
 
 class RenderConfig(BaseModel):

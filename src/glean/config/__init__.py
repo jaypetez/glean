@@ -1,3 +1,4 @@
+from glean.config.llm import LLMConfig
 from glean.config.loader import load_config
 from glean.config.schedule import parse_schedule
 from glean.config.schema import (
@@ -5,7 +6,6 @@ from glean.config.schema import (
     Defaults,
     FailureConfig,
     FeedConfig,
-    LLMConfig,
     RenderConfig,
     StageSpec,
 )
