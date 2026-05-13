@@ -1,0 +1,23 @@
+# Codecov configuration
+# https://docs.codecov.com/docs/codecov-yaml
+
+coverage:
+  status:
+    project:
+      default:
+        target: 50%
+        threshold: 1%
+    patch:
+      default:
+        target: 70%
+        threshold: 5%
+
+comment:
+  layout: "reach,diff,flags,files"
+  behavior: default
+  require_changes: true
+
+# Ignore generated and test files for coverage calculation
+ignore:
+  - "tests/**"
+  - "src/glean/__main__.py"

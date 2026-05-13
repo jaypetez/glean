@@ -73,6 +73,34 @@ Every new plugin needs:
 - User-visible changes are mentioned in the README or relevant doc.
 - No secrets, no large binaries, no committed `.env` or `.venv`.
 
+## Code review
+
+PRs in this repo are automatically reviewed by GitHub Copilot. Copilot leaves
+inline comments suggesting improvements; the reviews are advisory only and
+don't block merges.
+
+### Maintainer setup (one-time)
+
+To enable automatic Copilot reviews, the repo owner must:
+
+1. Go to **Settings** → **Rules** → **Rulesets** → **New branch ruleset**
+2. Set name to `copilot-review`, target branch to `main` ("Include default branch")
+3. Under **Branch rules**, enable **"Automatically request Copilot code review"**
+4. Enable **"Review new pushes"** (re-reviews on each push to the PR)
+5. Click **Create**
+
+This requires GitHub Copilot Pro+ for the repository owner.
+
+### Coverage
+
+Every PR runs the test suite with coverage reporting. The thresholds are:
+
+- **Project coverage** must stay above **50%** (allows 1% wiggle room)
+- **Patch coverage** (new code in the PR) targets **70%** (allows 5% slack)
+
+Codecov posts a comment on each PR showing the coverage delta and which files
+changed. Coverage is tracked in `codecov.yml`.
+
 ## Releases
 
 Releases are cut from `main` by maintainers. Tagging `vX.Y.Z` triggers a release workflow that publishes a multi-arch image to `ghcr.io/jaypetez/glean`. You don't need to bump versions in your PR — that happens at release time.
