@@ -4,6 +4,8 @@ from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from glean.config.skills import SkillConfig
+
 
 class LLMConfig(BaseModel):
     # Plugins may register additional providers, so we accept any string here
@@ -17,7 +19,7 @@ class LLMConfig(BaseModel):
     timeout_s: float = 60.0
 
 
-from glean.config.skills import SkillConfig  # noqa: E402
+SkillConfig.model_rebuild(_types_namespace={"LLMConfig": LLMConfig})
 
 
 class RenderConfig(BaseModel):

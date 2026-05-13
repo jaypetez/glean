@@ -28,6 +28,19 @@ def test_skill_config_valid() -> None:
     assert len(skill.output_schema) == 3
 
 
+def test_skill_llm_override_parses() -> None:
+    skill = SkillConfig(
+        name="with-llm",
+        prompt="Extract from {title}",
+        output_schema={"summary": "str"},
+        llm={"provider": "openai", "model": "gpt-4o-mini"},
+    )
+
+    assert skill.llm is not None
+    assert skill.llm.provider == "openai"
+    assert skill.llm.model == "gpt-4o-mini"
+
+
 def test_skill_unknown_template_var_rejected() -> None:
     with pytest.raises(ValueError, match="unknown variables"):
         SkillConfig(
