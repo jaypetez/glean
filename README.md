@@ -22,7 +22,7 @@
 
 ## Status
 
-**v1.0** — stable core surfaces. Shipped sinks include Telegram, Discord, ntfy.sh, and Slack; the architecture is sink-agnostic and more sinks (email, webhook, file) are roadmap. See [DESIGN.md](./DESIGN.md) for the long view.
+**v1.0** — stable core surfaces. Shipped sinks include Telegram, Discord, ntfy.sh, Slack, Webhook, and File; the architecture is sink-agnostic and more sinks (email, Matrix) are roadmap. See [DESIGN.md](./DESIGN.md) for the long view.
 
 ## Why
 
@@ -129,6 +129,14 @@ sinks:
     topic: my-topic
   - type: slack
     webhook_url: ${SLACK_WEBHOOK_URL}
+  - type: file
+    path: /data/glean-archive.jsonl
+    format: jsonl
+    required: false
+  - type: webhook
+    url: https://example.com/hook
+    auth_bearer: ${WEBHOOK_TOKEN}
+    required: false
 ```
 
 ### Schedules
@@ -178,7 +186,7 @@ Breaking changes require a major version bump and are documented in release note
 
 ## Roadmap
 
-- More first-party sinks: email (SMTP), webhook (POST any URL), file/append-only log.
+- More first-party sinks: email (SMTP), Matrix.
 - Inbound Telegram (and other) commands — `/pause <feed>`, `/run <feed>` from the chat itself.
 - Embedding-based semantic dedup ("we already covered this story 2 days ago").
 - Per-feed prompt versioning + A/B testing.

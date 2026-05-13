@@ -31,7 +31,7 @@ def build_sink(spec: dict[str, Any]) -> Sink:
 
 def _import_builtins() -> None:
     # Eager import so decorators register on first use.
-    from glean.sinks import discord, ntfy, slack, telegram  # noqa: F401
+    from glean.sinks import discord, file, ntfy, slack, telegram, webhook  # noqa: F401
 
 
 _import_builtins()

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import httpx
@@ -260,6 +262,30 @@ def _ctx() -> SendContext:
     )
 
 
+def _make_ctx(items: list[Item] | None = None) -> SendContext:
+    items = items or [
+        Item(
+            canonical_url="https://example.com/a",
+            title="A",
+            source_type="rss",
+            source_name="ex",
+        ),
+        Item(
+            canonical_url="https://example.com/b",
+            title="B",
+            source_type="rss",
+            source_name="ex",
+        ),
+    ]
+    return SendContext(
+        feed="t1",
+        items=items,
+        messages=["msg1", "msg2"],
+        intro="intro line",
+        render=RenderConfig(),
+    )
+
+
 @respx.mock
 async def test_discord_sink_posts_webhook() -> None:
     route = respx.post("https://discord.com/api/webhooks/123/abc").mock(
@@ -481,3 +507,159 @@ async def test_each_sink_raises_on_missing_required_field() -> None:
         build_sink({"type": "ntfy"})
     with pytest.raises(ValueError):
         build_sink({"type": "slack"})
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_webhook_sink_posts_payload() -> None:
+    route = respx.post("https://example.com/hook").mock(
+        return_value=httpx.Response(200, json={"ok": True})
+    )
+    sink = build_sink({"type": "webhook", "url": "https://example.com/hook"})
+    try:
+        await sink.send(_make_ctx())
+    finally:
+        await sink.aclose()
+
+    assert route.called
+    request = route.calls.last.request
+    payload = json.loads(request.content)
+    assert payload["feed"] == "t1"
+    assert payload["intro"] == "intro line"
+    assert len(payload["items"]) == 2
+    assert payload["items"][0]["url"] == "https://example.com/a"
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_webhook_sink_raises_on_http_error() -> None:
+    respx.post("https://example.com/hook").mock(return_value=httpx.Response(500, text="oops"))
+    sink = build_sink({"type": "webhook", "url": "https://example.com/hook"})
+    try:
+        with pytest.raises(httpx.HTTPStatusError):
+            await sink.send(_make_ctx())
+    finally:
+        await sink.aclose()
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_webhook_sink_supports_bearer_auth() -> None:
+    route = respx.post("https://example.com/hook").mock(return_value=httpx.Response(200))
+    sink = build_sink(
+        {
+            "type": "webhook",
+            "url": "https://example.com/hook",
+            "auth_bearer": "secret-token",
+        }
+    )
+    try:
+        await sink.send(_make_ctx())
+    finally:
+        await sink.aclose()
+    assert route.calls.last.request.headers["Authorization"] == "Bearer secret-token"
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_webhook_sink_supports_basic_auth_list() -> None:
+    route = respx.post("https://example.com/hook").mock(return_value=httpx.Response(200))
+    sink = build_sink(
+        {
+            "type": "webhook",
+            "url": "https://example.com/hook",
+            "auth_basic": ["user", "pass"],
+        }
+    )
+    try:
+        await sink.send(_make_ctx())
+    finally:
+        await sink.aclose()
+    assert route.calls.last.request.headers["Authorization"] == "Basic dXNlcjpwYXNz"
+
+
+async def test_webhook_sink_rejects_invalid_basic_auth_list() -> None:
+    with pytest.raises(ValueError, match="auth_basic must be"):
+        build_sink(
+            {
+                "type": "webhook",
+                "url": "https://example.com/hook",
+                "auth_basic": ["only-user"],
+            }
+        )
+
+
+@pytest.mark.asyncio
+async def test_file_sink_text_format(tmp_path: Path) -> None:
+    out = tmp_path / "out.txt"
+    sink = build_sink({"type": "file", "path": str(out)})
+    await sink.send(_make_ctx())
+    await sink.aclose()
+    content = out.read_text(encoding="utf-8")
+    assert "msg1" in content
+    assert "msg2" in content
+    assert "---" in content
+
+
+@pytest.mark.asyncio
+async def test_file_sink_write_does_not_block_event_loop(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from glean.sinks.file import FileSink
+
+    out = tmp_path / "out.txt"
+    sink = build_sink({"type": "file", "path": str(out)})
+    start = time.perf_counter()
+    first_tick_at: float | None = None
+
+    async def ticker() -> None:
+        nonlocal first_tick_at
+        await asyncio.sleep(0.01)
+        first_tick_at = time.perf_counter() - start
+
+    def slow_write(self: FileSink, ctx: SendContext) -> None:
+        time.sleep(0.2)
+        self.path.write_text(ctx.messages[0], encoding="utf-8")
+
+    monkeypatch.setattr(FileSink, "_write_text", slow_write)
+    await asyncio.gather(sink.send(_make_ctx()), ticker())
+    await sink.aclose()
+
+    assert first_tick_at is not None
+    assert first_tick_at < 0.1
+
+
+@pytest.mark.asyncio
+async def test_file_sink_jsonl_format(tmp_path: Path) -> None:
+    out = tmp_path / "out.jsonl"
+    sink = build_sink({"type": "file", "path": str(out), "format": "jsonl"})
+    await sink.send(_make_ctx())
+    await sink.aclose()
+    lines = out.read_text(encoding="utf-8").strip().split("\n")
+    assert len(lines) == 2
+    row = json.loads(lines[0])
+    assert row["feed"] == "t1"
+    assert row["title"] == "A"
+
+
+@pytest.mark.asyncio
+async def test_file_sink_markdown_format(tmp_path: Path) -> None:
+    out = tmp_path / "out.md"
+    sink = build_sink({"type": "file", "path": str(out), "format": "markdown"})
+    await sink.send(_make_ctx())
+    await sink.aclose()
+    content = out.read_text(encoding="utf-8")
+    assert "## intro line" in content
+    assert "### A" in content
+    assert "### B" in content
+
+
+@pytest.mark.asyncio
+async def test_file_sink_appends(tmp_path: Path) -> None:
+    out = tmp_path / "out.txt"
+    sink = build_sink({"type": "file", "path": str(out)})
+    await sink.send(_make_ctx())
+    await sink.send(_make_ctx())
+    await sink.aclose()
+    content = out.read_text(encoding="utf-8")
+    assert content.count("msg1") == 2
