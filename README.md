@@ -32,7 +32,7 @@ The longer game: any "periodically pull X, process with an LLM, deliver to Y" wo
 
 ## Features
 
-- **Pluggable sources** — RSS/Atom, web scraping, Hacker News, Reddit, web search (Brave / Tavily / SearXNG). Add your own in one file.
+- **Pluggable sources** — RSS/Atom, web scraping, Hacker News, Reddit, web search (Brave / Tavily / SearXNG / Serper / Exa / MWMBL). Add your own in one file.
 - **Pluggable LLM** — Ollama (default), Anthropic, OpenAI. Per-feed provider/model: local for the noisy feed, Claude for the important one.
 - **Per-feed pipeline** — declare stages in YAML: `dedup → rank → summarize → digest`. Reorder freely. Skip stages you don't want.
 - **Smart dedup** — SQLite-backed, persists across restarts. New feed? Indexed silently on first tick — no surprise 200-item dump.
@@ -105,7 +105,7 @@ feeds:
 | `scraper` | `urls: [list of article URLs]`                                  |
 | `hn`      | `query`, `tags` (default `story`), `min_points`, `window_hours` |
 | `reddit`  | `subreddit`, `sort` (`top`/`new`/`hot`), `timeframe`, `limit`   |
-| `search`  | `query`, `engine` (`brave`/`tavily`/`searxng`), `limit`         |
+| `search`  | `query`, `engine` (`brave`/`tavily`/`searxng`/`serper`/`exa`/`mwmbl`), `limit` |
 
 ### Pipeline stages
 

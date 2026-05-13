@@ -17,6 +17,10 @@ def _isolate_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "OPENAI_API_KEY",
         "BRAVE_API_KEY",
         "TAVILY_API_KEY",
+        "SERPER_API_KEY",
+        "EXA_API_KEY",
+        "SEARXNG_URL",
+        "SEARCH_ENGINE",
     ]:
         monkeypatch.delenv(key, raising=False)
 
