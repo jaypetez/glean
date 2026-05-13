@@ -1,18 +1,20 @@
 [project]
 name = "glean"
-version = "0.1.0"
+version = "1.0.0"
 description = "Pluggable content aggregator that summarizes feeds via LLM and posts digests to Telegram."
 readme = "README.md"
 requires-python = ">=3.12"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "Jayson Petersen" }]
 keywords = ["telegram", "rss", "ollama", "llm", "digest", "bot"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Intended Audience :: End Users/Desktop",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Communications :: Chat",
 ]
 dependencies = [
