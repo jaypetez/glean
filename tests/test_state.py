@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -79,3 +80,65 @@ async def test_bootstrap_flag(tmp_db: Path) -> None:
         assert await s.is_bootstrapped("ai") is True
     finally:
         await s.close()
+
+
+async def test_open_enables_wal_mode(tmp_db: Path) -> None:
+    s = StateStore(tmp_db)
+    try:
+        await s.open()
+        async with s.db.execute("PRAGMA journal_mode") as cur:
+            journal_mode = await cur.fetchone()
+        async with s.db.execute("PRAGMA synchronous") as cur:
+            synchronous = await cur.fetchone()
+        assert journal_mode == ("wal",)
+        assert synchronous == (1,)
+    finally:
+        await s.close()
+
+
+async def test_open_raises_when_wal_mode_cannot_be_enabled(
+    monkeypatch: pytest.MonkeyPatch, tmp_db: Path
+) -> None:
+    class FakeCursor:
+        def __init__(self, row: tuple[str, ...]) -> None:
+            self._row = row
+
+        async def __aenter__(self) -> FakeCursor:
+            return self
+
+        async def __aexit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
+            return None
+
+        async def fetchone(self) -> tuple[str, ...]:
+            return self._row
+
+    class FakeConnection:
+        def __init__(self) -> None:
+            self.closed = False
+
+        def execute(self, sql: str) -> FakeCursor:
+            assert sql == "PRAGMA journal_mode=WAL"
+            return FakeCursor(("delete",))
+
+        async def executescript(self, script: str) -> None:
+            raise AssertionError("schema should not be applied when WAL cannot be enabled")
+
+        async def commit(self) -> None:
+            raise AssertionError("commit should not run when WAL cannot be enabled")
+
+        async def close(self) -> None:
+            self.closed = True
+
+    fake_db = FakeConnection()
+
+    async def fake_connect(path: Path) -> FakeConnection:
+        assert path == tmp_db
+        return fake_db
+
+    monkeypatch.setattr("glean.state.store.aiosqlite.connect", fake_connect)
+
+    s = StateStore(tmp_db)
+    with pytest.raises(RuntimeError, match="Failed to enable WAL mode"):
+        await s.open()
+    assert fake_db.closed is True
+    assert s._db is None

@@ -1,27 +1,34 @@
 ### Build stage ###
-FROM python:3.14-slim AS builder
+FROM python:3.12-slim-bookworm AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
     UV_LINK_MODE=copy \
+    UV_COMPILE_BYTECODE=1 \
     UV_PROJECT_ENVIRONMENT=/opt/venv
 
-# uv: fast Python package installer.
 COPY --from=ghcr.io/astral-sh/uv:0.5.13 /uv /usr/local/bin/uv
 
 WORKDIR /app
-COPY pyproject.toml README.md ./
-COPY src ./src
 
-RUN uv venv /opt/venv \
- && uv pip install --python /opt/venv/bin/python --no-cache .
+# Layer 1: dependencies (changes rarely)
+COPY pyproject.toml uv.lock ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv venv /opt/venv \
+ && uv sync --frozen --no-dev --no-install-project
+
+# Layer 2: application code (changes often)
+COPY README.md ./
+COPY src ./src
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev
 
 ### Runtime stage ###
-FROM python:3.14-slim AS runtime
+FROM python:3.12-slim-bookworm AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
+    PYTHONUTF8=1 \
     PATH="/opt/venv/bin:$PATH" \
     GLEAN_CONFIG=/etc/glean/feeds.yaml \
     GLEAN_DB=/data/state.db \
@@ -30,10 +37,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     TZ=UTC
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends tzdata curl ca-certificates \
+ && apt-get install -y --no-install-recommends tzdata ca-certificates \
  && rm -rf /var/lib/apt/lists/* \
  && groupadd --system glean \
- && useradd --system --gid glean --home /home/glean --create-home glean \
+ && useradd --system --no-log-init --gid glean --home /home/glean --create-home glean \
  && mkdir -p /data /etc/glean \
  && chown -R glean:glean /data /etc/glean
 
@@ -44,8 +51,8 @@ WORKDIR /home/glean
 
 EXPOSE 9090
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD curl -fsS http://127.0.0.1:9090/healthz || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9090/healthz', timeout=4)" || exit 1
 
 ENTRYPOINT ["glean"]
 CMD ["run"]

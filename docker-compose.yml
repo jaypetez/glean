@@ -5,6 +5,8 @@ services:
       dockerfile: Dockerfile
     image: ghcr.io/jaypetez/glean:latest
     container_name: glean
+    init: true
+    stop_grace_period: 30s
     restart: unless-stopped
     depends_on:
       - ollama
@@ -29,6 +31,14 @@ services:
       - ollama-models:/root/.ollama
     networks:
       - glean
+    # Uncomment for NVIDIA GPU passthrough:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
     # Uncomment to expose Ollama to the host:
     # ports:
     #   - "11434:11434"
