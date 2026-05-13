@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import os
 import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar
@@ -129,11 +130,12 @@ class Runner:
         return sinks
 
     def _can_use_injected_telegram(self, spec: dict[str, object]) -> bool:
-        # Token or unknown Telegram options need the real plugin constructor.
+        # Token, base URL, or unknown Telegram options need the real plugin constructor.
         return (
             self.telegram is not None
             and spec.get("type") == "telegram"
             and "token" not in spec
+            and not os.environ.get("TELEGRAM_BASE_URL")
             and set(spec) <= {"type", "chat_id", "required"}
         )
 

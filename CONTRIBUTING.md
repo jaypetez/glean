@@ -43,6 +43,38 @@ pytest -q
 
 CI runs the same three steps plus a multi-arch Docker build on `main`.
 
+## End-to-end tests
+
+The repo ships a `docker-compose.e2e.yml` that wires the glean container to
+three mock services (mock-telegram, mock-ollama, mock-rss) so you can exercise
+the full pipeline locally without external accounts.
+
+### Run locally
+
+```bash
+# Start the stack
+docker compose -f docker-compose.e2e.yml up --build
+
+# In another terminal, watch what glean sent to mock-telegram
+curl http://localhost:8001/__messages | jq
+
+# Inspect mock-ollama calls
+curl http://localhost:11434/__calls | jq
+
+# Tear down (also removes the data volume)
+docker compose -f docker-compose.e2e.yml down -v
+```
+
+### Run the pytest E2E harness
+
+```bash
+# Runs the same compose stack and asserts glean delivered messages
+uv run pytest tests/e2e -v -m e2e
+```
+
+The `-m e2e` selector keeps E2E tests out of the default `pytest` run (they
+require Docker). CI runs them in a separate job after the unit tests pass.
+
 ## Adding plugins
 
 The plugin author's guides are in [`docs/plugins/source.md`](./docs/plugins/source.md) and [`docs/plugins/llm.md`](./docs/plugins/llm.md). Short version:

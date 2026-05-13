@@ -96,3 +96,7 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+addopts = "-m 'not e2e'"
+markers = [
+    "e2e: marks tests as end-to-end (requires docker compose)",
+]

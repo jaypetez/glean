@@ -210,7 +210,12 @@ uv venv
 uv pip install -e ".[dev]"
 ruff check src tests
 mypy src
-pytest -q
+
+# Standard tests
+uv run pytest -q
+
+# End-to-end against mock services (requires Docker)
+docker compose -f docker-compose.e2e.yml up --build
 ```
 
 ## Contributing
