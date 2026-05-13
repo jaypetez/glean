@@ -37,6 +37,8 @@ The longer game: any "periodically pull X, process with an LLM, deliver to Y" wo
 - **Pluggable sources** — RSS/Atom, web scraping, Hacker News, Reddit, web search (SearXNG / Brave / Tavily / Serper / Exa / MWMBL). Add your own in one file. See [`docs/plugins/source.md`](./docs/plugins/source.md).
 - **Pluggable sinks** — Telegram, Discord, Slack, ntfy.sh, generic Webhook, File (text/JSONL/markdown). Fan out a single feed to multiple sinks; mark some as `required: false` to swallow non-critical failures. See [`docs/plugins/sink.md`](./docs/plugins/sink.md).
 - **Pluggable LLM** — Ollama (default), Anthropic, OpenAI. Per-feed provider/model: local for the noisy feed, Claude for the important one. See [`docs/plugins/llm.md`](./docs/plugins/llm.md).
+- **Per-source LLM models** — each source within a feed can use its own LLM. Cheap local model for noisy RSS, Claude Haiku for the curated subreddit, premium Sonnet for the security feed. See [`docs/config/per-source-llm.md`](./docs/config/per-source-llm.md).
+- **Reusable structured skills** — define named extraction templates with JSON output schemas, then reference them from any feed. Built-in examples: deal-finder, CVE extractor, paper digest, job posting. See [`docs/config/skills.md`](./docs/config/skills.md).
 - **Pluggable web search** — six backends including the self-hosted [SearXNG](./docs/getting-started/search.md) for users who don't want cloud API keys. See [`docs/plugins/search.md`](./docs/plugins/search.md).
 - **Per-feed pipeline** — declare stages in YAML: `dedup → rank → summarize → digest`. Reorder freely. Skip stages you don't want.
 - **Smart dedup** — SQLite-backed (WAL mode), persists across restarts. New feed? Indexed silently on first tick — no surprise 200-item dump.
@@ -122,6 +124,7 @@ feeds:
 | `dedup`     | Drop already-seen items (by canonical URL hash).             |
 | `rank`      | LLM scores each item; drops below `min_relevance` (0..1).    |
 | `summarize` | LLM writes a 1-line summary, attached to each item.          |
+| `apply_skill` | Run a named skill (structured extraction); attaches JSON fields to `Item.structured` and auto-fills `llm_summary` from a `summary`/`one_liner`/`tldr` field. |
 | `digest`    | Sets the digest header. Optionally LLM-synthesized.          |
 
 ### Sinks (fan-out)

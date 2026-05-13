@@ -40,6 +40,8 @@ nav:
       - feeds.yaml Reference: config/feeds.md
       - Schedule Syntax: config/schedules.md
       - Environment Variables: config/env.md
+      - Per-source LLM: config/per-source-llm.md
+      - Skills: config/skills.md
   - Plugins:
       - Writing a Source: plugins/source.md
       - Writing an LLM Provider: plugins/llm.md

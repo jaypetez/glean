@@ -10,6 +10,12 @@
 | `reddit`  | `subreddit`, `sort` (`top`/`new`/`hot`), `timeframe`, `limit`   |
 | `search`  | `query`, `engine`, `limit`, plus engine-specific kwargs (see below) |
 
+### Per-source LLM
+
+Any source spec accepts an optional `llm:` field. This overrides the feed/default
+LLM for items fetched from that source, so one feed can mix local and premium
+models by source. See [Per-source LLM models](./per-source-llm.md).
+
 ### Search backends
 
 The `search` source delegates to a pluggable backend. Each backend has its
@@ -93,6 +99,7 @@ feeds:
 | `dedup`     | Drop already-seen items (by canonical URL hash).             |
 | `rank`      | LLM scores each item; drops below `min_relevance` (0..1).   |
 | `summarize` | LLM writes a 1-line summary, attached to each item.         |
+| `apply_skill` | Run a structured extraction skill on each item; attaches result to `Item.structured` and copies a `summary`/`one_liner`/`tldr` field into `llm_summary`. See [Skills](./skills.md). |
 | `digest`    | Sets the digest header. Optionally LLM-synthesized.         |
 
 ## Sinks
