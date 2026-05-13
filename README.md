@@ -32,7 +32,7 @@ The longer game: any "periodically pull X, process with an LLM, deliver to Y" wo
 
 ## Features
 
-- **Pluggable sources** — RSS/Atom, web scraping, Hacker News, Reddit, web search (Brave / Tavily / SearXNG / Serper / Exa / MWMBL). Add your own in one file.
+- **Pluggable sources** — RSS/Atom, web scraping, Hacker News, Reddit, web search (SearXNG / Brave / Tavily / Serper / Exa / MWMBL). Add your own in one file.
 - **Pluggable LLM** — Ollama (default), Anthropic, OpenAI. Per-feed provider/model: local for the noisy feed, Claude for the important one.
 - **Per-feed pipeline** — declare stages in YAML: `dedup → rank → summarize → digest`. Reorder freely. Skip stages you don't want.
 - **Smart dedup** — SQLite-backed, persists across restarts. New feed? Indexed silently on first tick — no surprise 200-item dump.
@@ -105,7 +105,7 @@ feeds:
 | `scraper` | `urls: [list of article URLs]`                                  |
 | `hn`      | `query`, `tags` (default `story`), `min_points`, `window_hours` |
 | `reddit`  | `subreddit`, `sort` (`top`/`new`/`hot`), `timeframe`, `limit`   |
-| `search`  | `query`, `engine` (`brave`/`tavily`/`searxng`/`serper`/`exa`/`mwmbl`), `limit` |
+| `search`  | `query`, `engine`, `limit`, plus engine-specific kwargs ([6 backends](docs/getting-started/search.md)) |
 
 ### Pipeline stages
 
@@ -194,6 +194,13 @@ Breaking changes require a major version bump and are documented in release note
 ## Adding a new source plugin
 
 A source is a class implementing `Source` (`fetch(ctx) -> list[Item]`) and decorated with `@register_source("yourtype")`. See `src/glean/sources/rss.py` for the smallest example, and [`docs/plugins/source.md`](./docs/plugins/source.md) for the full author's guide.
+
+## Adding a new search backend
+
+Search engines are pluggable. Implement the `SearchBackend` protocol
+(`async search(query, *, http, limit) -> list[SearchResult]`), decorate with
+`@register_backend("yourname")`, and add to `_import_builtins`. See
+[`docs/plugins/search.md`](./docs/plugins/search.md) for the full guide.
 
 ## Adding a new LLM provider
 

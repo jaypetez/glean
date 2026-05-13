@@ -8,10 +8,83 @@
 | `scraper` | `urls: [list of article URLs]`                                  |
 | `hn`      | `query`, `tags` (default `story`), `min_points`, `window_hours` |
 | `reddit`  | `subreddit`, `sort` (`top`/`new`/`hot`), `timeframe`, `limit`   |
-| `search`  | `query`, `engine` (`brave`/`tavily`/`searxng`/`serper`/`exa`/`mwmbl`), `limit` |
+| `search`  | `query`, `engine`, `limit`, plus engine-specific kwargs (see below) |
 
-Search backend kwargs are forwarded to the selected engine. For SearXNG, set
-`categories` or `safesearch` explicitly when you do not want instance defaults.
+### Search backends
+
+The `search` source delegates to a pluggable backend. Each backend has its
+own constructor kwargs which become YAML fields. Six backends ship
+out-of-the-box; see [Authoring Search Backends](../plugins/search.md) for how
+to add more.
+
+#### `searxng` (self-hosted, free)
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `base_url` | yes (or `SEARXNG_URL` env) | URL of your SearXNG instance |
+| `categories` | no | Comma-separated SearXNG categories (default `general`) |
+| `time_range` | no | `day`, `week`, `month`, or `year` |
+| `safesearch` | no | `0` (off), `1` (moderate), `2` (strict) — default `0` |
+
+#### `brave`
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `api_key` | no (defaults to `BRAVE_API_KEY` env) | Brave Search API key |
+
+#### `tavily`
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `api_key` | no (defaults to `TAVILY_API_KEY` env) | Tavily API key |
+| `search_depth` | no | `basic` (default) or `advanced` (fetches full pages) |
+
+#### `serper`
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `api_key` | no (defaults to `SERPER_API_KEY` env) | Serper.dev API key |
+| `country` | no | Two-letter country code (default `us`) |
+
+#### `exa`
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `api_key` | no (defaults to `EXA_API_KEY` env) | Exa.ai API key |
+| `type` | no | `neural`, `keyword`, or `auto` (default) |
+| `include_text` | no | `true` to include full page text (large payloads — default `false`) |
+
+#### `mwmbl` (free, no API key)
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `base_url` | no | Override the API host (default `https://api.mwmbl.org`) |
+
+#### Example: multi-backend feed
+
+```yaml
+feeds:
+  - name: ai-research
+    schedule: "every 1h"
+    chat_id: ${TELEGRAM_CHAT_AI}
+    sources:
+      - type: search
+        query: "LLM evaluation methods"
+        engine: searxng
+        base_url: http://searxng:8080
+        time_range: week
+      - type: search
+        query: "transformer architecture"
+        engine: brave
+      - type: search
+        query: "embedding models 2025"
+        engine: exa
+    pipeline:
+      - dedup
+      - rank: { prompt: "0-1 score: relevance to ML researchers", min_relevance: 0.4 }
+      - summarize: { prompt: "One-sentence summary." }
+      - digest: { intro: "🧠 AI research" }
+```
 
 ## Pipeline stages
 
