@@ -95,7 +95,7 @@ This requires GitHub Copilot Pro+ for the repository owner.
 
 Every PR runs the test suite with coverage reporting. The thresholds are:
 
-- **Project coverage** must stay above **50%** (allows 1% wiggle room)
+- **Project coverage** must stay above **80%** (allows 1% wiggle room)
 - **Patch coverage** (new code in the PR) targets **70%** (allows 5% slack)
 
 Codecov posts a comment on each PR showing the coverage delta and which files
