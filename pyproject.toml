@@ -80,6 +80,7 @@ ignore = [
 "src/glean/cli/**" = ["PLC0415"]                          # lazy imports keep CLI startup fast
 "src/glean/sources/registry.py" = ["PLC0415"]             # late import avoids decorator cycle
 "src/glean/llm/registry.py" = ["PLC0415"]                 # late import avoids decorator cycle
+"src/glean/sinks/registry.py" = ["PLC0415"]               # late import avoids decorator cycle
 
 [tool.mypy]
 python_version = "3.12"

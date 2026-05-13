@@ -19,6 +19,18 @@
 | `summarize` | LLM writes a 1-line summary, attached to each item.         |
 | `digest`    | Sets the digest header. Optionally LLM-synthesized.         |
 
+## Sink configuration
+
+`chat_id` is backwards-compatible shorthand for a Telegram sink. Use `sinks:` when a feed should declare output destinations explicitly or fan out to multiple sinks.
+
+```yaml
+chat_id: ${TELEGRAM_CHAT_AI}
+# equivalent to:
+sinks:
+  - type: telegram
+    chat_id: ${TELEGRAM_CHAT_AI}
+```
+
 ## Schedule syntax
 
 | String              | Meaning                                |
