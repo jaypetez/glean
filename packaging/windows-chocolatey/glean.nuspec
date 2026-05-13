@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>glean</id>
+    <version>$version$</version>
+    <title>glean</title>
+    <authors>Jayson Petersen</authors>
+    <owners>jaypetez</owners>
+    <projectUrl>https://github.com/jaypetez/glean</projectUrl>
+    <licenseUrl>https://github.com/jaypetez/glean/blob/main/LICENSE</licenseUrl>
+    <iconUrl>https://raw.githubusercontent.com/jaypetez/glean/main/assets/glean-hero.svg</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Self-hosted RSS/LLM digest daemon that summarizes content via any LLM and posts to Telegram. Pluggable sources (RSS, Hacker News, Reddit, web search), pluggable LLM providers (Ollama, Anthropic, OpenAI), per-feed pipelines, smart dedup, friendly schedules.</description>
+    <summary>RSS/LLM digest daemon for Telegram</summary>
+    <tags>rss llm telegram digest daemon ollama</tags>
+    <releaseNotes>https://github.com/jaypetez/glean/releases</releaseNotes>
+    <copyright>Copyright 2024-2026 Jayson Petersen</copyright>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

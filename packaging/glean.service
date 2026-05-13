@@ -1,0 +1,23 @@
+[Unit]
+Description=glean RSS/LLM digest daemon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=glean
+Group=glean
+ExecStart=/usr/bin/glean run --config /etc/glean/feeds.yaml --db /var/lib/glean/state.db
+Restart=on-failure
+RestartSec=10
+StateDirectory=glean
+ConfigurationDirectory=glean
+
+# Hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/glean
+
+[Install]
+WantedBy=multi-user.target
