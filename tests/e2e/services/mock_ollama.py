@@ -32,7 +32,10 @@ async def chat(request: Request) -> dict[str, Any]:
 
     is_ranking = "0 and 1" in system_content or "score 0-1" in system_content.lower()
 
-    if is_ranking:
+    fmt = body.get("format")
+    if isinstance(fmt, dict) and fmt.get("type") == "object":
+        content = _build_structured_response(fmt, user_content)
+    elif is_ranking:
         content = "0.8"
     else:
         # Summarize: extract title from user content if present
@@ -52,6 +55,48 @@ async def chat(request: Request) -> dict[str, Any]:
         "prompt_eval_count": 10,
         "eval_count": 20,
     }
+
+
+def _build_structured_response(schema: dict[str, Any], user_content: str) -> str:
+    """Return a JSON string matching the JSON Schema, with deterministic mock values."""
+    import json
+
+    properties = schema.get("properties", {})
+    result: dict[str, Any] = {}
+    for field_name, field_spec in properties.items():
+        field_type = field_spec.get("type")
+        if isinstance(field_type, list):
+            field_type = next((t for t in field_type if t != "null"), "string")
+        if field_type == "string":
+            if field_name in ("summary", "one_liner", "tldr", "title", "item_title"):
+                first_line = user_content.split("\n", 1)[0] if user_content else ""
+                title_hint = (
+                    first_line.removeprefix("TITLE:").strip()
+                    if first_line.startswith("TITLE:")
+                    else "mock"
+                )
+                result[field_name] = f"mock-{field_name}: {title_hint}"
+            else:
+                result[field_name] = f"mock-{field_name}"
+        elif field_type == "integer":
+            result[field_name] = 1
+        elif field_type == "number":
+            result[field_name] = 0.5
+        elif field_type == "boolean":
+            result[field_name] = True
+        elif field_type == "array":
+            items_type = field_spec.get("items", {}).get("type", "string")
+            if items_type == "string":
+                result[field_name] = ["mock-item"]
+            elif items_type == "integer":
+                result[field_name] = [1]
+            elif items_type == "number":
+                result[field_name] = [1.0]
+            else:
+                result[field_name] = []
+        else:
+            result[field_name] = None
+    return json.dumps(result)
 
 
 @app.post("/api/generate")
