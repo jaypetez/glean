@@ -33,3 +33,6 @@ overrides:
   rpm:
     depends:
       - ca-certificates
+  apk:
+    depends:
+      - ca-certificates

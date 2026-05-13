@@ -1,0 +1,8 @@
+description = "Self-hosted RSS/LLM digest daemon for Telegram"
+test = { cmd = "glean version" }
+
+[[backends]]
+full = "aqua:jaypetez/glean"
+
+[[backends]]
+full = "github:jaypetez/glean"
