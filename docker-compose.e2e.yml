@@ -27,6 +27,8 @@ services:
         condition: service_healthy
       mock-rss:
         condition: service_healthy
+      mock-searxng:
+        condition: service_healthy
     networks:
       - e2e
 
@@ -77,6 +79,22 @@ services:
       start_period: 5s
     ports:
       - "127.0.0.1:8002:8002"
+    networks:
+      - e2e
+
+  mock-searxng:
+    build:
+      context: ./tests/e2e/services
+    container_name: mock-searxng
+    command: uvicorn mock_searxng:app --host 0.0.0.0 --port 8003
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+      start_period: 5s
+    ports:
+      - "127.0.0.1:8003:8003"
     networks:
       - e2e
 

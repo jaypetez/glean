@@ -27,3 +27,20 @@ feeds:
           prompt: "Summarize in one short sentence."
       - digest:
           intro: "<b>E2E test digest</b>"
+
+  - name: e2e-search-feed
+    schedule: "every 10s"
+    sinks:
+      - type: telegram
+        chat_id: "5678"
+    sources:
+      - type: search
+        query: "mock test query"
+        engine: searxng
+        base_url: http://mock-searxng:8003
+    pipeline:
+      - dedup
+      - summarize:
+          prompt: "Summarize in one short sentence."
+      - digest:
+          intro: "<b>E2E search digest</b>"
