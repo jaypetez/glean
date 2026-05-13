@@ -11,6 +11,7 @@
 <p align="center">
   <a href="https://github.com/jaypetez/glean/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/jaypetez/glean/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/jaypetez/glean/actions/workflows/codeql.yml"><img alt="CodeQL" src="https://github.com/jaypetez/glean/actions/workflows/codeql.yml/badge.svg"></a>
+  <a href="https://codecov.io/gh/jaypetez/glean"><img alt="Coverage" src="https://codecov.io/gh/jaypetez/glean/branch/main/graph/badge.svg"></a>
   <a href="./LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="https://www.python.org/downloads/"><img alt="Python 3.12+" src="https://img.shields.io/badge/python-3.12+-3776ab.svg"></a>
   <a href="https://github.com/jaypetez/glean/pkgs/container/glean"><img alt="ghcr.io image" src="https://img.shields.io/badge/ghcr.io-glean-24292f?logo=docker&logoColor=white"></a>

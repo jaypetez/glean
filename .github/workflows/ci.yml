@@ -51,6 +51,18 @@ jobs:
           . .venv/bin/activate
           pytest -q
 
+      - name: Coverage
+        run: |
+          . .venv/bin/activate
+          pytest --cov=src/glean --cov-report=xml --cov-report=term-missing --cov-fail-under=70 -q
+
+      - name: Upload coverage
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false
+
   docker:
     name: Build & push image
     runs-on: ubuntu-latest
