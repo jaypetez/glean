@@ -57,12 +57,12 @@ async def test_healthz_reports_generic_db_error(tmp_path: Path) -> None:
     assert resp.json() == {"detail": "db error"}
 
 
-async def test_initialize_returns_api_key(client: AsyncClient, api_key: str) -> None:
-    """/api/v1/initialize is unauthenticated and returns the api_key."""
+async def test_initialize_does_not_return_api_key(client: AsyncClient) -> None:
+    """/api/v1/initialize is unauthenticated but never returns the api_key."""
     resp = await client.get("/api/v1/initialize")
     assert resp.status_code == 200
     body = resp.json()
-    assert body["api_key"] == api_key
+    assert "api_key" not in body
     assert body["version"]
     assert body["auth_disabled"] is False
 
@@ -123,10 +123,10 @@ async def test_api_key_persisted_as_verifier_not_cleartext(tmp_path: Path) -> No
     await state2.close()
 
     assert init.status_code == 200
-    assert init.json()["api_key"] is None
+    assert "api_key" not in init.json()
     assert health.status_code == 200
     assert app2.state.glean_api_key_material.plaintext == api_key
-    assert init_after_auth.json()["api_key"] is None
+    assert "api_key" not in init_after_auth.json()
 
 
 async def test_legacy_plaintext_api_key_file_is_migrated(tmp_path: Path) -> None:
@@ -144,7 +144,7 @@ async def test_legacy_plaintext_api_key_file_is_migrated(tmp_path: Path) -> None
     persisted = (tmp_path / "api_key").read_text(encoding="utf-8").strip()
     assert persisted != legacy_key
     assert persisted.startswith("pbkdf2_sha256$")
-    assert init.json()["api_key"] == legacy_key
+    assert "api_key" not in init.json()
     assert health.status_code == 200
 
 

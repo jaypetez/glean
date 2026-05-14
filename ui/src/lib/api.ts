@@ -1,7 +1,7 @@
 /**
- * Minimal typed API client. Reads the API key from /api/v1/initialize on
- * first load (cached in module state). All authenticated calls include
- * X-Glean-Api-Key.
+ * Minimal typed API client. Reads the API key from localStorage and adds
+ * X-Glean-Api-Key to authenticated calls. First-run key entry is handled
+ * by the app shell after /api/v1/initialize reports auth is enabled.
  */
 
 import type {
@@ -19,6 +19,14 @@ import type {
 const API_KEY_STORAGE_KEY = "glean.api_key";
 
 let apiKeyPromise: Promise<string> | null = null;
+let authDisabled = false;
+
+export class ApiKeyRequiredError extends Error {
+  constructor() {
+    super("Paste your glean API key to continue.");
+    this.name = "ApiKeyRequiredError";
+  }
+}
 
 function storage(): Storage | null {
   if (typeof window === "undefined") return null;
@@ -30,16 +38,16 @@ export function getStoredApiKey(): string | null {
 }
 
 export function setApiKey(newKey: string): void {
-  storage()?.setItem(API_KEY_STORAGE_KEY, newKey);
-  apiKeyPromise = Promise.resolve(newKey);
+  const key = newKey.trim();
+  storage()?.setItem(API_KEY_STORAGE_KEY, key);
+  apiKeyPromise = Promise.resolve(key);
 }
 
 async function fetchApiKey(): Promise<string> {
   const stored = getStoredApiKey();
   if (stored) return stored;
-  const init = await getInitialize();
-  if (init.api_key) return init.api_key;
-  throw new Error("No API key is available. Rotate the key from an authenticated browser, set GLEAN_API_KEY, or delete the api_key verifier and restart to re-initialize.");
+  if (authDisabled) return "";
+  throw new ApiKeyRequiredError();
 }
 
 function ensureApiKey(): Promise<string> {
@@ -56,7 +64,7 @@ export function getApiKey(): Promise<string> {
 export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const key = await ensureApiKey();
   const headers = new Headers(init.headers ?? {});
-  headers.set("X-Glean-Api-Key", key);
+  if (key) headers.set("X-Glean-Api-Key", key);
   if (init.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
@@ -73,7 +81,6 @@ export async function apiJson<T>(path: string, init?: RequestInit): Promise<T> {
 
 export interface InitializeResponse {
   version: string;
-  api_key: string | null;
   auth_disabled: boolean;
 }
 
@@ -81,8 +88,22 @@ export async function getInitialize(): Promise<InitializeResponse> {
   const resp = await fetch("/api/v1/initialize");
   if (!resp.ok) throw new Error(`initialize: ${resp.status}`);
   const body = (await resp.json()) as InitializeResponse;
-  if (body.api_key) setApiKey(body.api_key);
+  authDisabled = body.auth_disabled;
+  if (authDisabled) apiKeyPromise = Promise.resolve("");
   return body;
+}
+
+export async function validateAndStoreApiKey(candidate: string): Promise<void> {
+  const key = candidate.trim();
+  if (!key) throw new Error("API key is required.");
+
+  const headers = new Headers();
+  headers.set("X-Glean-Api-Key", key);
+  const resp = await fetch("/api/v1/system/info", { headers });
+  if (!resp.ok) {
+    throw new Error(resp.status === 401 ? "Invalid API key." : `system info: ${resp.status}`);
+  }
+  setApiKey(key);
 }
 
 // --- Defaults ---

@@ -78,7 +78,6 @@ class InitializeResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     version: str
-    api_key: str | None
     auth_disabled: bool
 
 

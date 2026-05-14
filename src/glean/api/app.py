@@ -138,7 +138,6 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
         """Return bootstrap data for first-load UI initialization."""
         return InitializeResponse(
             version=__version__,
-            api_key=app.state.glean_api_key,
             auth_disabled=auth_disabled(),
         )
 

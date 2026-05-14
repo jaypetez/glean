@@ -193,9 +193,6 @@
     try {
       const response = await rotateApiKey();
       setApiKey(response.api_key);
-      initialize = initialize
-        ? { ...initialize, api_key: response.api_key }
-        : { version: "", api_key: response.api_key, auth_disabled: false };
       currentApiKey = response.api_key;
       rotatedKey = response.api_key;
       showRotateDialog = false;
@@ -261,7 +258,7 @@
       defaults = loadedDefaults;
       form = formFromDefaults(loadedDefaults);
       initialize = loadedInitialize;
-      currentApiKey = loadedInitialize.api_key ?? getStoredApiKey();
+      currentApiKey = getStoredApiKey();
       systemInfo = loadedSystemInfo;
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);

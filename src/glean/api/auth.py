@@ -1,9 +1,9 @@
 """API key generation and verification.
 
 Single-user self-hosted pattern (Sonarr-style): one auto-generated key
-with a persisted verifier stored alongside the state DB. UI fetches the
-plaintext key from /api/v1/initialize only when it is first created or
-migrated, then includes it as X-Glean-Api-Key on subsequent requests.
+with a persisted verifier stored alongside the state DB. The initial
+plaintext key is emitted once to logs when generated, then clients include
+it as X-Glean-Api-Key on subsequent requests.
 
 Override via GLEAN_API_KEY env var. Disable auth entirely (loopback-only
 deployments behind reverse proxies) via GLEAN_DISABLE_AUTH=1.
@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import contextlib
 import hashlib
+import logging
 import os
 import secrets
 from collections.abc import Awaitable, Callable
@@ -23,6 +24,8 @@ from fastapi import Header, HTTPException, Query, Request, status
 
 _HASH_PREFIX = "pbkdf2_sha256"
 _HASH_ITERATIONS = 200_000
+_INITIAL_KEY_LOGGED_MARKER = "initial_key_logged=1"
+_initial_key_logger = logging.getLogger("glean.initial_api_key")
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,7 +77,8 @@ def _serialize_record(record: ApiKeyRecord) -> str:
 
 
 def _parse_record(raw: str) -> ApiKeyRecord | None:
-    parts = raw.strip().split("$")
+    record_line = raw.strip().splitlines()[0] if raw.strip() else ""
+    parts = record_line.split("$")
     if len(parts) != 4 or parts[0] != _HASH_PREFIX:
         return None
     try:
@@ -88,13 +92,43 @@ def _parse_record(raw: str) -> ApiKeyRecord | None:
     return ApiKeyRecord(iterations=iterations, salt_hex=parts[2], digest_hex=parts[3])
 
 
-def _persist_api_key_record(state_db_path: Path, record: ApiKeyRecord) -> None:
+def _serialize_record_file(record: ApiKeyRecord, *, initial_key_logged: bool) -> str:
+    lines = [_serialize_record(record)]
+    if initial_key_logged:
+        lines.append(_INITIAL_KEY_LOGGED_MARKER)
+    return "\n".join(lines) + "\n"
+
+
+def _persist_api_key_record(
+    state_db_path: Path, record: ApiKeyRecord, *, initial_key_logged: bool = False
+) -> None:
     """Persist an API key verifier beside the state DB."""
     key_file = _key_path(state_db_path)
     key_file.parent.mkdir(parents=True, exist_ok=True)
-    key_file.write_text(_serialize_record(record), encoding="utf-8")
+    key_file.write_text(
+        _serialize_record_file(record, initial_key_logged=initial_key_logged),
+        encoding="utf-8",
+    )
     with contextlib.suppress(OSError, NotImplementedError):
         key_file.chmod(0o600)
+
+
+def _log_initial_api_key(secret: str) -> None:
+    # Intentional one-time bootstrap disclosure for operators; see issue #82.
+    if not _initial_key_logger.isEnabledFor(logging.WARNING):
+        return
+    record = _initial_key_logger.makeRecord(
+        name=_initial_key_logger.name,
+        level=logging.WARNING,
+        fn=__file__,
+        lno=0,
+        msg="GLEAN_INITIAL_API_KEY=%s",
+        args=(secret,),
+        exc_info=None,
+        func="_log_initial_api_key",
+        extra=None,
+    )
+    _initial_key_logger.handle(record)
 
 
 def get_or_create_api_key(state_db_path: Path) -> ApiKeyMaterial:
@@ -120,7 +154,8 @@ def get_or_create_api_key(state_db_path: Path) -> ApiKeyMaterial:
 
     new_key = secrets.token_urlsafe(32)
     record = _hash_api_key(new_key)
-    _persist_api_key_record(state_db_path, record)
+    _persist_api_key_record(state_db_path, record, initial_key_logged=True)
+    _log_initial_api_key(new_key)
     return ApiKeyMaterial(plaintext=new_key, record=record)
 
 
