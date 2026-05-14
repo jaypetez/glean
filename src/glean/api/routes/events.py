@@ -24,7 +24,6 @@ router = APIRouter(tags=["events"])
 _KEEPALIVE_SECS = 30.0
 _EVENT_TOKEN_TTL_SECS = 60
 _EVENT_TOKENS: dict[str, float] = {}
-_API_KEY_QUERY_WARNING_EMITTED = False
 
 
 def _sweep_expired_event_tokens(now: float) -> None:
@@ -61,9 +60,12 @@ def _check_origin(request: Request) -> None:
         )
 
 
+class _ApiKeyDeprecationFlag:
+    emitted = False
+
+
 def _warn_api_key_query_deprecated_once() -> None:
-    global _API_KEY_QUERY_WARNING_EMITTED  # noqa: PLW0603
-    if _API_KEY_QUERY_WARNING_EMITTED:
+    if _ApiKeyDeprecationFlag.emitted:
         return
     warnings.warn(
         "Passing api_key in the events stream query string is deprecated; "
@@ -71,7 +73,7 @@ def _warn_api_key_query_deprecated_once() -> None:
         DeprecationWarning,
         stacklevel=2,
     )
-    _API_KEY_QUERY_WARNING_EMITTED = True
+    _ApiKeyDeprecationFlag.emitted = True
 
 
 @router.post("/events/token", response_model=EventTokenResponse)

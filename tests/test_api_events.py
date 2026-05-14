@@ -26,11 +26,11 @@ def clear_event_tokens() -> Iterator[None]:
     token_store = getattr(events_routes, "_EVENT_TOKENS", None)
     if token_store is not None:
         token_store.clear()
-    events_routes._API_KEY_QUERY_WARNING_EMITTED = False
+    events_routes._ApiKeyDeprecationFlag.emitted = False
     yield
     if token_store is not None:
         token_store.clear()
-    events_routes._API_KEY_QUERY_WARNING_EMITTED = False
+    events_routes._ApiKeyDeprecationFlag.emitted = False
 
 
 async def test_event_bus_publish_and_subscribe() -> None:
