@@ -30,6 +30,10 @@ function ensureApiKey(): Promise<string> {
   return apiKeyPromise;
 }
 
+export function getApiKey(): Promise<string> {
+  return ensureApiKey();
+}
+
 export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const key = await ensureApiKey();
   const headers = new Headers(init.headers ?? {});
@@ -111,6 +115,16 @@ export async function validateFeedConfig(feed: FeedConfig): Promise<ValidateResp
 
 export async function listFeedStatuses(): Promise<FeedStatus[]> {
   return apiJson<FeedStatus[]>("/api/v1/feeds");
+}
+
+export async function runFeedNow(name: string): Promise<void> {
+  const resp = await apiFetch(`/api/v1/feeds/${encodeURIComponent(name)}/run`, {
+    method: "POST",
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`run feed failed: ${resp.status} ${text}`);
+  }
 }
 
 // --- Skill config CRUD ---

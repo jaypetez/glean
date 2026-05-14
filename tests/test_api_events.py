@@ -7,6 +7,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from fastapi import Response
 from httpx import ASGITransport, AsyncClient
 
 from glean.api.app import make_app
@@ -89,6 +90,19 @@ async def test_events_endpoint_requires_auth(configured_app) -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         resp = await ac.get("/api/v1/events", timeout=2.0)
         assert resp.status_code == 401
+
+
+async def test_events_endpoint_accepts_api_key_query_param(
+    configured_app, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    app, _ = configured_app
+    monkeypatch.setattr(
+        "glean.api.routes.events.EventSourceResponse",
+        lambda body_iterator: Response(status_code=204, media_type="text/event-stream"),
+    )
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        resp = await ac.get(f"/api/v1/events?api_key={app.state.glean_api_key}", timeout=2.0)
+        assert resp.status_code == 204
 
 
 async def test_events_endpoint_streams_published_events() -> None:

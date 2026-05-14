@@ -17,7 +17,7 @@ from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import Header, HTTPException, status
+from fastapi import Header, HTTPException, Query, status
 
 
 def _key_path(state_db_path: Path) -> Path:
@@ -52,20 +52,25 @@ def auth_disabled() -> bool:
 
 
 def make_verify_api_key(expected: str) -> Callable[..., Awaitable[None]]:
-    """Build a FastAPI dependency that validates the X-Glean-Api-Key header."""
+    """Build a FastAPI dependency that validates API keys from header or query string."""
 
     async def verify(
         x_glean_api_key: Annotated[
             str | None,
             Header(alias="X-Glean-Api-Key"),
         ] = None,
+        api_key: Annotated[
+            str | None,
+            Query(alias="api_key"),
+        ] = None,
     ) -> None:
         if auth_disabled():
             return
-        if not x_glean_api_key or not secrets.compare_digest(x_glean_api_key, expected):
+        candidate_keys = [key for key in (x_glean_api_key, api_key) if key]
+        if not any(secrets.compare_digest(key, expected) for key in candidate_keys):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="invalid or missing X-Glean-Api-Key header",
+                detail="invalid or missing API key",
             )
 
     return verify
