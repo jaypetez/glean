@@ -94,7 +94,7 @@ class FailingDigestTelegram(FakeTelegram):
         style: str = "html",
         link_preview: bool = False,
     ) -> None:
-        raise RuntimeError("sink failed with sk-abc12345")
+        raise RuntimeError("sink <b>failed</b> & leaked sk-abc12345")
 
 
 def _cfg_yaml() -> str:
@@ -375,6 +375,14 @@ async def test_ops_alert_redacts_api_key_from_failure(
     assert result.error is not None
     assert "sk-[REDACTED]" in result.error
     assert "sk-abc12345" not in result.error
-    assert fake_tg.texts == [("ops", f"🚨 <b>t1</b> failing: {result.error}")]
-    assert "sk-[REDACTED]" in fake_tg.texts[0][1]
+    assert "sink <b>failed</b> & leaked sk-[REDACTED]" in result.error
+
+    assert fake_tg.texts == [
+        (
+            "ops",
+            "🚨 <b>t1</b> failing: RuntimeError: required sinks failed: telegram: "
+            "RuntimeError: sink &lt;b&gt;failed&lt;/b&gt; &amp; leaked sk-[REDACTED]",
+        )
+    ]
+    assert "<b>failed</b>" not in fake_tg.texts[0][1]
     assert "sk-abc12345" not in fake_tg.texts[0][1]
