@@ -2,47 +2,57 @@
 
 ## Supported versions
 
-Only the latest tagged release receives fixes. If you're running an older version, please update before reporting.
+Only the current v1.1.x release line receives security fixes.
+If you are running an older version, update before reporting unless the issue is
+needed to confirm whether the latest release is affected.
 
-| Version    | Supported |
-|------------|-----------|
-| 1.x        | ✅ yes    |
-| < 1.0      | ❌ no     |
+| Version | Supported |
+|---------|-----------|
+| v1.1.x  | Yes       |
+| < v1.1  | No        |
 
 ## Reporting a vulnerability
 
-**Please do not file public issues for security problems.**
+Please do not file public issues for security problems.
 
-Report privately via GitHub's [Private Vulnerability Reporting](https://github.com/jaypetez/glean/security/advisories/new) (preferred), or email **jayson@shoe4africa.org** with `[glean security]` in the subject.
+Report privately through GitHub's [Private Vulnerability Reporting](https://github.com/jaypetez/glean/security/advisories/new)
+(preferred), or email **jayson@shoe4africa.org** with `[glean security]` in the
+subject.
 
 Include:
 
 - A description of the issue and its impact.
 - Steps to reproduce, or a proof-of-concept if you have one.
-- The version / commit you tested against.
+- The version or commit you tested against.
 - Any suggested remediation.
 
-## What to expect
+## Response SLA and disclosure
 
-- Acknowledgement within **3 business days**.
-- A first assessment (confirmed / needs-info / out-of-scope) within **7 days**.
-- For confirmed issues, a fix or mitigation plan within **30 days** when reasonably possible. Complex issues may take longer; we'll keep you posted.
-- Credit in the release notes when the fix ships, unless you prefer to stay anonymous.
+- We aim to triage reports within **7 days** on a best-effort basis.
+- For confirmed critical issues, we target a fix or mitigation within **90 days**.
+- We coordinate disclosure with reporters and use a **90-day disclosure window**
+  unless we agree otherwise.
+- We credit reporters in release notes when the fix ships, unless they prefer to
+  stay anonymous.
 
 ## Scope
 
 In scope:
 
-- The `glean` daemon and its bundled source / LLM provider / sink plugins.
+- The `glean` daemon and its bundled source, LLM provider, and sink plugins.
 - The published container image at `ghcr.io/jaypetez/glean`.
 - Documented configuration surfaces (`feeds.yaml`, `.env`, CLI flags).
 
 Out of scope:
 
-- Vulnerabilities in third-party services (Telegram, Ollama, Anthropic, OpenAI, etc.) — please report those upstream.
-- Issues that require the attacker to already control the operator's machine, `.env`, or `feeds.yaml`.
-- DoS via obviously-malformed config you wrote yourself.
+- Vulnerabilities in third-party services such as Telegram, Ollama, Anthropic,
+  OpenAI, Brave, Tavily, Serper, Exa, Discord, Slack, and ntfy.
+- Issues that require the attacker to already control the operator's machine,
+  `.env`, `feeds.yaml`, or sink credentials.
+- Denial of service through obviously malformed configuration written by the
+  operator.
 
 ## Secrets hygiene reminder
 
-`glean` reads bot tokens and API keys from `.env`. Never commit `.env`, never paste it into an issue, and rotate any secret you suspect has leaked.
+`glean` reads bot tokens and API keys from `.env`. Never commit `.env`, never
+paste it into an issue, and rotate any secret you suspect has leaked.
