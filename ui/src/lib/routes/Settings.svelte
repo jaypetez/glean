@@ -4,6 +4,7 @@
   import {
     getDefaults,
     getInitialize,
+    getStoredApiKey,
     getSystemInfo,
     rotateApiKey,
     setApiKey,
@@ -51,6 +52,7 @@
   let showCurrentApiKey = $state(false);
   let showRotateDialog = $state(false);
   let rotatedKey: string | null = $state(null);
+  let currentApiKey: string | null = $state(null);
   let themeChoice: ThemeChoice = $state("system");
   let densityChoice: DensityChoice = $state("comfortable");
 
@@ -194,6 +196,7 @@
       initialize = initialize
         ? { ...initialize, api_key: response.api_key }
         : { version: "", api_key: response.api_key, auth_disabled: false };
+      currentApiKey = response.api_key;
       rotatedKey = response.api_key;
       showRotateDialog = false;
       showCurrentApiKey = true;
@@ -258,6 +261,7 @@
       defaults = loadedDefaults;
       form = formFromDefaults(loadedDefaults);
       initialize = loadedInitialize;
+      currentApiKey = loadedInitialize.api_key ?? getStoredApiKey();
       systemInfo = loadedSystemInfo;
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
@@ -496,10 +500,12 @@
             <div>
               <p class="text-xs text-tertiary">Current API key</p>
               <p class="mt-1 break-all font-mono text-sm text-primary">
-                {#if showCurrentApiKey}
-                  {initialize?.api_key}
-                {:else}
+                {#if currentApiKey && showCurrentApiKey}
+                  {currentApiKey}
+                {:else if currentApiKey}
                   {"•".repeat(32)}
+                {:else}
+                  Unavailable in this browser
                 {/if}
               </p>
             </div>
@@ -507,14 +513,16 @@
               <button
                 type="button"
                 onclick={() => (showCurrentApiKey = !showCurrentApiKey)}
-                class="density-control inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm text-secondary hover:bg-surface"
+                disabled={!currentApiKey}
+                class="density-control inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm text-secondary hover:bg-surface disabled:opacity-50"
               >
                 {#if showCurrentApiKey}<EyeSlash size={16} /> Hide{:else}<Eye size={16} /> Show{/if}
               </button>
               <button
                 type="button"
-                onclick={() => initialize?.api_key && copyText(initialize.api_key, "API key copied.")}
-                class="density-control inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm text-secondary hover:bg-surface"
+                onclick={() => currentApiKey && copyText(currentApiKey, "API key copied.")}
+                disabled={!currentApiKey}
+                class="density-control inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm text-secondary hover:bg-surface disabled:opacity-50"
               >
                 <Copy size={16} /> Copy
               </button>

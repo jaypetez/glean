@@ -25,14 +25,21 @@ function storage(): Storage | null {
   return window.localStorage;
 }
 
+export function getStoredApiKey(): string | null {
+  return storage()?.getItem(API_KEY_STORAGE_KEY) ?? null;
+}
+
 export function setApiKey(newKey: string): void {
   storage()?.setItem(API_KEY_STORAGE_KEY, newKey);
   apiKeyPromise = Promise.resolve(newKey);
 }
 
 async function fetchApiKey(): Promise<string> {
+  const stored = getStoredApiKey();
+  if (stored) return stored;
   const init = await getInitialize();
-  return init.api_key;
+  if (init.api_key) return init.api_key;
+  throw new Error("No API key is available. Rotate the key from an authenticated browser, set GLEAN_API_KEY, or delete the api_key verifier and restart to re-initialize.");
 }
 
 function ensureApiKey(): Promise<string> {
@@ -66,7 +73,7 @@ export async function apiJson<T>(path: string, init?: RequestInit): Promise<T> {
 
 export interface InitializeResponse {
   version: string;
-  api_key: string;
+  api_key: string | null;
   auth_disabled: boolean;
 }
 
@@ -74,7 +81,7 @@ export async function getInitialize(): Promise<InitializeResponse> {
   const resp = await fetch("/api/v1/initialize");
   if (!resp.ok) throw new Error(`initialize: ${resp.status}`);
   const body = (await resp.json()) as InitializeResponse;
-  setApiKey(body.api_key);
+  if (body.api_key) setApiKey(body.api_key);
   return body;
 }
 
