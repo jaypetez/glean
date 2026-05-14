@@ -16,6 +16,8 @@ from glean.state.store import StateStore
 async def main() -> None:
     ui_dir = Path(__file__).resolve().parents[1]
     tmp_dir = ui_dir / "e2e" / ".tmp"
+    if tmp_dir.exists():
+        shutil.rmtree(tmp_dir, ignore_errors=True)
     tmp_dir.mkdir(parents=True, exist_ok=True)
 
     default_fixture = ui_dir / "e2e" / "fixtures" / "test-feeds.yaml"
