@@ -3,19 +3,34 @@ from __future__ import annotations
 
 import asyncio
 import json
+import warnings
+from collections.abc import Iterator
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from fastapi import Response
+from fastapi import HTTPException, Response
 from httpx import ASGITransport, AsyncClient
 
 from glean.api.app import make_app
 from glean.api.events import EventBus, RunEvent
+from glean.api.routes import events as events_routes
 from glean.api.routes.events import events_stream
 from glean.state.store import StateStore
 
 pytestmark = pytest.mark.asyncio
+
+
+@pytest.fixture(autouse=True)
+def clear_event_tokens() -> Iterator[None]:
+    token_store = getattr(events_routes, "_EVENT_TOKENS", None)
+    if token_store is not None:
+        token_store.clear()
+    events_routes._API_KEY_QUERY_WARNING_EMITTED = False
+    yield
+    if token_store is not None:
+        token_store.clear()
+    events_routes._API_KEY_QUERY_WARNING_EMITTED = False
 
 
 async def test_event_bus_publish_and_subscribe() -> None:
@@ -62,6 +77,20 @@ async def test_unsubscribe_decrements_count() -> None:
     assert bus.subscriber_count == 0
 
 
+async def test_event_bus_max_subscribers_can_be_configured(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GLEAN_MAX_SSE_SUBSCRIBERS", "2")
+    bus = EventBus()
+    q1 = await bus.subscribe()
+    q2 = await bus.subscribe()
+    with pytest.raises(HTTPException) as exc_info:
+        await bus.subscribe()
+    assert exc_info.value.status_code == 503
+    await bus.unsubscribe(q1)
+    await bus.unsubscribe(q2)
+
+
 async def test_run_event_to_json_serializes_timestamp() -> None:
     event = RunEvent(type="run_failed", feed="alpha", error="boom")
     payload = event.to_json()
@@ -69,6 +98,12 @@ async def test_run_event_to_json_serializes_timestamp() -> None:
     assert payload["feed"] == "alpha"
     assert isinstance(payload["timestamp"], str)
     assert payload["error"] == "boom"
+
+
+async def test_run_event_to_json_scrubs_sensitive_error_text() -> None:
+    event = RunEvent(type="run_failed", feed="alpha", error="upstream rejected sk-abc12345")
+    payload = event.to_json()
+    assert payload["error"] == "upstream rejected sk-[REDACTED]"
 
 
 @pytest.fixture
@@ -96,13 +131,142 @@ async def test_events_endpoint_accepts_api_key_query_param(
     configured_app, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     app, _ = configured_app
-    monkeypatch.setattr(
-        "glean.api.routes.events.EventSourceResponse",
-        lambda body_iterator: Response(status_code=204, media_type="text/event-stream"),
-    )
+
+    def stub_event_source_response(body_iterator: object) -> Response:
+        return Response(status_code=204, media_type="text/event-stream")
+
+    monkeypatch.setattr(events_routes, "EventSourceResponse", stub_event_source_response)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        resp = await ac.get(f"/api/v1/events?api_key={app.state.glean_api_key}", timeout=2.0)
+        with pytest.warns(DeprecationWarning, match="Passing api_key"):
+            resp = await ac.get(f"/api/v1/events?api_key={app.state.glean_api_key}", timeout=2.0)
         assert resp.status_code == 204
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always", DeprecationWarning)
+            resp = await ac.get(f"/api/v1/events?api_key={app.state.glean_api_key}", timeout=2.0)
+        assert resp.status_code == 204
+        assert caught == []
+
+
+async def test_event_token_endpoint_returns_short_lived_token(configured_app) -> None:
+    app, _ = configured_app
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        resp = await ac.post(
+            "/api/v1/events/token",
+            headers={"X-Glean-Api-Key": app.state.glean_api_key},
+            timeout=2.0,
+        )
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert isinstance(payload["token"], str)
+    assert payload["token"]
+    assert payload["expires_in"] == 60
+
+
+async def test_event_token_endpoint_requires_api_key(configured_app) -> None:
+    app, _ = configured_app
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        resp = await ac.post("/api/v1/events/token", timeout=2.0)
+    assert resp.status_code == 401
+
+
+async def test_events_endpoint_accepts_single_use_token(
+    configured_app, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    app, _ = configured_app
+
+    def stub_event_source_response(body_iterator: object) -> Response:
+        return Response(status_code=204, media_type="text/event-stream")
+
+    monkeypatch.setattr(events_routes, "EventSourceResponse", stub_event_source_response)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        token_resp = await ac.post(
+            "/api/v1/events/token",
+            headers={"X-Glean-Api-Key": app.state.glean_api_key},
+            timeout=2.0,
+        )
+        token = token_resp.json()["token"]
+        first = await ac.get(f"/api/v1/events?token={token}", timeout=2.0)
+        second = await ac.get(f"/api/v1/events?token={token}", timeout=2.0)
+    assert first.status_code == 204
+    assert second.status_code == 401
+
+
+async def test_events_endpoint_rejects_expired_token(
+    configured_app, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    app, _ = configured_app
+    current_time = [1_000.0]
+    monkeypatch.setattr(events_routes.time, "time", lambda: current_time[0])
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        token_resp = await ac.post(
+            "/api/v1/events/token",
+            headers={"X-Glean-Api-Key": app.state.glean_api_key},
+            timeout=2.0,
+        )
+        token = token_resp.json()["token"]
+        current_time[0] += 61.0
+        resp = await ac.get(f"/api/v1/events?token={token}", timeout=2.0)
+    assert resp.status_code == 401
+
+
+async def test_events_endpoint_rejects_disallowed_origin(configured_app) -> None:
+    app, _ = configured_app
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        resp = await ac.get(
+            f"/api/v1/events?api_key={app.state.glean_api_key}",
+            headers={"Origin": "http://evil.com"},
+            timeout=2.0,
+        )
+    assert resp.status_code == 403
+
+
+async def test_events_endpoint_rejects_subscriber_above_limit(configured_app) -> None:
+    app, _ = configured_app
+    bus: EventBus = app.state.glean_event_bus
+    queues = [await bus.subscribe() for _ in range(EventBus.MAX_SUBSCRIBERS)]
+    try:
+        assert bus.subscriber_count == EventBus.MAX_SUBSCRIBERS
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            resp = await ac.get(
+                "/api/v1/events",
+                headers={"X-Glean-Api-Key": app.state.glean_api_key},
+                timeout=2.0,
+            )
+        assert resp.status_code == 503
+    finally:
+        for queue in queues:
+            await bus.unsubscribe(queue)
+
+
+async def test_events_endpoint_does_not_consume_token_when_subscriber_limit_reached(
+    configured_app,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    app, _ = configured_app
+    bus: EventBus = app.state.glean_event_bus
+
+    def stub_event_source_response(body_iterator: object) -> Response:
+        return Response(status_code=204, media_type="text/event-stream")
+
+    monkeypatch.setattr(events_routes, "EventSourceResponse", stub_event_source_response)
+    queues = [await bus.subscribe() for _ in range(EventBus.MAX_SUBSCRIBERS)]
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            token_resp = await ac.post(
+                "/api/v1/events/token",
+                headers={"X-Glean-Api-Key": app.state.glean_api_key},
+                timeout=2.0,
+            )
+            token = token_resp.json()["token"]
+            first = await ac.get(f"/api/v1/events?token={token}", timeout=2.0)
+            await bus.unsubscribe(queues.pop())
+            second = await ac.get(f"/api/v1/events?token={token}", timeout=2.0)
+        assert first.status_code == 503
+        assert second.status_code == 204
+    finally:
+        for queue in queues:
+            await bus.unsubscribe(queue)
 
 
 async def test_events_endpoint_streams_published_events() -> None:
@@ -112,6 +276,8 @@ async def test_events_endpoint_streams_published_events() -> None:
 
     class FakeRequest:
         app = SimpleNamespace(state=SimpleNamespace(glean_event_bus=bus))
+        headers: dict[str, str] = {}
+        query_params: dict[str, str] = {}
 
         async def is_disconnected(self) -> bool:
             return disconnected
@@ -137,6 +303,8 @@ async def test_events_endpoint_emits_keepalive_comments(monkeypatch: pytest.Monk
 
     class FakeRequest:
         app = SimpleNamespace(state=SimpleNamespace(glean_event_bus=bus))
+        headers: dict[str, str] = {}
+        query_params: dict[str, str] = {}
 
         async def is_disconnected(self) -> bool:
             return False
