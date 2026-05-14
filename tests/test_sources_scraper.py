@@ -95,6 +95,11 @@ async def test_scraper_empty_response_yields_empty_body_item(fetch_context):
     assert items[0].body == ""
 
 
+async def test_scraper_rejects_malicious_url():
+    with pytest.raises(ValueError):
+        ScraperSource(urls=["https://example.com/good", "http://10.0.0.1/admin"])
+
+
 async def test_scraper_requires_at_least_one_url():
     with pytest.raises(ValueError, match="at least one url"):
         ScraperSource(urls=[])

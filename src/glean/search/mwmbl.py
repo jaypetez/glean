@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING, ClassVar
 
 from glean.search.base import SearchResult
 from glean.search.registry import register_backend
+from glean.security.ssrf import validate_url
+from glean.security.ssrf_transport import outbound_timeout
 
 if TYPE_CHECKING:
     import httpx
@@ -15,7 +17,7 @@ class MWMBLBackend:
     name: ClassVar[str] = "mwmbl"
 
     def __init__(self, *, base_url: str = "https://api.mwmbl.org") -> None:
-        self.base_url = base_url.rstrip("/")
+        self.base_url = validate_url(base_url).rstrip("/")
 
     async def search(
         self,
@@ -27,7 +29,7 @@ class MWMBLBackend:
         resp = await http.get(
             f"{self.base_url}/search/api/v1/search/",
             params={"s": query},
-            timeout=30.0,
+            timeout=outbound_timeout(),
         )
         resp.raise_for_status()
         data = resp.json()

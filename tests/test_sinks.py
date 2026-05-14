@@ -531,6 +531,25 @@ async def test_each_sink_raises_on_missing_required_field() -> None:
         build_sink({"type": "slack"})
 
 
+@pytest.mark.parametrize(
+    "spec",
+    [
+        {"type": "discord", "webhook_url": "http://169.254.169.254/hook"},
+        {"type": "slack", "webhook_url": "http://10.0.0.1/hook"},
+        {"type": "ntfy", "topic": "alerts", "base_url": "http://127.0.0.1:8080"},
+        {"type": "webhook", "url": "file:///etc/passwd"},
+    ],
+)
+async def test_http_sinks_reject_malicious_urls(spec: dict[str, object]) -> None:
+    with pytest.raises(ValueError):
+        build_sink(spec)
+
+
+async def test_webhook_sink_rejects_disallowed_method() -> None:
+    with pytest.raises(ValueError, match="method"):
+        build_sink({"type": "webhook", "url": "https://example.com/hook", "method": "DELETE"})
+
+
 @pytest.mark.asyncio
 @respx.mock
 async def test_webhook_sink_posts_payload() -> None:

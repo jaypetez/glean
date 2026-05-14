@@ -5,6 +5,7 @@ import time
 from datetime import UTC, datetime
 from typing import ClassVar
 
+from glean.security.ssrf_transport import outbound_timeout
 from glean.sources.base import FetchContext, Item
 from glean.sources.registry import register_source
 
@@ -46,7 +47,7 @@ class HNSource:
             "numericFilters": ",".join(numeric_filters),
             "hitsPerPage": str(self.max_items),
         }
-        resp = await ctx.http.get(_ALGOLIA, params=params, timeout=30.0)
+        resp = await ctx.http.get(_ALGOLIA, params=params, timeout=outbound_timeout())
         resp.raise_for_status()
         data = resp.json()
 

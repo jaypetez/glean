@@ -6,6 +6,60 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 
 from glean.config.llm import LLMConfig
 from glean.config.skills import SkillConfig
+from glean.security.ssrf import SSRFValidationError, validate_url
+
+_WEBHOOK_METHODS = {"POST", "PUT", "PATCH"}
+
+
+def _validate_url_field(value: Any, *, field: str, allow_private: bool = False) -> None:
+    if not isinstance(value, str) or not value:
+        return
+    try:
+        validate_url(value, allow_private=allow_private)
+    except SSRFValidationError as exc:
+        raise ValueError(f"{field}: SSRF blocked: {exc}") from exc
+
+
+def _validate_source_urls(spec: dict[str, Any], *, field: str) -> None:
+    source_type = str(spec.get("type", "")).lower()
+    if source_type == "rss":
+        _validate_url_field(spec.get("url"), field=f"{field}.url")
+        return
+    if source_type == "scraper":
+        urls = spec.get("urls")
+        if isinstance(urls, list):
+            for index, url in enumerate(urls):
+                _validate_url_field(url, field=f"{field}.urls[{index}]")
+        return
+    if source_type != "search":
+        return
+
+    engine = str(spec.get("engine", "")).lower()
+    allow_private = engine == "searxng" or "searxng_url" in spec
+    _validate_url_field(
+        spec.get("searxng_url"), field=f"{field}.searxng_url", allow_private=True
+    )
+    _validate_url_field(
+        spec.get("base_url"), field=f"{field}.base_url", allow_private=allow_private
+    )
+
+
+def _validate_sink_urls(sinks: list[dict[str, Any]] | None, *, field: str) -> None:
+    if sinks is None:
+        return
+    for index, spec in enumerate(sinks):
+        sink_type = str(spec.get("type", "")).lower()
+        prefix = f"{field}[{index}]"
+        if sink_type == "webhook":
+            _validate_url_field(spec.get("url"), field=f"{prefix}.url")
+            method = str(spec.get("method", "POST")).upper()
+            if method not in _WEBHOOK_METHODS:
+                allowed = ", ".join(sorted(_WEBHOOK_METHODS))
+                raise ValueError(f"{prefix}.method must be one of: {allowed}")
+        elif sink_type in {"discord", "slack"}:
+            _validate_url_field(spec.get("webhook_url"), field=f"{prefix}.webhook_url")
+        elif sink_type in {"ntfy", "telegram"}:
+            _validate_url_field(spec.get("base_url"), field=f"{prefix}.base_url")
 
 
 class RenderConfig(BaseModel):
@@ -40,6 +94,11 @@ class Defaults(BaseModel):
     bootstrap: Literal["skip-and-mark", "send-last-N", "send-all"] = "skip-and-mark"
     bootstrap_count: int = Field(default=5, ge=1)
     failure: FailureConfig = Field(default_factory=FailureConfig)
+
+    @model_validator(mode="after")
+    def _validate_default_sinks(self) -> Self:
+        _validate_sink_urls(self.sinks, field="defaults.sinks")
+        return self
 
 
 StageName = Literal["dedup", "rank", "summarize", "digest", "apply_skill"]
@@ -89,6 +148,19 @@ class FeedConfig(BaseModel):
     def _normalize_legacy_chat_id(self) -> Self:
         if self.sinks is None and self.chat_id is not None:
             self.sinks = [{"type": "telegram", "chat_id": self.chat_id}]
+        return self
+
+    @model_validator(mode="after")
+    def _validate_url_specs(self) -> Self:
+        for i, spec in enumerate(self.sources):
+            try:
+                _validate_source_urls(spec, field=f"sources[{i}]")
+            except ValueError as exc:
+                raise ValueError(str(exc)) from exc
+        try:
+            _validate_sink_urls(self.sinks, field="sinks")
+        except ValueError as exc:
+            raise ValueError(str(exc)) from exc
         return self
 
     @model_validator(mode="after")

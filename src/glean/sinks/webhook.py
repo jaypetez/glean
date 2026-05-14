@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING, Any, ClassVar
 import httpx
 
 from glean.logging import get_logger
+from glean.security.ssrf import validate_url
+from glean.security.ssrf_transport import SSRFGuardedTransport, outbound_timeout
 from glean.sinks.registry import register_sink
 
 if TYPE_CHECKING:
@@ -13,6 +15,7 @@ if TYPE_CHECKING:
     from glean.sources.base import Item
 
 logger = get_logger(__name__)
+_ALLOWED_METHODS = {"POST", "PUT", "PATCH"}
 
 
 @register_sink("webhook")
@@ -34,8 +37,11 @@ class WebhookSink:
     ) -> None:
         if not url:
             raise ValueError("webhook sink requires 'url'")
-        self.url = url
+        self.url = validate_url(url)
         self.method = method.upper()
+        if self.method not in _ALLOWED_METHODS:
+            allowed = ", ".join(sorted(_ALLOWED_METHODS))
+            raise ValueError(f"webhook sink method must be one of: {allowed}")
         self.required = required
         self.timeout_s = timeout_s
 
@@ -56,7 +62,11 @@ class WebhookSink:
         else:
             self._auth = None
 
-        self._client = httpx.AsyncClient(timeout=timeout_s)
+        self._client = httpx.AsyncClient(
+            timeout=outbound_timeout(read=timeout_s),
+            follow_redirects=False,
+            transport=SSRFGuardedTransport(allow_private=False),
+        )
 
     async def send(self, ctx: SendContext) -> None:
         payload: dict[str, Any] = {

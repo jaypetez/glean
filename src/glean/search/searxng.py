@@ -10,6 +10,8 @@ import httpx
 
 from glean.search.base import SearchResult
 from glean.search.registry import register_backend
+from glean.security.ssrf import validate_url
+from glean.security.ssrf_transport import SSRF_ALLOW_PRIVATE_EXTENSION, outbound_timeout
 
 
 def _parse_published_at(value: str | None) -> datetime | None:
@@ -34,7 +36,12 @@ class SearXNGBackend:
         time_range: str | None = None,
         safesearch: int | None = None,
     ) -> None:
-        self.base_url = (base_url or os.environ.get("SEARXNG_URL") or "").rstrip("/")
+        resolved_base_url = (base_url or os.environ.get("SEARXNG_URL") or "").rstrip("/")
+        self.base_url = (
+            validate_url(resolved_base_url, allow_private=True).rstrip("/")
+            if resolved_base_url
+            else ""
+        )
         self.categories = categories
         self.time_range = time_range
         self.safesearch = safesearch
@@ -63,7 +70,8 @@ class SearXNGBackend:
             resp = await http.get(
                 self.base_url + "/search",
                 params=params,
-                timeout=30.0,
+                timeout=outbound_timeout(),
+                extensions={SSRF_ALLOW_PRIVATE_EXTENSION: True},
             )
             resp.raise_for_status()
         except httpx.HTTPStatusError as exc:

@@ -193,6 +193,11 @@ async def test_rss_uses_configured_name_when_feed_has_no_title(fetch_context):
     assert items[0].source_name == "Configured"
 
 
+async def test_rss_rejects_malicious_url():
+    with pytest.raises(ValueError):
+        RSSSource(url="http://169.254.169.254/latest/meta-data/")
+
+
 async def test_strip_html_handles_empty_values():
     assert _strip_html(None) == ""
     assert _strip_html("<p>Hello&nbsp; <b>world</b></p>") == "Hello&nbsp; world"

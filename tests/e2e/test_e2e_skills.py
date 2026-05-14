@@ -6,6 +6,8 @@ import time
 import httpx
 import pytest
 
+from tests.e2e.urls import OLLAMA_URL, TELEGRAM_URL
+
 pytestmark = pytest.mark.e2e
 
 
@@ -14,7 +16,7 @@ def _wait_for_skills_messages(timeout: float = 60.0) -> list[dict]:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         try:
-            msgs = httpx.get("http://localhost:8001/__messages", timeout=5.0).json()
+            msgs = httpx.get(f"{TELEGRAM_URL}/__messages", timeout=5.0).json()
             skills_msgs = [m for m in msgs if str(m.get("chat", {}).get("id")) == "9999"]
             if skills_msgs:
                 return skills_msgs
@@ -38,7 +40,7 @@ def test_skills_feed_sends_digest(e2e_stack: None) -> None:
 def test_apply_skill_dispatches_format_to_mock_ollama(e2e_stack: None) -> None:
     """The apply_skill stage should send a JSON Schema format= to mock-ollama."""
     _wait_for_skills_messages(timeout=60)
-    calls = httpx.get("http://localhost:11434/__calls", timeout=5).json()
+    calls = httpx.get(f"{OLLAMA_URL}/__calls", timeout=5).json()
     assert len(calls) > 0, "mock-ollama received no calls"
 
     structured_calls = [c for c in calls if isinstance(c.get("format"), dict)]
@@ -56,7 +58,7 @@ def test_apply_skill_dispatches_format_to_mock_ollama(e2e_stack: None) -> None:
 def test_per_source_llm_dispatches_special_model(e2e_stack: None) -> None:
     """The per-source LLM override should send model=mock-special to mock-ollama."""
     _wait_for_skills_messages(timeout=60)
-    calls = httpx.get("http://localhost:11434/__calls", timeout=5).json()
+    calls = httpx.get(f"{OLLAMA_URL}/__calls", timeout=5).json()
     assert len(calls) > 0
     models = {c.get("model") for c in calls}
     assert "mock-special" in models, (

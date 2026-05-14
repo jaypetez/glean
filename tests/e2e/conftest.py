@@ -9,6 +9,8 @@ from pathlib import Path
 import httpx
 import pytest
 
+from tests.e2e.urls import OLLAMA_URL, RSS_URL, SEARXNG_URL, TELEGRAM_URL
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 COMPOSE_FILE = REPO_ROOT / "docker-compose.e2e.yml"
 
@@ -43,6 +45,9 @@ def e2e_stack() -> Generator[None, None, None]:
     if not _compose_available():
         pytest.skip("docker compose not available in this environment")
 
+    # Ensure manually pre-started stacks do not leave stale state behind.
+    _compose("down", "-v")
+
     # Build & start
     build = _compose("build")
     if build.returncode != 0:
@@ -58,10 +63,10 @@ def e2e_stack() -> Generator[None, None, None]:
 
     try:
         # Wait for mocks to be healthy
-        _wait_for("http://localhost:8001/health", timeout=60)
-        _wait_for("http://localhost:11434/health", timeout=60)
-        _wait_for("http://localhost:8002/health", timeout=60)
-        _wait_for("http://localhost:8003/health", timeout=60)
+        _wait_for(f"{TELEGRAM_URL}/health", timeout=60)
+        _wait_for(f"{OLLAMA_URL}/health", timeout=60)
+        _wait_for(f"{RSS_URL}/health", timeout=60)
+        _wait_for(f"{SEARXNG_URL}/health", timeout=60)
 
         yield
     finally:
@@ -89,7 +94,7 @@ def _compose_available() -> bool:
 @pytest.fixture
 def reset_mocks(e2e_stack: None) -> None:
     """Reset mock service state before a test."""
-    httpx.post("http://localhost:8001/__reset", timeout=5)
-    httpx.post("http://localhost:11434/__reset", timeout=5)
-    httpx.post("http://localhost:8002/__reset", timeout=5)
-    httpx.post("http://localhost:8003/__reset", timeout=5)
+    httpx.post(f"{TELEGRAM_URL}/__reset", timeout=5)
+    httpx.post(f"{OLLAMA_URL}/__reset", timeout=5)
+    httpx.post(f"{RSS_URL}/__reset", timeout=5)
+    httpx.post(f"{SEARXNG_URL}/__reset", timeout=5)

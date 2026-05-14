@@ -12,7 +12,12 @@ from glean.llm.common import (
     parse_score,
 )
 from glean.llm.registry import register_provider
+from glean.logging import get_logger
+from glean.security.ssrf import is_external_http_url, validate_provider_base_url
+from glean.security.ssrf_transport import SSRFGuardedTransport, outbound_timeout
 from glean.sources.base import Item
+
+logger = get_logger(__name__)
 
 
 @register_provider("ollama")
@@ -28,9 +33,16 @@ class OllamaProvider:
     ) -> None:
         del api_key  # unused
         self.model = model
-        self.base_url = base_url or "http://ollama:11434"
+        self.base_url = validate_provider_base_url("ollama", base_url or "http://ollama:11434")
         self.timeout_s = timeout_s
-        self._client = ollama.AsyncClient(host=self.base_url, timeout=timeout_s)
+        if is_external_http_url(self.base_url):
+            logger.warning("ollama_external_http_base_url", base_url=self.base_url)
+        self._client = ollama.AsyncClient(
+            host=self.base_url,
+            timeout=outbound_timeout(read=timeout_s),
+            follow_redirects=False,
+            transport=SSRFGuardedTransport(allow_private=True),
+        )
 
     async def rank(self, item: Item, prompt: str) -> float:
         system = (
