@@ -4,7 +4,13 @@
  * X-Glean-Api-Key.
  */
 
-import type { SkillConfig } from "./types";
+import type {
+  FeedConfig,
+  FeedListItem,
+  FeedStatus,
+  SkillConfig,
+  ValidateResponse,
+} from "./types";
 
 let apiKeyPromise: Promise<string> | null = null;
 
@@ -22,6 +28,10 @@ function ensureApiKey(): Promise<string> {
     apiKeyPromise = fetchApiKey();
   }
   return apiKeyPromise;
+}
+
+export function getApiKey(): Promise<string> {
+  return ensureApiKey();
 }
 
 export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
@@ -53,6 +63,71 @@ export async function getInitialize(): Promise<InitializeResponse> {
   if (!resp.ok) throw new Error(`initialize: ${resp.status}`);
   return (await resp.json()) as InitializeResponse;
 }
+
+// --- Feed config CRUD ---
+
+export async function listFeedConfigs(): Promise<FeedListItem[]> {
+  return apiJson<FeedListItem[]>("/api/v1/config/feeds");
+}
+
+export async function getFeedConfig(name: string): Promise<FeedConfig> {
+  return apiJson<FeedConfig>(`/api/v1/config/feeds/${encodeURIComponent(name)}`);
+}
+
+export async function createFeedConfig(feed: FeedConfig): Promise<void> {
+  const resp = await apiFetch("/api/v1/config/feeds", {
+    method: "POST",
+    body: JSON.stringify(feed),
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`create feed failed: ${resp.status} ${text}`);
+  }
+}
+
+export async function updateFeedConfig(name: string, feed: FeedConfig): Promise<void> {
+  const resp = await apiFetch(`/api/v1/config/feeds/${encodeURIComponent(name)}`, {
+    method: "PUT",
+    body: JSON.stringify(feed),
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`update feed failed: ${resp.status} ${text}`);
+  }
+}
+
+export async function deleteFeedConfig(name: string): Promise<void> {
+  const resp = await apiFetch(`/api/v1/config/feeds/${encodeURIComponent(name)}`, {
+    method: "DELETE",
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`delete feed failed: ${resp.status} ${text}`);
+  }
+}
+
+export async function validateFeedConfig(feed: FeedConfig): Promise<ValidateResponse> {
+  return apiJson<ValidateResponse>("/api/v1/config/validate", {
+    method: "POST",
+    body: JSON.stringify({ defaults: {}, feeds: [feed] }),
+  });
+}
+
+export async function listFeedStatuses(): Promise<FeedStatus[]> {
+  return apiJson<FeedStatus[]>("/api/v1/feeds");
+}
+
+export async function runFeedNow(name: string): Promise<void> {
+  const resp = await apiFetch(`/api/v1/feeds/${encodeURIComponent(name)}/run`, {
+    method: "POST",
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`run feed failed: ${resp.status} ${text}`);
+  }
+}
+
+// --- Skill config CRUD ---
 
 export async function listSkills(): Promise<SkillConfig[]> {
   return apiJson<SkillConfig[]>("/api/v1/config/skills");
