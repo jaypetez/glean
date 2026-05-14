@@ -61,6 +61,14 @@ class FakeLLM:
         pass
 
 
+class FakeTelegram:
+    def __init__(self) -> None:
+        self.close_count = 0
+
+    async def aclose(self) -> None:
+        self.close_count += 1
+
+
 def _basic_cfg_yaml() -> str:
     return textwrap.dedent(
         """
@@ -166,6 +174,20 @@ async def test_run_feed_once_dry_run(tmp_path: Path, write_yaml) -> None:
         await state.close()
     assert result.feed == "t1"
     assert result.error is None
+
+
+async def test_run_feed_once_leaves_injected_telegram_lifecycle_to_caller(
+    tmp_path: Path, write_yaml
+) -> None:
+    cfg = load_config(write_yaml(_basic_cfg_yaml()))
+    state = StateStore(tmp_path / "s.db")
+    telegram = FakeTelegram()
+    await state.open()
+    try:
+        await run_feed_once(cfg, state, "alpha", dry_run=True, telegram=telegram)  # type: ignore[arg-type]
+    finally:
+        await state.close()
+    assert telegram.close_count == 0
 
 
 async def test_run_feed_once_unknown_feed_raises(tmp_path: Path, write_yaml) -> None:

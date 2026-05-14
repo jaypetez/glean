@@ -86,12 +86,15 @@ class Runner:
         state: StateStore,
         telegram: TelegramSender | None = None,
         http: httpx.AsyncClient | None = None,
+        *,
+        close_telegram: bool = True,
     ) -> None:
         self.config = config
         self.state = state
         self.telegram = telegram
         self.http = http or httpx.AsyncClient(timeout=30.0)
         self._owns_http = http is None
+        self._close_telegram = close_telegram
         self._llm_cache: dict[str, LLMProvider] = {}
         self._sinks_cache: dict[str, list[Sink]] = {}
 
@@ -105,7 +108,7 @@ class Runner:
                 await provider.aclose()
         if self._owns_http:
             await self.http.aclose()
-        if self.telegram is not None:
+        if self._close_telegram and self.telegram is not None:
             await self.telegram.aclose()
 
     def _get_llm(self, feed: FeedConfig) -> LLMProvider:
