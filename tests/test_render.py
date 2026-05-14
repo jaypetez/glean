@@ -18,9 +18,9 @@ def _item(title: str, url: str = "https://example.com/x", body: str = "") -> Ite
 
 def test_html_render_single_message() -> None:
     items = [_item(f"item {i}") for i in range(3)]
-    msgs = render_digest(items, intro="<b>AI news</b>", render=RenderConfig())
+    msgs = render_digest(items, intro="AI news", render=RenderConfig())
     assert len(msgs) == 1
-    assert "<b>AI news</b>" in msgs[0]
+    assert "AI news" in msgs[0]
     assert "<b>item 0</b>" in msgs[0]
     assert msgs[0].count("📰") == 3
 
@@ -30,6 +30,14 @@ def test_html_escapes_dangerous_chars() -> None:
     msgs = render_digest(items, intro="hi", render=RenderConfig())
     assert "<script>" not in msgs[0]
     assert "&lt;script&gt;" in msgs[0]
+
+
+def test_html_escapes_intro() -> None:
+    items = [_item("safe")]
+    msgs = render_digest(items, intro="<script>alert(1)</script>", render=RenderConfig())
+
+    assert "<script>" not in msgs[0]
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in msgs[0]
 
 
 def test_chunking_when_too_long() -> None:

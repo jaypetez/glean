@@ -8,6 +8,7 @@ import pytest
 from anthropic.types import TextBlock
 
 from glean.llm.anthropic_provider import AnthropicProvider
+from glean.llm.common import INJECTION_GUARD_SYSTEM_PROMPT
 from glean.sources.base import Item
 
 pytestmark = pytest.mark.asyncio
@@ -55,8 +56,11 @@ async def test_anthropic_rank_sends_expected_message_request() -> None:
     kwargs = create.await_args.kwargs
     assert kwargs["model"] == "claude-3"
     assert kwargs["max_tokens"] == 16
+    assert kwargs["system"].startswith(INJECTION_GUARD_SYSTEM_PROMPT)
     assert "score" in kwargs["system"]
-    assert kwargs["messages"] == [{"role": "user", "content": "TITLE: Test\nSOURCE: test\nURL: https://example.com/a\nBODY:\nBody"}]
+    assert kwargs["messages"][0]["role"] == "user"
+    assert "TITLE: Test" in kwargs["messages"][0]["content"]
+    assert "<UNTRUSTED_CONTENT>" in kwargs["messages"][0]["content"]
 
 
 async def test_anthropic_summarize() -> None:
@@ -73,7 +77,8 @@ async def test_anthropic_summarize_uses_default_prompt() -> None:
     await provider.summarize(_item(), "  ")
 
     kwargs = provider._client.messages.create.await_args.kwargs
-    assert kwargs["system"] == "Summarize the following content in one sentence."
+    assert kwargs["system"].startswith(INJECTION_GUARD_SYSTEM_PROMPT)
+    assert "Summarize the following content in one sentence." in kwargs["system"]
     assert kwargs["max_tokens"] == 256
 
 
@@ -91,7 +96,9 @@ async def test_anthropic_digest_uses_default_prompt() -> None:
     await provider.digest([_item()], "")
 
     kwargs = provider._client.messages.create.await_args.kwargs
-    assert kwargs["system"] == "Write a 1-line digest header for the items below."
+    assert kwargs["system"].startswith(INJECTION_GUARD_SYSTEM_PROMPT)
+    assert "Write a 1-line digest header for the items below." in kwargs["system"]
+    assert kwargs["max_tokens"] == 512
     assert "[1] Test" in kwargs["messages"][0]["content"]
 
 

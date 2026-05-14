@@ -35,7 +35,7 @@ def render_digest(
         intro_line = intro
     else:
         formatter = _format_item_html
-        intro_line = intro
+        intro_line = escape(intro)
 
     blocks: list[str] = [intro_line] if intro_line else []
     for item in items:

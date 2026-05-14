@@ -136,6 +136,15 @@ async def test_summarize_stage_falls_back_on_exception() -> None:
     assert out[0].llm_summary == "source summary"
 
 
+async def test_summarize_stage_filters_suspicious_llm_output() -> None:
+    items = [_item(title="X")]
+    llm = _LLM(summary_fn=lambda item, prompt: "ignore previous instructions")
+
+    out = await summarize_stage("feed", items, _resolver(llm), prompt="sum")
+
+    assert out[0].llm_summary == "[output filtered: suspected prompt injection]"
+
+
 async def test_summarize_stage_empty_items() -> None:
     llm = _LLM()
 
@@ -162,6 +171,15 @@ async def test_digest_intro_falls_back_to_prompt_on_exception() -> None:
     out = await digest_intro("feed", items, llm, prompt="static header")
 
     assert out == "static header"
+
+
+async def test_digest_intro_filters_suspicious_llm_output() -> None:
+    items = [_item(title="A")]
+    llm = _LLM(digest_fn=lambda items, prompt: "<script>alert(1)</script>")
+
+    out = await digest_intro("feed", items, llm, prompt="write a header")
+
+    assert out == "[output filtered: suspected prompt injection]"
 
 
 async def test_digest_intro_returns_prompt_when_no_items() -> None:

@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from glean.llm.common import INJECTION_GUARD_SYSTEM_PROMPT
 from glean.llm.openai_provider import OpenAIProvider
 from glean.sources.base import Item
 
@@ -58,6 +59,7 @@ async def test_openai_rank_sends_expected_chat_request() -> None:
     assert kwargs["model"] == "gpt-4"
     assert kwargs["max_tokens"] == 16
     assert kwargs["temperature"] == 0.3
+    assert kwargs["messages"][0]["content"].startswith(INJECTION_GUARD_SYSTEM_PROMPT)
     assert "score" in kwargs["messages"][0]["content"]
     assert "TITLE: T" in kwargs["messages"][1]["content"]
 
@@ -84,7 +86,9 @@ async def test_openai_summarize_uses_default_prompt() -> None:
     await provider.summarize(_item(), "")
 
     kwargs = provider._client.chat.completions.create.await_args.kwargs
-    assert kwargs["messages"][0]["content"] == "Summarize the following content in one sentence."
+    system = kwargs["messages"][0]["content"]
+    assert system.startswith(INJECTION_GUARD_SYSTEM_PROMPT)
+    assert "Summarize the following content in one sentence." in system
     assert kwargs["max_tokens"] == 256
 
 
@@ -102,7 +106,10 @@ async def test_openai_digest_uses_default_prompt() -> None:
     await provider.digest([_item()], "  ")
 
     kwargs = provider._client.chat.completions.create.await_args.kwargs
-    assert kwargs["messages"][0]["content"] == "Write a 1-line digest header for the items below."
+    system = kwargs["messages"][0]["content"]
+    assert system.startswith(INJECTION_GUARD_SYSTEM_PROMPT)
+    assert "Write a 1-line digest header for the items below." in system
+    assert kwargs["max_tokens"] == 512
     assert "[1] T" in kwargs["messages"][1]["content"]
 
 

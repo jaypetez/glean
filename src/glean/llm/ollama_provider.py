@@ -6,6 +6,7 @@ from typing import Any, ClassVar
 import ollama
 
 from glean.llm.common import (
+    INJECTION_GUARD_SYSTEM_PROMPT,
     item_as_prompt_context,
     items_as_prompt_context,
     parse_score,
@@ -33,6 +34,7 @@ class OllamaProvider:
 
     async def rank(self, item: Item, prompt: str) -> float:
         system = (
+            f"{INJECTION_GUARD_SYSTEM_PROMPT}\n\n"
             f"{prompt.strip()}\n\n"
             "Respond with ONLY a single number between 0 and 1. No prose."
         )
@@ -48,7 +50,10 @@ class OllamaProvider:
         return parse_score(resp["message"]["content"])
 
     async def summarize(self, item: Item, prompt: str) -> str:
-        system = prompt.strip() or "Summarize the following content in one sentence."
+        system = (
+            f"{INJECTION_GUARD_SYSTEM_PROMPT}\n\n"
+            f"{prompt.strip() or 'Summarize the following content in one sentence.'}"
+        )
         user = item_as_prompt_context(item)
         resp = await self._client.chat(
             model=self.model,
@@ -61,7 +66,10 @@ class OllamaProvider:
         return (resp["message"]["content"] or "").strip()
 
     async def digest(self, items: list[Item], prompt: str) -> str:
-        system = prompt.strip() or "Write a 1-line digest header for the items below."
+        system = (
+            f"{INJECTION_GUARD_SYSTEM_PROMPT}\n\n"
+            f"{prompt.strip() or 'Write a 1-line digest header for the items below.'}"
+        )
         user = items_as_prompt_context(items)
         resp = await self._client.chat(
             model=self.model,
@@ -69,7 +77,7 @@ class OllamaProvider:
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
-            options={"temperature": 0.3, "num_predict": 256},
+            options={"temperature": 0.3, "num_predict": 512},
         )
         return (resp["message"]["content"] or "").strip()
 
