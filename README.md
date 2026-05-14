@@ -118,7 +118,13 @@ Defaults editor (Telegram / LLM / render / failure), API key rotation, theme tog
 
 ![Settings page with Defaults / API Key / Appearance / About tabs at the top, a Telegram defaults section with bot token (masked) / default chat ID / ops chat ID inputs, an LLM defaults section with provider (ollama) / model (qwen2.5:7b) / base URL, and Render + Failure defaults panels](./assets/screenshots/settings.png)
 
-The UI authenticates with the single-user API key returned by `/api/v1/initialize` and sends it as `X-Glean-Api-Key` for REST calls. Keep port 9090 on loopback or behind a trusted reverse proxy unless you provide your own auth layer.
+The UI authenticates with a single-user API key and sends it as `X-Glean-Api-Key` for REST calls. On first run, copy the generated key from the container logs:
+
+```bash
+docker logs glean | grep GLEAN_INITIAL_API_KEY
+```
+
+Paste that key into the UI modal. Alternatively, set `GLEAN_API_KEY` in your environment for a fixed externally-managed key. Keep port 9090 on loopback or behind a trusted reverse proxy unless you provide your own auth layer.
 
 ## Configuration
 
@@ -302,7 +308,7 @@ All commands accept `--config <path>` (default `/etc/glean/feeds.yaml`) and `--d
 - **Bootstrap is silent.** First run of any new feed indexes current items into the seen-set without sending — only genuinely-new items go out next tick. Override with `bootstrap: send-last-N` if you want a primer.
 - **State lives at `/data/state.db`.** Mount a volume. SQLite (WAL mode), inspectable with the `sqlite3` CLI.
 - **Health endpoint:** `GET /healthz` on port 9090 (loopback only by default).
-- **Web UI/API auth:** expose port 9090 only on loopback or behind a trusted reverse proxy. The UI receives a generated single-user API key while the server process that created, migrated, or rotated it is still running, then keeps it in browser storage; restarts persist only a verifier. Set `GLEAN_API_KEY` for a fixed externally-managed key; in that mode UI key rotation is disabled.
+- **Web UI/API auth:** expose port 9090 only on loopback or behind a trusted reverse proxy. On first boot, read the generated key with `docker logs glean | grep GLEAN_INITIAL_API_KEY`, paste it into the UI modal, and the browser stores it locally. Restarts persist only a verifier. Set `GLEAN_API_KEY` for a fixed externally-managed key; in that mode UI key rotation is disabled.
 - **Logs:** structured key=value to stderr in dev, JSON when `LOG_FORMAT=json`.
 - **Telegram rate limits:** the sender retries on `RetryAfter` automatically.
 - **LLM failures during ranking:** items with failed scores are dropped (treated as `0.0`). Summarize failures fall back to the source-provided summary.
