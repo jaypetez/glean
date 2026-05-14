@@ -286,8 +286,14 @@ async def test_api_key_env_override(
     assert get_or_create_api_key(tmp_path / "x.db").plaintext == "env-override-key"
 
 
-async def test_openapi_schema_available(client: AsyncClient) -> None:
-    resp = await client.get("/api/openapi.json")
+async def test_openapi_schema_available_when_enabled(
+    app_and_state, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _, state = app_and_state
+    monkeypatch.setenv("GLEAN_ENABLE_DOCS", "1")
+    app = make_app(state, tmp_path / "state.db")
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        resp = await ac.get("/api/openapi.json")
     assert resp.status_code == 200
     body = resp.json()
     assert body["info"]["title"] == "glean"

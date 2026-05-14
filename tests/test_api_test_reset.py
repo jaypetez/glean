@@ -12,7 +12,10 @@ from glean.state.store import StateStore
 pytestmark = pytest.mark.asyncio
 
 
-async def test_test_reset_route_is_not_registered_outside_test_mode(tmp_path: Path) -> None:
+async def test_test_reset_route_is_not_registered_outside_test_mode(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("GLEAN_ENABLE_DOCS", "1")
     state = StateStore(tmp_path / "state.db")
     await state.open()
     try:
@@ -29,6 +32,31 @@ async def test_test_reset_route_is_not_registered_outside_test_mode(tmp_path: Pa
     assert resp.status_code == 404
     assert "/api/v1/test/reset" not in openapi.json()["paths"]
     assert "/api/v1/test/rss" not in openapi.json()["paths"]
+
+
+async def test_test_reset_clears_rate_limit_state(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("GLEAN_TEST_MODE", "1")
+    state = StateStore(tmp_path / "state.db")
+    await state.open()
+    try:
+        app = make_app(state, tmp_path / "state.db")
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            limited_statuses = [
+                (await client.get("/api/v1/initialize")).status_code for _ in range(11)
+            ]
+            reset = await client.post(
+                "/api/v1/test/reset",
+                headers={"X-Glean-Api-Key": app.state.glean_api_key},
+            )
+            after_reset = await client.get("/api/v1/initialize")
+    finally:
+        await state.close()
+
+    assert 429 in limited_statuses
+    assert reset.status_code == 200
+    assert after_reset.status_code == 200
 
 
 async def test_test_reset_restores_fixture_config_and_clears_state(

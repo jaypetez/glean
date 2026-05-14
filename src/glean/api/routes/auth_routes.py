@@ -1,15 +1,16 @@
 """Authentication management routes."""
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from fastapi import APIRouter, HTTPException, Request, status
 
 from glean.api.auth import api_key_env_override_active, rotate_api_key
 from glean.api.models import RotateResponse
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+if TYPE_CHECKING:
+    from slowapi import Limiter
 
-
-@router.post("/rotate", response_model=RotateResponse)
 async def rotate(request: Request) -> RotateResponse:
     """Rotate the single-user API key and return it once."""
     if api_key_env_override_active():
@@ -27,3 +28,11 @@ async def rotate(request: Request) -> RotateResponse:
     request.app.state.glean_api_key = material.plaintext
     request.app.state.glean_api_key_material = material
     return RotateResponse(api_key=material.plaintext)
+
+
+def build_auth_router(limiter: Limiter) -> APIRouter:
+    limited_router = APIRouter(prefix="/auth", tags=["auth"])
+    limited_router.post("/rotate", response_model=RotateResponse)(
+        limiter.limit("10/minute")(rotate)
+    )
+    return limited_router
