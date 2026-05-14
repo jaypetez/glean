@@ -1,3 +1,5 @@
+// Mirrors src/glean/config/schema.py (subset relevant for editing).
+
 export interface LLMConfig {
   provider: string;
   model: string;
