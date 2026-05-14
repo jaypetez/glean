@@ -21,6 +21,34 @@ _RANK_CONCURRENCY = 4
 _SUMMARIZE_CONCURRENCY = 4
 
 
+class LLMCallCounter:
+    def __init__(self, max_calls: int | None) -> None:
+        self.max_calls = max_calls
+        self.calls = 0
+        self._capped_logged = False
+        self._lock = asyncio.Lock()
+
+    @property
+    def at_limit(self) -> bool:
+        return self.max_calls is not None and self.calls >= self.max_calls
+
+    async def increment(self, feed: str) -> bool:
+        calls: int | None = None
+        max_calls: int | None = None
+        async with self._lock:
+            if self.at_limit:
+                if not self._capped_logged:
+                    calls = self.calls
+                    max_calls = self.max_calls
+                    self._capped_logged = True
+            else:
+                self.calls += 1
+                return True
+        if calls is not None and max_calls is not None:
+            logger.warning("llm_budget_capped", feed=feed, calls=calls, max=max_calls)
+        return False
+
+
 async def dedup_stage(feed: str, items: list[Item], state: StateStore) -> list[Item]:
     new_items = await state.filter_new(feed, items)
     logger.debug("dedup", feed=feed, before=len(items), after=len(new_items))
@@ -34,14 +62,17 @@ async def rank_stage(
     *,
     prompt: str,
     min_relevance: float,
+    llm_counter: LLMCallCounter | None = None,
 ) -> tuple[list[Item], list[Item]]:
     """Return (kept, dropped). Items get a .relevance score attached."""
     if not items:
         return [], []
     sem = asyncio.Semaphore(_RANK_CONCURRENCY)
 
-    async def score(item: Item) -> Item:
+    async def score(item: Item) -> tuple[Item, bool]:
         async with sem:
+            if llm_counter is not None and not await llm_counter.increment(feed):
+                return item, False
             try:
                 s = await llm_for(item).rank(item, prompt)
             except Exception as exc:
@@ -52,12 +83,15 @@ async def rank_stage(
                     err=scrub(str(exc))[:500],
                 )
                 s = 0.0
-            return dataclasses.replace(item, relevance=s)
+            return dataclasses.replace(item, relevance=s), True
 
-    scored = await asyncio.gather(*(score(i) for i in items))
+    score_results = await asyncio.gather(*(score(i) for i in items))
+    scored = [i for i, called in score_results if called]
+    skipped = [i for i, called in score_results if not called]
     kept = [i for i in scored if (i.relevance or 0.0) >= min_relevance]
     dropped = [i for i in scored if (i.relevance or 0.0) < min_relevance]
     kept.sort(key=lambda i: i.relevance or 0.0, reverse=True)
+    kept.extend(skipped)
     logger.debug("rank", feed=feed, kept=len(kept), dropped=len(dropped))
     return kept, dropped
 
@@ -68,6 +102,7 @@ async def summarize_stage(
     llm_for: Callable[[Item], LLMProvider],
     *,
     prompt: str,
+    llm_counter: LLMCallCounter | None = None,
 ) -> list[Item]:
     if not items:
         return []
@@ -75,6 +110,8 @@ async def summarize_stage(
 
     async def one(item: Item) -> Item:
         async with sem:
+            if llm_counter is not None and not await llm_counter.increment(feed):
+                return dataclasses.replace(item, llm_summary="")
             try:
                 summary = filter_llm_output(await llm_for(item).summarize(item, prompt))
             except Exception as exc:
@@ -96,8 +133,11 @@ async def digest_intro(
     llm: LLMProvider,
     *,
     prompt: str,
+    llm_counter: LLMCallCounter | None = None,
 ) -> str:
     if not items:
+        return prompt
+    if llm_counter is not None and not await llm_counter.increment(feed):
         return prompt
     try:
         return filter_llm_output(await llm.digest(items, prompt))
@@ -113,6 +153,7 @@ async def apply_skill_stage(
     *,
     skill: SkillConfig,
     skill_llm: LLMProvider | None = None,
+    llm_counter: LLMCallCounter | None = None,
 ) -> list[Item]:
     """Run structured extraction for each item using the skill's schema.
 
@@ -138,6 +179,8 @@ async def apply_skill_stage(
                 return item
 
             rendered_prompt = render_skill_prompt(skill.prompt, item)
+            if llm_counter is not None and not await llm_counter.increment(feed):
+                return item
             try:
                 result = await extract_fn(
                     item,

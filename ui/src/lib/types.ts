@@ -34,6 +34,7 @@ export interface DefaultsConfig {
   llm?: LLMConfig;
   render?: RenderConfig;
   sinks?: Array<Record<string, unknown>> | null;
+  max_llm_calls_per_run?: number | null;
   bootstrap?: BootstrapMode;
   bootstrap_count?: number;
   failure?: FailureConfig;
@@ -43,6 +44,7 @@ export interface Defaults extends DefaultsConfig {
   telegram: TelegramDefaults;
   llm: LLMConfig;
   render: RenderConfig;
+  max_llm_calls_per_run: number | null;
   bootstrap: BootstrapMode;
   bootstrap_count: number;
   failure: FailureConfig;
@@ -83,6 +85,7 @@ export interface FeedConfig {
   pipeline: StageSpec[] | StageSpecYaml[];
   llm?: LLMConfig | null;
   render?: RenderConfig | null;
+  max_llm_calls_per_run?: number | null;
   bootstrap?: BootstrapMode | null;
   bootstrap_count?: number | null;
   failure?: FailureConfig | null;

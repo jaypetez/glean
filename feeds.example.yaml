@@ -13,6 +13,9 @@ defaults:
     style: html
     link_preview: false
     max_items: 10
+  # Optional safety budget for rank/summarize/digest/apply_skill LLM calls.
+  # Recommended when using paid providers; override per feed as needed.
+  # max_llm_calls_per_run: 50
   bootstrap: skip-and-mark
   failure:
     alert_after: 3

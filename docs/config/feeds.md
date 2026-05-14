@@ -106,6 +106,28 @@ feeds:
 | `apply_skill` | Run a structured extraction skill on each item; attaches result to `Item.structured` and copies a `summary`/`one_liner`/`tldr` field into `llm_summary`. See [Skills](./skills.md). |
 | `digest`    | Sets the digest header. Optionally LLM-synthesized.         |
 
+## LLM call budget
+
+Set `max_llm_calls_per_run` to cap total LLM calls made by one feed run across
+`rank`, `summarize`, `apply_skill`, and LLM-generated `digest` stages. With
+no default or feed cap configured, runs are unlimited for backwards
+compatibility. Use a budget such as `50` for feeds that use paid providers.
+
+```yaml
+defaults:
+  max_llm_calls_per_run: 50   # optional global default
+
+feeds:
+  - name: ai-news
+    max_llm_calls_per_run: 25 # optional per-feed override
+```
+
+When the budget is exhausted, glean logs `llm_budget_capped` once for that run.
+Items that skip an LLM stage still continue through the pipeline; skipped
+summaries are left blank. If the budget is exhausted during `rank`, unranked
+items continue after ranked items, so set the cap high enough when ranking is
+your primary quality filter.
+
 ## Sinks
 
 Each feed delivers its digest to one or more **sinks**. Configure them with the
@@ -245,6 +267,9 @@ llm:
   base_url: http://ollama:11434
   timeout_s: 60.0
 ```
+
+For paid LLMs, also set `max_llm_calls_per_run` on `defaults` or individual
+feeds to prevent one large tick from making unbounded model calls.
 
 ## Render configuration
 

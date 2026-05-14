@@ -120,6 +120,11 @@ class Defaults(BaseModel):
     llm: LLMConfig = Field(default_factory=LLMConfig)
     render: RenderConfig = Field(default_factory=RenderConfig)
     sinks: list[dict[str, Any]] | None = Field(default=None, min_length=1)
+    max_llm_calls_per_run: int | None = Field(
+        default=None,
+        ge=1,
+        description="Default hard cap on total LLM calls per run. None = unlimited.",
+    )
     bootstrap: Literal["skip-and-mark", "send-last-N", "send-all"] = "skip-and-mark"
     bootstrap_count: int = Field(default=5, ge=1)
     failure: FailureConfig = Field(default_factory=FailureConfig)
@@ -162,6 +167,14 @@ class FeedConfig(BaseModel):
     pipeline: list[StageSpec] = Field(min_length=1)
     llm: LLMConfig | None = None
     render: RenderConfig | None = None
+    max_llm_calls_per_run: int | None = Field(
+        default=None,
+        ge=1,
+        description=(
+            "Hard cap on total LLM calls per run for this feed. "
+            "None = unlimited (back-compat)."
+        ),
+    )
     bootstrap: Literal["skip-and-mark", "send-last-N", "send-all"] | None = None
     bootstrap_count: int | None = None
     failure: FailureConfig | None = None
@@ -224,6 +237,9 @@ class FeedConfig(BaseModel):
         raise ValueError(
             "feed must have feed-level sinks/chat_id, defaults.sinks, or Telegram defaults"
         )
+
+    def effective_max_llm_calls_per_run(self, defaults: Defaults) -> int | None:
+        return self.max_llm_calls_per_run or defaults.max_llm_calls_per_run
 
     def effective_bootstrap(self, defaults: Defaults) -> str:
         return self.bootstrap or defaults.bootstrap
