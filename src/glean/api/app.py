@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -11,9 +12,11 @@ from fastapi.staticfiles import StaticFiles
 from glean import __version__
 from glean.api.auth import auth_disabled, get_or_create_api_key, make_verify_api_key
 from glean.api.events import EventBus
+from glean.api.routes.auth_routes import router as auth_router
 from glean.api.routes.config import router as config_router
 from glean.api.routes.events import router as events_router
 from glean.api.routes.feeds import router as feeds_router
+from glean.api.routes.system import router as system_router
 from glean.logging import get_logger
 
 if TYPE_CHECKING:
@@ -43,8 +46,14 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
     app.state.glean_state = state
     app.state.glean_db_path = db_path
     app.state.glean_api_key = api_key
+    app.state.glean_started_at = time.time()
     app.state.glean_event_bus = EventBus()
-    verify = make_verify_api_key(api_key)
+
+    def api_key_getter() -> str:
+        return str(app.state.glean_api_key)
+
+    verify = make_verify_api_key(api_key_getter)
+    verify_events = make_verify_api_key(api_key_getter, allow_query_for_events=True)
 
     health_router = APIRouter(tags=["health"])
 
@@ -65,7 +74,7 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
         """Return bootstrap data for first-load UI initialization."""
         return {
             "version": __version__,
-            "api_key": api_key,
+            "api_key": app.state.glean_api_key,
             "auth_disabled": auth_disabled(),
         }
 
@@ -77,10 +86,19 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
     async def api_health() -> dict[str, str]:
         return {"status": "ok"}
 
+    api_router.include_router(auth_router)
     api_router.include_router(config_router)
     api_router.include_router(feeds_router)
-    api_router.include_router(events_router)
+    api_router.include_router(system_router)
     app.include_router(api_router)
+
+    events_api_router = APIRouter(
+        prefix="/api/v1",
+        dependencies=[Depends(verify_events)],
+        tags=["api"],
+    )
+    events_api_router.include_router(events_router)
+    app.include_router(events_api_router)
 
     # Serve the pre-built SPA. MUST be mounted last so /api and /healthz
     # routes win over the catch-all.

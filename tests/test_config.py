@@ -68,13 +68,13 @@ def test_effective_sinks_inherits_from_defaults_sinks(write_yaml) -> None:
     ]
 
 
-def test_effective_sinks_inherits_from_telegram_defaults(write_yaml) -> None:
+def test_telegram_defaults_provide_effective_sink(write_yaml) -> None:
     yaml = textwrap.dedent(
         """
         defaults:
           telegram:
             bot_token: test-token
-            chat_id: -100123
+            chat_id: -1001
         feeds:
           - name: ai
             schedule: "every 1h"
@@ -85,14 +85,15 @@ def test_effective_sinks_inherits_from_telegram_defaults(write_yaml) -> None:
               - dedup
         """
     )
+
     cfg = load_config(write_yaml(yaml))
 
     assert cfg.feeds[0].effective_sinks(cfg.defaults) == [
-        {"type": "telegram", "chat_id": -100123, "token": "test-token"}
+        {"type": "telegram", "chat_id": -1001, "token": "test-token"}
     ]
 
 
-def test_effective_sinks_raises_without_feed_or_default_sinks(write_yaml) -> None:
+def test_feed_without_sink_or_default_sink_is_rejected(write_yaml) -> None:
     yaml = textwrap.dedent(
         """
         feeds:
@@ -105,10 +106,34 @@ def test_effective_sinks_raises_without_feed_or_default_sinks(write_yaml) -> Non
               - dedup
         """
     )
+
+    with pytest.raises(ConfigError) as exc:
+        load_config(write_yaml(yaml))
+
+    assert "feed must have feed-level sinks/chat_id" in str(exc.value)
+
+
+def test_failure_alert_after_accepts_large_operational_threshold(write_yaml) -> None:
+    yaml = textwrap.dedent(
+        """
+        defaults:
+          failure:
+            alert_after: 99
+        feeds:
+          - name: ai
+            schedule: "every 1h"
+            chat_id: -1001
+            sources:
+              - type: rss
+                url: https://example.com/feed
+            pipeline:
+              - dedup
+        """
+    )
+
     cfg = load_config(write_yaml(yaml))
 
-    with pytest.raises(ValueError, match="feed must have feed-level sinks"):
-        cfg.feeds[0].effective_sinks(cfg.defaults)
+    assert cfg.defaults.failure.alert_after == 99
 
 
 def test_env_interpolation(write_yaml, monkeypatch) -> None:

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Gear } from "@phosphor-icons/svelte";
   import type { Snippet } from "svelte";
   interface Props {
     children: Snippet;
@@ -37,9 +38,10 @@
           Skills
         </a>
         <a
-          class="rounded-md px-3 py-1.5 text-tertiary hover:bg-elevated hover:text-primary"
+          class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-tertiary hover:bg-elevated hover:text-primary"
           href="/settings"
         >
+          <Gear size={16} aria-hidden="true" />
           Settings
         </a>
       </nav>

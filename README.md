@@ -264,6 +264,7 @@ All commands accept `--config <path>` (default `/etc/glean/feeds.yaml`) and `--d
 - **Bootstrap is silent.** First run of any new feed indexes current items into the seen-set without sending — only genuinely-new items go out next tick. Override with `bootstrap: send-last-N` if you want a primer.
 - **State lives at `/data/state.db`.** Mount a volume. SQLite (WAL mode), inspectable with the `sqlite3` CLI.
 - **Health endpoint:** `GET /healthz` on port 9090 (loopback only by default).
+- **Web UI/API auth:** the UI reads the single-user API key from unauthenticated `/api/v1/initialize`, so expose port 9090 only on loopback or behind a trusted reverse proxy. Set `GLEAN_API_KEY` for a fixed externally-managed key; in that mode UI key rotation is disabled.
 - **Logs:** structured key=value to stderr in dev, JSON when `LOG_FORMAT=json`.
 - **Telegram rate limits:** the sender retries on `RetryAfter` automatically.
 - **LLM failures during ranking:** items with failed scores are dropped (treated as `0.0`). Summarize failures fall back to the source-provided summary.

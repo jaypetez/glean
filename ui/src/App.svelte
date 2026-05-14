@@ -5,9 +5,11 @@
   import AppShell from "./lib/components/AppShell.svelte";
   import Dashboard from "./lib/routes/Dashboard.svelte";
   import FeedEditor from "./lib/routes/FeedEditor.svelte";
+  import Settings from "./lib/routes/Settings.svelte";
   import Setup from "./lib/routes/Setup.svelte";
   import SkillEditor from "./lib/routes/SkillEditor.svelte";
   import SkillsList from "./lib/routes/SkillsList.svelte";
+  import { loadAppearance } from "./lib/theme";
 
   let info: InitializeResponse | null = $state(null);
   let error: string | null = $state(null);
@@ -15,6 +17,7 @@
   let url = typeof window === "undefined" ? "/" : window.location.pathname;
 
   onMount(async () => {
+    loadAppearance();
     try {
       info = await getInitialize();
       if (
@@ -38,6 +41,7 @@
     <Route path="/skills"><SkillsList /></Route>
     <Route path="/skills/new"><SkillEditor mode="create" /></Route>
     <Route path="/skills/:name" let:params><SkillEditor mode="edit" name={params.name} /></Route>
+    <Route path="/settings"><Settings /></Route>
 
     <Route path="/">
       {#if error}

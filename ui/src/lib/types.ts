@@ -1,5 +1,13 @@
 // Mirrors src/glean/config/schema.py (subset relevant for editing).
 
+export type ThemeChoice = "system" | "dark" | "light";
+export type DensityChoice = "comfortable" | "compact";
+
+export interface TelegramDefaults {
+  bot_token?: string | null;
+  chat_id?: string | number | null;
+}
+
 export interface LLMConfig {
   provider: string;
   model: string;
@@ -12,11 +20,6 @@ export interface RenderConfig {
   style?: "html" | "markdown_v2" | "plain";
   link_preview?: boolean;
   max_items?: number;
-}
-
-export interface TelegramDefaults {
-  bot_token?: string | null;
-  chat_id?: string | number | null;
 }
 
 export interface FailureConfig {
@@ -34,6 +37,33 @@ export interface DefaultsConfig {
   bootstrap?: BootstrapMode;
   bootstrap_count?: number;
   failure?: FailureConfig;
+}
+
+export interface Defaults extends DefaultsConfig {
+  telegram: TelegramDefaults;
+  llm: LLMConfig;
+  render: RenderConfig;
+  bootstrap: BootstrapMode;
+  bootstrap_count: number;
+  failure: FailureConfig;
+}
+
+export interface RotateResponse {
+  api_key: string;
+}
+
+export interface SystemInfo {
+  version: string;
+  hostname: string;
+  python: string;
+  platform: string;
+  database_path: string;
+  config_path: string;
+  feeds_count: number;
+  uptime_seconds: number;
+  started_at: string;
+  llm_provider: string | null;
+  llm_model: string | null;
 }
 
 export type StageName = "dedup" | "rank" | "summarize" | "digest" | "apply_skill";

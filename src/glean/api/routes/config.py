@@ -33,6 +33,16 @@ def _load_or_400() -> Config:
         ) from exc
 
 
+def _ensure_valid_for_write(cfg: Config) -> Config:
+    try:
+        return cfg.ensure_effective_sinks()
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+
 # --- Defaults ---
 
 
@@ -47,7 +57,7 @@ async def put_defaults(
     defaults: Defaults = Body(...),  # noqa: B008
 ) -> WriteResponse:
     cfg = _load_or_400()
-    new_cfg = cfg.model_copy(update={"defaults": defaults})
+    new_cfg = _ensure_valid_for_write(cfg.model_copy(update={"defaults": defaults}))
     write_config(new_cfg, _config_path())
     return WriteResponse(ok=True, message="defaults updated")
 
@@ -97,7 +107,7 @@ async def create_feed(feed: FeedConfig = Body(...)) -> WriteResponse:  # noqa: B
             status_code=status.HTTP_409_CONFLICT,
             detail=f"feed {feed.name!r} already exists",
         )
-    new_cfg = cfg.model_copy(update={"feeds": [*cfg.feeds, feed]})
+    new_cfg = _ensure_valid_for_write(cfg.model_copy(update={"feeds": [*cfg.feeds, feed]}))
     write_config(new_cfg, _config_path())
     return WriteResponse(ok=True, message=f"feed {feed.name!r} created")
 
@@ -116,7 +126,7 @@ async def update_feed(name: str, feed: FeedConfig = Body(...)) -> WriteResponse:
             detail=f"no such feed: {name!r}",
         )
     new_feeds = [feed if f.name == name else f for f in cfg.feeds]
-    new_cfg = cfg.model_copy(update={"feeds": new_feeds})
+    new_cfg = _ensure_valid_for_write(cfg.model_copy(update={"feeds": new_feeds}))
     write_config(new_cfg, _config_path())
     return WriteResponse(ok=True, message=f"feed {name!r} updated")
 
@@ -130,7 +140,7 @@ async def delete_feed(name: str) -> WriteResponse:
             detail=f"no such feed: {name!r}",
         )
     new_feeds = [f for f in cfg.feeds if f.name != name]
-    new_cfg = cfg.model_copy(update={"feeds": new_feeds})
+    new_cfg = _ensure_valid_for_write(cfg.model_copy(update={"feeds": new_feeds}))
     write_config(new_cfg, _config_path())
     return WriteResponse(ok=True, message=f"feed {name!r} deleted")
 
