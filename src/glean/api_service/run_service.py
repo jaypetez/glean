@@ -9,6 +9,7 @@ from glean.config import Config
 from glean.pipeline.engine import Runner, RunResult
 
 if TYPE_CHECKING:
+    from glean.api.events import EventBus
     from glean.state.store import StateStore
     from glean.telegram import TelegramSender
 
@@ -77,10 +78,11 @@ async def run_feed_once(
     *,
     dry_run: bool,
     telegram: TelegramSender | None = None,
+    event_bus: EventBus | None = None,
 ) -> RunResult:
     """Run a single feed once. Caller manages injected telegram lifecycle."""
     cfg.feed(name)  # raises KeyError if feed missing — let caller handle
-    runner = Runner(cfg, state, telegram, close_telegram=False)
+    runner = Runner(cfg, state, telegram, close_telegram=False, event_bus=event_bus)
     try:
         return await runner.run_feed(name, dry_run=dry_run)
     finally:

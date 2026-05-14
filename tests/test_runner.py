@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 import textwrap
 from pathlib import Path
 
 import pytest
 
+from glean.api.events import EventBus
 from glean.config import load_config
 from glean.llm.registry import register_provider
 from glean.pipeline.engine import Runner
@@ -251,3 +253,57 @@ async def test_per_source_llm_dispatched_in_full_pipeline(
     assert "https://exp/1" in calls["expensive"]
     assert "https://cheap/1" not in calls["expensive"]
     assert "https://exp/1" not in calls["cheap"]
+
+
+async def test_run_feed_emits_start_and_completion_events(tmp_path: Path, write_yaml) -> None:
+    cfg = load_config(write_yaml(_cfg_yaml()))
+    state = StateStore(tmp_path / "s.db")
+    await state.open()
+    await state.set_bootstrapped("t1")
+    fake_tg = FakeTelegram()
+    bus = EventBus()
+    q = await bus.subscribe()
+    runner = Runner(cfg, state, telegram=fake_tg, event_bus=bus)  # type: ignore[arg-type]
+    try:
+        result = await runner.run_feed("t1")
+        started = await asyncio.wait_for(q.get(), timeout=1.0)
+        completed = await asyncio.wait_for(q.get(), timeout=1.0)
+    finally:
+        await bus.unsubscribe(q)
+        await runner.aclose()
+        await state.close()
+
+    assert result.error is None
+    assert started.type == "run_started"
+    assert started.feed == "t1"
+    assert completed.type == "run_completed"
+    assert completed.feed == "t1"
+    assert completed.fetched == result.fetched
+    assert completed.after_dedup == result.after_dedup
+    assert completed.sent == result.sent
+    assert completed.duration_ms == result.duration_ms
+
+
+async def test_run_feed_emits_failure_event(tmp_path: Path, write_yaml) -> None:
+    cfg = load_config(write_yaml(_cfg_yaml()))
+    state = StateStore(tmp_path / "s.db")
+    await state.open()
+    await state.set_bootstrapped("t1")
+    bus = EventBus()
+    q = await bus.subscribe()
+    runner = Runner(cfg, state, event_bus=bus)
+    try:
+        result = await runner.run_feed("t1")
+        started = await asyncio.wait_for(q.get(), timeout=1.0)
+        failed = await asyncio.wait_for(q.get(), timeout=1.0)
+    finally:
+        await bus.unsubscribe(q)
+        await runner.aclose()
+        await state.close()
+
+    assert result.error is not None
+    assert started.type == "run_started"
+    assert failed.type == "run_failed"
+    assert failed.feed == "t1"
+    assert failed.error == result.error
+    assert failed.duration_ms == result.duration_ms

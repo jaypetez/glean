@@ -1,11 +1,13 @@
 """Tests for the shared api_service layer (used by both CLI and API)."""
 from __future__ import annotations
 
+import asyncio
 import textwrap
 from pathlib import Path
 
 import pytest
 
+from glean.api.events import EventBus
 from glean.api_service import (
     ConfigSummary,
     FeedStatus,
@@ -188,6 +190,26 @@ async def test_run_feed_once_leaves_injected_telegram_lifecycle_to_caller(
     finally:
         await state.close()
     assert telegram.close_count == 0
+
+
+async def test_run_feed_once_publishes_to_event_bus(tmp_path: Path, write_yaml) -> None:
+    cfg = load_config(write_yaml(_basic_cfg_yaml()))
+    state = StateStore(tmp_path / "s.db")
+    bus = EventBus()
+    queue = await bus.subscribe()
+    await state.open()
+    try:
+        await state.set_bootstrapped("alpha")
+        result = await run_feed_once(cfg, state, "alpha", dry_run=True, event_bus=bus)
+        started = await asyncio.wait_for(queue.get(), timeout=1.0)
+        completed = await asyncio.wait_for(queue.get(), timeout=1.0)
+    finally:
+        await bus.unsubscribe(queue)
+        await state.close()
+    assert result.error is None
+    assert started.type == "run_started"
+    assert completed.type == "run_completed"
+    assert completed.feed == "alpha"
 
 
 async def test_run_feed_once_unknown_feed_raises(tmp_path: Path, write_yaml) -> None:

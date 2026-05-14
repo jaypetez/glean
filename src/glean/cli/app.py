@@ -6,7 +6,7 @@ import os
 import signal
 import sys
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, cast
 
 import typer
 
@@ -216,6 +216,7 @@ def run(
 
 async def _run_async(cfg, db_path: Path, health_port: int) -> None:  # type: ignore[no-untyped-def]
     from apscheduler import AsyncScheduler
+    from fastapi import FastAPI
 
     from glean.api.app import run_api_server
     from glean.pipeline.engine import Runner
@@ -225,9 +226,11 @@ async def _run_async(cfg, db_path: Path, health_port: int) -> None:  # type: ign
 
     store = StateStore(db_path)
     await store.open()
-    telegram = TelegramSender(_require_token())
-    runner = Runner(cfg, store, telegram)
     server = await run_api_server(store, db_path, port=health_port)
+    api_app = cast(FastAPI, server.config.app)
+    event_bus = api_app.state.glean_event_bus
+    telegram = TelegramSender(_require_token())
+    runner = Runner(cfg, store, telegram, event_bus=event_bus)
 
     api_task = asyncio.create_task(server.serve(), name="glean-api")
 
