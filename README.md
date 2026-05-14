@@ -289,6 +289,14 @@ Full per-sink reference: [`docs/config/feeds.md`](./docs/config/feeds.md).
 | **`.deb` / `.rpm` / `.apk`** | Distro-native installs with systemd unit | [Releases](https://github.com/jaypetez/glean/releases) (built via nfpm) |
 | **From source** | Contributors | `uv venv && uv pip install -e ".[dev]"` |
 
+Verify Docker image signatures with cosign before deploying a release:
+
+```bash
+cosign verify ghcr.io/jaypetez/glean:v1.1.0 \
+  --certificate-identity-regexp 'https://github.com/jaypetez/glean/.github/workflows/release.yml@.*' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
 ## CLI
 
 ```
@@ -315,6 +323,9 @@ All commands accept `--config <path>` (default `/etc/glean/feeds.yaml`) and `--d
 - **Optional sinks** (`required: false`) log warnings on failure but don't trigger ops alerts.
 
 ### Security model
+
+See the full [security model and deployment guide](./docs/security.md) for the threat model, reverse proxy examples,
+file-permission requirements, and post-audit protections.
 
 - **Single-user trust boundary:** the Web UI and REST API are designed for one trusted operator. The API key is the sole gate for API access; anyone with it can manage feeds and rotate the key.
 - **Do not use `GLEAN_DISABLE_AUTH`** on a public port, shared host, or network with untrusted clients. It is only for loopback-only testing or a trusted reverse proxy that supplies its own authentication.
@@ -395,6 +406,7 @@ Full docs are at [jaypetez.github.io/glean](https://jaypetez.github.io/glean) (b
 
 - [Installation](./docs/getting-started/install.md)
 - [Quickstart](./docs/getting-started/quickstart.md)
+- [Security model and deployment guide](./docs/security.md)
 - [Web search setup](./docs/getting-started/search.md) — including SearXNG self-host
 - [feeds.yaml reference](./docs/config/feeds.md)
 - [Per-source LLM models](./docs/config/per-source-llm.md)
