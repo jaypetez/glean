@@ -6,9 +6,6 @@ on:
   pull_request:
     branches: [main]
 
-permissions:
-  contents: read
-
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -20,14 +17,14 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: '3.12'
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9 # v7
         with:
           version: '0.5.13'
 
@@ -50,10 +47,90 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: always()
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe # v5
         with:
           files: coverage.xml
           fail_ci_if_error: false
+
+  audit-python:
+    name: Audit Python deps
+    runs-on: ubuntu-latest
+    needs: lint-test
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9 # v7
+        with:
+          version: '0.5.13'
+
+      - name: Install deps
+        run: uv sync --locked --all-extras
+
+      - name: Pip audit
+        run: uv run pip-audit --strict
+
+  trivy-fs:
+    name: Trivy filesystem scan
+    runs-on: ubuntu-latest
+    needs: lint-test
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Trivy HIGH/CRITICAL filesystem scan
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
+
+  gitleaks:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  bandit:
+    name: Bandit SAST
+    runs-on: ubuntu-latest
+    needs: lint-test
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9 # v7
+        with:
+          version: '0.5.13'
+
+      - name: Install deps
+        run: uv sync --locked --all-extras
+
+      - name: Bandit
+        run: uv run bandit -r src/ --severity-level medium --confidence-level low -f txt
 
   e2e-ui:
     name: e2e-ui
@@ -62,25 +139,29 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
           node-version: '22'
           cache: npm
           cache-dependency-path: ui/package-lock.json
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: '3.12'
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9 # v7
         with:
           version: '0.5.13'
 
       - name: Install Python deps
         run: uv sync --locked --all-extras
+
+      - name: npm audit
+        working-directory: ui
+        run: npm audit --audit-level=high
 
       - name: Install UI deps
         working-directory: ui
@@ -96,7 +177,7 @@ jobs:
 
       - name: Upload Playwright report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: playwright-report
           path: |
@@ -108,15 +189,17 @@ jobs:
     name: End-to-end (docker compose)
     runs-on: ubuntu-latest
     needs: lint-test
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: '3.12'
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9 # v7
         with:
           version: '0.5.13'
 
@@ -172,7 +255,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Build image
         env:
@@ -201,16 +284,16 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
+        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4
 
       - name: Set up Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
 
       - name: Login to ghcr.io
-        uses: docker/login-action@v4
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -228,7 +311,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Build & push
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
         with:
           context: .
           file: ./Dockerfile
