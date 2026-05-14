@@ -4,14 +4,15 @@ from __future__ import annotations
 import os
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, status
 from fastapi.staticfiles import StaticFiles
 
 from glean import __version__
-from glean.api.auth import auth_disabled, get_or_create_api_key, make_verify_api_key
+from glean.api.auth import ApiKeyMaterial, auth_disabled, get_or_create_api_key, make_verify_api_key
 from glean.api.events import EventBus
+from glean.api.models import InitializeResponse
 from glean.api.routes.auth_routes import router as auth_router
 from glean.api.routes.config import router as config_router
 from glean.api.routes.events import router as events_router
@@ -42,18 +43,26 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
         openapi_url="/api/openapi.json",
     )
 
-    api_key = get_or_create_api_key(db_path)
+    api_key_material = get_or_create_api_key(db_path)
     app.state.glean_state = state
     app.state.glean_db_path = db_path
-    app.state.glean_api_key = api_key
+    app.state.glean_api_key = api_key_material.plaintext
+    app.state.glean_api_key_material = api_key_material
     app.state.glean_started_at = time.time()
     app.state.glean_event_bus = EventBus()
 
-    def api_key_getter() -> str:
-        return str(app.state.glean_api_key)
+    def api_key_getter() -> ApiKeyMaterial:
+        return cast(ApiKeyMaterial, app.state.glean_api_key_material)
 
-    verify = make_verify_api_key(api_key_getter)
-    verify_events = make_verify_api_key(api_key_getter, allow_query_for_events=True)
+    def cache_verified_api_key(material: ApiKeyMaterial) -> None:
+        app.state.glean_api_key_material = material
+
+    verify = make_verify_api_key(api_key_getter, on_verified=cache_verified_api_key)
+    verify_events = make_verify_api_key(
+        api_key_getter,
+        allow_query_for_events=True,
+        on_verified=cache_verified_api_key,
+    )
 
     health_router = APIRouter(tags=["health"])
 
@@ -69,14 +78,14 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
                 detail="db error",
             ) from exc
 
-    @health_router.get("/api/v1/initialize")
-    async def initialize() -> dict[str, object]:
+    @health_router.get("/api/v1/initialize", response_model=InitializeResponse)
+    async def initialize() -> InitializeResponse:
         """Return bootstrap data for first-load UI initialization."""
-        return {
-            "version": __version__,
-            "api_key": app.state.glean_api_key,
-            "auth_disabled": auth_disabled(),
-        }
+        return InitializeResponse(
+            version=__version__,
+            api_key=app.state.glean_api_key,
+            auth_disabled=auth_disabled(),
+        )
 
     app.include_router(health_router)
 

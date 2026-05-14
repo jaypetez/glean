@@ -18,6 +18,12 @@ async def rotate(request: Request) -> RotateResponse:
             detail="API key rotation is disabled while GLEAN_API_KEY is set.",
         )
     db_path = request.app.state.glean_db_path
-    new_key = rotate_api_key(db_path)
-    request.app.state.glean_api_key = new_key
-    return RotateResponse(api_key=new_key)
+    material = rotate_api_key(db_path)
+    if material.plaintext is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="API key rotation did not produce a new key.",
+        )
+    request.app.state.glean_api_key = material.plaintext
+    request.app.state.glean_api_key_material = material
+    return RotateResponse(api_key=material.plaintext)

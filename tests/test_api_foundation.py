@@ -99,16 +99,53 @@ async def test_auth_disabled_via_env(
     assert resp.status_code == 200
 
 
-async def test_api_key_persisted_across_calls(tmp_path: Path) -> None:
-    """get_or_create_api_key should return the same key on subsequent calls."""
-    from glean.api.auth import get_or_create_api_key
+async def test_api_key_persisted_as_verifier_not_cleartext(tmp_path: Path) -> None:
+    """Restarted apps should verify the key without storing or re-revealing it."""
+    state1 = StateStore(tmp_path / "state.db")
+    await state1.open()
+    app1 = make_app(state1, tmp_path / "state.db")
+    api_key = app1.state.glean_api_key
+    await state1.close()
 
-    db_path = tmp_path / "state.db"
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    key1 = get_or_create_api_key(db_path)
-    key2 = get_or_create_api_key(db_path)
-    assert key1 == key2
-    assert len(key1) >= 32
+    assert isinstance(api_key, str)
+    assert len(api_key) >= 32
+    assert (tmp_path / "api_key").read_text(encoding="utf-8").strip() != api_key
+
+    state2 = StateStore(tmp_path / "state.db")
+    await state2.open()
+    app2 = make_app(state2, tmp_path / "state.db")
+    assert app2.state.glean_api_key is None
+    assert app2.state.glean_api_key_material.plaintext is None
+    async with AsyncClient(transport=ASGITransport(app=app2), base_url="http://test") as ac:
+        init = await ac.get("/api/v1/initialize")
+        health = await ac.get("/api/v1/health", headers={"X-Glean-Api-Key": api_key})
+        init_after_auth = await ac.get("/api/v1/initialize")
+    await state2.close()
+
+    assert init.status_code == 200
+    assert init.json()["api_key"] is None
+    assert health.status_code == 200
+    assert app2.state.glean_api_key_material.plaintext == api_key
+    assert init_after_auth.json()["api_key"] is None
+
+
+async def test_legacy_plaintext_api_key_file_is_migrated(tmp_path: Path) -> None:
+    legacy_key = "legacy-manual-key"
+    (tmp_path / "api_key").write_text(legacy_key, encoding="utf-8")
+
+    state = StateStore(tmp_path / "state.db")
+    await state.open()
+    app = make_app(state, tmp_path / "state.db")
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        init = await ac.get("/api/v1/initialize")
+        health = await ac.get("/api/v1/health", headers={"X-Glean-Api-Key": legacy_key})
+    await state.close()
+
+    persisted = (tmp_path / "api_key").read_text(encoding="utf-8").strip()
+    assert persisted != legacy_key
+    assert persisted.startswith("pbkdf2_sha256$")
+    assert init.json()["api_key"] == legacy_key
+    assert health.status_code == 200
 
 
 async def test_api_key_env_override(
@@ -117,7 +154,7 @@ async def test_api_key_env_override(
     from glean.api.auth import get_or_create_api_key
 
     monkeypatch.setenv("GLEAN_API_KEY", "env-override-key")
-    assert get_or_create_api_key(tmp_path / "x.db") == "env-override-key"
+    assert get_or_create_api_key(tmp_path / "x.db").plaintext == "env-override-key"
 
 
 async def test_openapi_schema_available(client: AsyncClient) -> None:

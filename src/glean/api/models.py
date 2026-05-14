@@ -72,6 +72,16 @@ class RunResultResponse(BaseModel):
     messages: list[str] = Field(default_factory=list)
 
 
+class InitializeResponse(BaseModel):
+    """First-load UI initialization payload."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    version: str
+    api_key: str | None
+    auth_disabled: bool
+
+
 class RotateResponse(BaseModel):
     """One-time API key rotation response."""
 
