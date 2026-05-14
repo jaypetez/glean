@@ -44,6 +44,73 @@ def test_load_minimal(write_yaml) -> None:
     assert feed.effective_llm(cfg.defaults).provider == "ollama"
 
 
+def test_effective_sinks_inherits_from_defaults_sinks(write_yaml) -> None:
+    yaml = textwrap.dedent(
+        """
+        defaults:
+          sinks:
+            - type: telegram
+              chat_id: -100999
+        feeds:
+          - name: ai
+            schedule: "every 1h"
+            sources:
+              - type: rss
+                url: https://example.com/feed
+            pipeline:
+              - dedup
+        """
+    )
+    cfg = load_config(write_yaml(yaml))
+
+    assert cfg.feeds[0].effective_sinks(cfg.defaults) == [
+        {"type": "telegram", "chat_id": -100999}
+    ]
+
+
+def test_effective_sinks_inherits_from_telegram_defaults(write_yaml) -> None:
+    yaml = textwrap.dedent(
+        """
+        defaults:
+          telegram:
+            bot_token: test-token
+            chat_id: -100123
+        feeds:
+          - name: ai
+            schedule: "every 1h"
+            sources:
+              - type: rss
+                url: https://example.com/feed
+            pipeline:
+              - dedup
+        """
+    )
+    cfg = load_config(write_yaml(yaml))
+
+    assert cfg.feeds[0].effective_sinks(cfg.defaults) == [
+        {"type": "telegram", "chat_id": -100123, "token": "test-token"}
+    ]
+
+
+def test_effective_sinks_raises_without_feed_or_default_sinks(write_yaml) -> None:
+    yaml = textwrap.dedent(
+        """
+        feeds:
+          - name: ai
+            schedule: "every 1h"
+            sources:
+              - type: rss
+                url: https://example.com/feed
+            pipeline:
+              - dedup
+        """
+    )
+    cfg = load_config(write_yaml(yaml))
+
+    with pytest.raises(ValueError, match="feed must have feed-level sinks"):
+        cfg.feeds[0].effective_sinks(cfg.defaults)
+
+
 def test_env_interpolation(write_yaml, monkeypatch) -> None:
     monkeypatch.setenv("TELEGRAM_CHAT_AI", "-1009")
     yaml = textwrap.dedent(

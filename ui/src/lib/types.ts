@@ -14,9 +14,26 @@ export interface RenderConfig {
   max_items?: number;
 }
 
+export interface TelegramDefaults {
+  bot_token?: string | null;
+  chat_id?: string | number | null;
+}
+
 export interface FailureConfig {
   alert_after?: number;
   ops_chat_id?: string | number | null;
+}
+
+export type BootstrapMode = "skip-and-mark" | "send-last-N" | "send-all";
+
+export interface DefaultsConfig {
+  telegram?: TelegramDefaults;
+  llm?: LLMConfig;
+  render?: RenderConfig;
+  sinks?: Array<Record<string, unknown>> | null;
+  bootstrap?: BootstrapMode;
+  bootstrap_count?: number;
+  failure?: FailureConfig;
 }
 
 export type StageName = "dedup" | "rank" | "summarize" | "digest" | "apply_skill";
@@ -26,8 +43,6 @@ export interface StageSpec {
   name: StageName;
   params?: Record<string, unknown>;
 }
-
-export type BootstrapMode = "skip-and-mark" | "send-last-N" | "send-all";
 
 export interface FeedConfig {
   name: string;

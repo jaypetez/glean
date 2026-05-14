@@ -55,6 +55,13 @@ async def put_defaults(
 # --- Feeds ---
 
 
+def _sinks_count(feed: FeedConfig, defaults: Defaults) -> int:
+    try:
+        return len(feed.effective_sinks(defaults))
+    except ValueError:
+        return 0
+
+
 @router.get("/feeds", response_model=list[FeedListResponse])
 async def list_feeds() -> list[FeedListResponse]:
     cfg = _load_or_400()
@@ -64,7 +71,7 @@ async def list_feeds() -> list[FeedListResponse]:
             schedule=f.schedule,
             sources_count=len(f.sources),
             pipeline_stages=[s.name for s in f.pipeline],
-            sinks_count=len(f.sinks or []),
+            sinks_count=_sinks_count(f, cfg.defaults),
         )
         for f in cfg.feeds
     ]
@@ -123,11 +130,6 @@ async def delete_feed(name: str) -> WriteResponse:
             detail=f"no such feed: {name!r}",
         )
     new_feeds = [f for f in cfg.feeds if f.name != name]
-    if not new_feeds:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="cannot delete last feed; config requires at least one",
-        )
     new_cfg = cfg.model_copy(update={"feeds": new_feeds})
     write_config(new_cfg, _config_path())
     return WriteResponse(ok=True, message=f"feed {name!r} deleted")

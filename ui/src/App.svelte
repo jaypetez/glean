@@ -1,10 +1,11 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { Route, Router } from "svelte-routing";
-  import { getInitialize, type InitializeResponse } from "./lib/api";
+  import { navigate, Route, Router } from "svelte-routing";
+  import { getInitialize, listFeedConfigs, type InitializeResponse } from "./lib/api";
   import AppShell from "./lib/components/AppShell.svelte";
   import Dashboard from "./lib/routes/Dashboard.svelte";
   import FeedEditor from "./lib/routes/FeedEditor.svelte";
+  import Setup from "./lib/routes/Setup.svelte";
   import SkillEditor from "./lib/routes/SkillEditor.svelte";
   import SkillsList from "./lib/routes/SkillsList.svelte";
 
@@ -16,6 +17,13 @@
   onMount(async () => {
     try {
       info = await getInitialize();
+      if (
+        window.location.pathname === "/" &&
+        localStorage.getItem("glean.skipped_setup") !== "1" &&
+        (await listFeedConfigs()).length === 0
+      ) {
+        navigate("/setup");
+      }
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     }
@@ -24,6 +32,7 @@
 
 <Router {url}>
   <AppShell>
+    <Route path="/setup"><Setup /></Route>
     <Route path="/feeds/new"><FeedEditor mode="create" /></Route>
     <Route path="/feeds/:name" let:params><FeedEditor mode="edit" name={params.name} /></Route>
     <Route path="/skills"><SkillsList /></Route>
