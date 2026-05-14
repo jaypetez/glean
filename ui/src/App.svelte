@@ -39,7 +39,7 @@
       {:else if !info}
         <div class="p-8 text-tertiary">Loading</div>
       {:else}
-        <Dashboard {info} />
+        <Dashboard />
       {/if}
     </Route>
   </AppShell>
