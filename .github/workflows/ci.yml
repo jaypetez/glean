@@ -123,6 +123,13 @@ jobs:
       - name: Install pytest deps for harness
         run: uv sync --locked --all-extras
 
+      - name: Validate compose syntax
+        run: |
+          touch .env
+          trap 'rm -f .env' EXIT
+          docker compose -f docker-compose.yml config --quiet
+          docker compose -f docker-compose.e2e.yml config --quiet
+
       - name: Build & start E2E stack
         run: |
           docker compose -f docker-compose.e2e.yml build

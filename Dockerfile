@@ -1,5 +1,5 @@
 ### UI build stage ###
-FROM node:22-alpine AS ui-builder
+FROM node:22-alpine@sha256:968df39aedcea65eeb078fb336ed7191baf48f972b4479711397108be0966920 AS ui-builder
 
 WORKDIR /ui
 
@@ -13,7 +13,7 @@ RUN npm run build
 
 
 ### Build stage (existing Python build) ###
-FROM python:3.13-slim-trixie AS builder
+FROM python:3.13-slim-trixie@sha256:dc1546eefcbe8caaa1f004f16ab76b204b5e1dbd58ff81b899f21cd40541232f AS builder
 
 RUN apt-get update \
  && apt-get -y --no-install-recommends upgrade \
@@ -26,7 +26,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     UV_COMPILE_BYTECODE=1 \
     UV_PROJECT_ENVIRONMENT=/opt/venv
 
-COPY --from=ghcr.io/astral-sh/uv:0.5.13 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.5.13@sha256:ea61e006cfec0e8d81fae901ad703e09d2c6cf1aa58abcb6507d124b50286f9f /uv /usr/local/bin/uv
 
 WORKDIR /app
 
@@ -44,7 +44,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 
 ### Runtime stage ###
-FROM python:3.13-slim-trixie AS runtime
+FROM python:3.13-slim-trixie@sha256:dc1546eefcbe8caaa1f004f16ab76b204b5e1dbd58ff81b899f21cd40541232f AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -59,7 +59,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 RUN apt-get update \
  && apt-get -y --no-install-recommends upgrade \
- && apt-get install -y --no-install-recommends tzdata ca-certificates \
+ && apt-get install -y --no-install-recommends tzdata ca-certificates curl \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/* \
  && groupadd --system glean \

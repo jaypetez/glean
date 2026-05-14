@@ -8,6 +8,13 @@ services:
     init: true
     stop_grace_period: 30s
     restart: unless-stopped
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
     depends_on:
       - ollama
     env_file:
@@ -27,6 +34,14 @@ services:
     image: ollama/ollama:latest
     container_name: glean-ollama
     restart: unless-stopped
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /root/.cache:size=256m,mode=0700
     volumes:
       - ollama-models:/root/.ollama
     networks:
@@ -65,6 +80,13 @@ services:
   #   image: ghcr.io/searxng/searxng:latest
   #   container_name: glean-searxng
   #   restart: unless-stopped
+  #   cap_drop:
+  #     - ALL
+  #   security_opt:
+  #     - no-new-privileges:true
+  #   read_only: true
+  #   tmpfs:
+  #     - /tmp:size=64m,mode=1777
   #   environment:
   #     SEARXNG_BASE_URL: http://searxng:8080/
   #     SEARXNG_SECRET: ${SEARXNG_SECRET}
