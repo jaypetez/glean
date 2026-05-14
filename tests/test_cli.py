@@ -425,19 +425,32 @@ async def test_run_async_starts_scheduler_and_cleans_up(
             observed["telegram"] = self
 
     class FakeRunner:
-        def __init__(self, _cfg: Config, store: FakeStore, telegram: FakeTelegramSender) -> None:
+        def __init__(
+            self,
+            _cfg: Config,
+            store: FakeStore,
+            telegram: FakeTelegramSender,
+            *,
+            event_bus: object | None = None,
+        ) -> None:
             observed["runner"] = self
             observed["runner_store"] = store
             observed["runner_telegram"] = telegram
+            observed["runner_event_bus"] = event_bus
             self.closed = False
 
         async def aclose(self) -> None:
             self.closed = True
 
+    event_bus = object()
+
     class FakeApiServer:
         def __init__(self) -> None:
             self.should_exit = False
             self.served = False
+            self.config = SimpleNamespace(
+                app=SimpleNamespace(state=SimpleNamespace(glean_event_bus=event_bus))
+            )
 
         async def serve(self) -> None:
             self.served = True
@@ -499,6 +512,7 @@ async def test_run_async_starts_scheduler_and_cleans_up(
     assert api_server.served is True
     assert api_server.should_exit is True
     assert observed["scheduler_started"] is True
+    assert observed["runner_event_bus"] is event_bus
     assert observed["schedule_args"] == (observed["scheduler"], observed["runner"])
     assert observed["runner"].closed is True
     assert observed["store"].closed is True

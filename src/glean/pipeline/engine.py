@@ -7,7 +7,7 @@ import os
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import httpx
 
@@ -29,6 +29,7 @@ from glean.sources.base import Item
 from glean.telegram import TelegramSender, render_digest
 
 if TYPE_CHECKING:
+    from glean.api.events import EventBus
     from glean.state import StateStore
 
 logger = get_logger(__name__)
@@ -88,6 +89,7 @@ class Runner:
         http: httpx.AsyncClient | None = None,
         *,
         close_telegram: bool = True,
+        event_bus: EventBus | None = None,
     ) -> None:
         self.config = config
         self.state = state
@@ -95,6 +97,7 @@ class Runner:
         self.http = http or httpx.AsyncClient(timeout=30.0)
         self._owns_http = http is None
         self._close_telegram = close_telegram
+        self._event_bus = event_bus
         self._llm_cache: dict[str, LLMProvider] = {}
         self._sinks_cache: dict[str, list[Sink]] = {}
 
@@ -221,12 +224,61 @@ class Runner:
         if required_errors:
             raise RuntimeError(f"required sinks failed: {'; '.join(required_errors)}")
 
+    async def _emit(self, **kwargs: Any) -> None:
+        if self._event_bus is None:
+            return
+        from glean.api.events import RunEvent  # noqa: PLC0415
+
+        try:
+            await self._event_bus.publish(RunEvent(**kwargs))
+        except Exception:
+            logger.exception("event_publish_failed", **kwargs)
+
+    async def _finalize_run_result(
+        self,
+        result: RunResult,
+        started: float,
+        *,
+        dry_run: bool,
+    ) -> RunResult:
+        result.duration_ms = int((time.monotonic() - started) * 1000)
+        if result.error is None:
+            await self._emit(
+                type="run_completed",
+                feed=result.feed,
+                fetched=result.fetched,
+                after_dedup=result.after_dedup,
+                sent=result.sent,
+                duration_ms=result.duration_ms,
+            )
+        else:
+            await self._emit(
+                type="run_failed",
+                feed=result.feed,
+                error=result.error,
+                duration_ms=result.duration_ms,
+            )
+        logger.info(
+            "feed_run",
+            feed=result.feed,
+            fetched=result.fetched,
+            after_dedup=result.after_dedup,
+            sent=result.sent,
+            dropped=result.dropped,
+            overflow=result.overflow,
+            duration_ms=result.duration_ms,
+            dry_run=dry_run,
+            error=result.error,
+        )
+        return result
+
     async def run_feed(self, name: str, *, dry_run: bool = False) -> RunResult:
         started = time.monotonic()
         feed = self.config.feed(name)
         result = RunResult(feed=name)
 
         try:
+            await self._emit(type="run_started", feed=name)
             items = await self._fetch_all(feed)
             result.fetched = len(items)
 
@@ -243,7 +295,7 @@ class Runner:
                 logger.info(
                     "bootstrap_skip", feed=name, indexed=len(items), dry_run=dry_run
                 )
-                return result
+                return await self._finalize_run_result(result, started, dry_run=dry_run)
 
             # Run pipeline stages
             new_items = await dedup_stage(name, items, self.state)
@@ -252,7 +304,7 @@ class Runner:
                 if not dry_run:
                     await self.state.record_success(name)
                 logger.info("no_new_items", feed=name)
-                return result
+                return await self._finalize_run_result(result, started, dry_run=dry_run)
 
             default_llm = self._get_llm(feed)
             llm_for = self._llm_resolver(feed)
@@ -275,7 +327,7 @@ class Runner:
                 if not dry_run:
                     await self.state.record_success(name)
                 logger.info("nothing_to_send", feed=name)
-                return result
+                return await self._finalize_run_result(result, started, dry_run=dry_run)
 
             messages = render_digest(
                 new_items,
@@ -323,20 +375,7 @@ class Runner:
                     except Exception:  # noqa: BLE001
                         logger.exception("ops_alert_send_failed", feed=name)
 
-        result.duration_ms = int((time.monotonic() - started) * 1000)
-        logger.info(
-            "feed_run",
-            feed=name,
-            fetched=result.fetched,
-            after_dedup=result.after_dedup,
-            sent=result.sent,
-            dropped=result.dropped,
-            overflow=result.overflow,
-            duration_ms=result.duration_ms,
-            dry_run=dry_run,
-            error=result.error,
-        )
-        return result
+        return await self._finalize_run_result(result, started, dry_run=dry_run)
 
     async def _fetch_all(self, feed: FeedConfig) -> list[Item]:
         ctx = FetchContext(feed_name=feed.name, http=self.http, state=self.state)
