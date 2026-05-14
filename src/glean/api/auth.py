@@ -99,6 +99,17 @@ def _serialize_record_file(record: ApiKeyRecord, *, initial_key_logged: bool) ->
     return "\n".join(lines) + "\n"
 
 
+def _verify_key_file_permissions(key_file: Path) -> None:
+    if os.name == "nt":
+        return
+    mode = key_file.stat().st_mode & 0o777
+    if mode != 0o600:
+        raise RuntimeError(
+            f"API key verifier {key_file} has permissions {oct(mode)}, expected 0o600; "
+            "fix /data/api_key perms with chmod 600 /data/api_key and restart"
+        )
+
+
 def _persist_api_key_record(
     state_db_path: Path, record: ApiKeyRecord, *, initial_key_logged: bool = False
 ) -> None:
@@ -111,6 +122,7 @@ def _persist_api_key_record(
     )
     with contextlib.suppress(OSError, NotImplementedError):
         key_file.chmod(0o600)
+    _verify_key_file_permissions(key_file)
 
 
 def _log_initial_api_key(secret: str) -> None:
@@ -146,6 +158,7 @@ def get_or_create_api_key(state_db_path: Path) -> ApiKeyMaterial:
     if key_file.is_file():
         raw = key_file.read_text(encoding="utf-8").strip()
         if record := _parse_record(raw):
+            _verify_key_file_permissions(key_file)
             return ApiKeyMaterial(plaintext=None, record=record)
         if raw:
             record = _hash_api_key(raw)

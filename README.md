@@ -314,6 +314,14 @@ All commands accept `--config <path>` (default `/etc/glean/feeds.yaml`) and `--d
 - **LLM failures during ranking:** items with failed scores are dropped (treated as `0.0`). Summarize failures fall back to the source-provided summary.
 - **Optional sinks** (`required: false`) log warnings on failure but don't trigger ops alerts.
 
+### Security model
+
+- **Single-user trust boundary:** the Web UI and REST API are designed for one trusted operator. The API key is the sole gate for API access; anyone with it can manage feeds and rotate the key.
+- **Do not use `GLEAN_DISABLE_AUTH`** on a public port, shared host, or network with untrusted clients. It is only for loopback-only testing or a trusted reverse proxy that supplies its own authentication.
+- **Protect `/data/`:** mount it as a private volume and use `chmod 700 /data`. The API key verifier at `/data/api_key` must stay `chmod 600`; startup warns on world-accessible data directories and fails if a verifier is not private.
+- **Bootstrap the API key:** on first boot, read the one-time plaintext key with `docker logs glean | grep GLEAN_INITIAL_API_KEY`, paste it into the UI, then store it in a password manager or rotate it.
+- **Use a reverse proxy + TLS** before exposing the UI/API beyond localhost. Terminate HTTPS at the proxy, keep port 9090 private, and apply any organization auth/rate limits there.
+
 ## Stability guarantee
 
 From v1.0, the following surfaces are stable within major versions:

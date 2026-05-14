@@ -1,6 +1,9 @@
 """Tests for the FastAPI foundation + auth."""
 from __future__ import annotations
 
+import json
+import logging
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -11,6 +14,30 @@ from glean.api.app import make_app
 from glean.state.store import StateStore
 
 pytestmark = pytest.mark.asyncio
+
+AUTH_DISABLED_WARNING = (
+    "AUTH_DISABLED — all endpoints unauthenticated; "
+    "do not expose port 9090 publicly"
+)
+
+
+def _structured_events(
+    records: list[logging.LogRecord], *, logger_name: str, contains: str
+) -> list[str]:
+    events: list[str] = []
+    for record in records:
+        if record.name != logger_name:
+            continue
+        message = record.getMessage()
+        try:
+            decoded = json.loads(message)
+        except json.JSONDecodeError:
+            event = message
+        else:
+            event = str(decoded.get("event", message))
+        if contains in event:
+            events.append(event)
+    return events
 
 
 @pytest.fixture
@@ -97,6 +124,108 @@ async def test_auth_disabled_via_env(
     monkeypatch.setenv("GLEAN_DISABLE_AUTH", "1")
     resp = await client.get("/api/v1/health")
     assert resp.status_code == 200
+
+
+async def test_make_app_checks_configured_data_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from glean.api import app as app_module
+
+    checked_dirs: list[Path] = []
+    monkeypatch.setattr(app_module, "_warn_if_data_dir_insecure", checked_dirs.append)
+
+    db_path = tmp_path / "custom-data" / "state.db"
+    db_path.parent.mkdir()
+    state = StateStore(db_path)
+    await state.open()
+    try:
+        make_app(state, db_path)
+    finally:
+        await state.close()
+
+    assert checked_dirs == [db_path.parent]
+
+
+async def test_auth_disabled_logs_warning_once_per_app_instance(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    import glean.logging as logging_module
+    from glean.api import app as app_module
+
+    monkeypatch.setenv("GLEAN_DISABLE_AUTH", "1")
+    logging_module.structlog.reset_defaults()
+    try:
+        logging_module.configure_logging("INFO", json_logs=True)
+        monkeypatch.setattr(app_module, "logger", logging_module.get_logger("glean.api.app"))
+        caplog.set_level(logging.WARNING, logger="glean.api.app")
+
+        state1 = StateStore(tmp_path / "state1.db")
+        await state1.open()
+        try:
+            app1 = make_app(state1, tmp_path / "state1.db")
+            async with AsyncClient(transport=ASGITransport(app=app1), base_url="http://test") as ac:
+                assert (await ac.get("/api/v1/health")).status_code == 200
+                assert (await ac.get("/api/v1/health")).status_code == 200
+        finally:
+            await state1.close()
+
+        auth_disabled_warnings = _structured_events(
+            caplog.records,
+            logger_name="glean.api.app",
+            contains="AUTH_DISABLED",
+        )
+        assert auth_disabled_warnings == [AUTH_DISABLED_WARNING]
+
+        state2 = StateStore(tmp_path / "state2.db")
+        await state2.open()
+        try:
+            make_app(state2, tmp_path / "state2.db")
+        finally:
+            await state2.close()
+
+        assert _structured_events(
+            caplog.records,
+            logger_name="glean.api.app",
+            contains="AUTH_DISABLED",
+        ) == [AUTH_DISABLED_WARNING, AUTH_DISABLED_WARNING]
+    finally:
+        logging_module.structlog.reset_defaults()
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="POSIX chmod checks are not reliable on Windows"
+)
+async def test_make_app_warns_when_data_dir_has_world_permission_bits(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    import glean.logging as logging_module
+    from glean.api import app as app_module
+
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    data_dir.chmod(0o701)
+    db_path = data_dir / "state.db"
+
+    logging_module.structlog.reset_defaults()
+    try:
+        logging_module.configure_logging("INFO", json_logs=True)
+        monkeypatch.setattr(app_module, "logger", logging_module.get_logger("glean.api.app"))
+        caplog.set_level(logging.WARNING, logger="glean.api.app")
+
+        state = StateStore(db_path)
+        await state.open()
+        try:
+            make_app(state, db_path)
+        finally:
+            await state.close()
+
+        assert _structured_events(
+            caplog.records,
+            logger_name="glean.api.app",
+            contains="data directory",
+        ) == ["data directory is world-accessible; run chmod 700 /data"]
+    finally:
+        logging_module.structlog.reset_defaults()
 
 
 async def test_api_key_persisted_as_verifier_not_cleartext(tmp_path: Path) -> None:

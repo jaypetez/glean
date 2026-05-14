@@ -60,6 +60,20 @@ def _test_mode_enabled() -> bool:
     return os.environ.get("GLEAN_TEST_MODE", "").lower() in ("1", "true", "yes")
 
 
+def _warn_if_data_dir_insecure(data_dir: Path = Path("/data")) -> None:
+    """Warn operators when the default data directory is visible to other users."""
+    try:
+        mode = data_dir.stat().st_mode
+    except OSError:
+        return
+    if mode & 0o007:
+        logger.warning(
+            "data directory is world-accessible; run chmod 700 /data",
+            path=str(data_dir),
+            mode=oct(mode & 0o777),
+        )
+
+
 async def _clear_test_state(state: StateStore) -> None:
     """Clear state tables for Playwright e2e isolation."""
     await state.db.execute("DELETE FROM seen_items")
@@ -97,6 +111,13 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
         redoc_url=None,
         openapi_url="/api/openapi.json",
     )
+
+    if auth_disabled():
+        logger.warning(
+            "AUTH_DISABLED — all endpoints unauthenticated; "
+            "do not expose port 9090 publicly"
+        )
+    _warn_if_data_dir_insecure(db_path.parent)
 
     api_key_material = get_or_create_api_key(db_path)
     app.state.glean_state = state
