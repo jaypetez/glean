@@ -1,4 +1,18 @@
-### Build stage ###
+### UI build stage ###
+FROM node:22-alpine AS ui-builder
+
+WORKDIR /ui
+
+# Copy package files first for better caching
+COPY ui/package.json ui/package-lock.json* ./
+RUN npm install --no-audit --no-fund --prefer-offline
+
+# Copy the rest of the UI source and build
+COPY ui/ ./
+RUN npm run build
+
+
+### Build stage (existing Python build) ###
 FROM python:3.12-slim-bookworm AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -18,13 +32,11 @@ RUN --mount=type=cache,target=/root/.cache/uv \
  && uv sync --frozen --no-dev --no-install-project
 
 # Layer 2: application code (changes often)
-# --no-editable so the venv contains a real copy of the package, not a
-# .pth file pointing back at /app/src (which would break when only /opt/venv
-# is copied to the runtime stage).
 COPY README.md ./
 COPY src ./src
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-editable
+
 
 ### Runtime stage ###
 FROM python:3.12-slim-bookworm AS runtime
@@ -35,6 +47,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PATH="/opt/venv/bin:$PATH" \
     GLEAN_CONFIG=/etc/glean/feeds.yaml \
     GLEAN_DB=/data/state.db \
+    GLEAN_UI_DIST=/home/glean/ui/dist \
     HEALTH_PORT=9090 \
     LOG_LEVEL=INFO \
     TZ=UTC
@@ -44,10 +57,11 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/* \
  && groupadd --system glean \
  && useradd --system --no-log-init --gid glean --home /home/glean --create-home glean \
- && mkdir -p /data /etc/glean \
- && chown -R glean:glean /data /etc/glean
+ && mkdir -p /data /etc/glean /home/glean/ui \
+ && chown -R glean:glean /data /etc/glean /home/glean
 
 COPY --from=builder /opt/venv /opt/venv
+COPY --from=ui-builder --chown=glean:glean /ui/dist /home/glean/ui/dist
 
 USER glean
 WORKDIR /home/glean

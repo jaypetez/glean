@@ -18,3 +18,9 @@ dist/
 build/
 *.egg-info/
 feeds.yaml
+
+# Frontend
+ui/node_modules/
+ui/dist/
+ui/.vite/
+ui/*.local

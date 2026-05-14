@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+/* === Design tokens — extracted from assets/glean-hero.svg === */
+@theme {
+  /* Backgrounds */
+  --color-base: #070a14;
+  --color-surface: #0e1730;
+  --color-elevated: #10172a;
+  --color-muted: #1f2a44;
+  --color-border: #243154;
+
+  /* Accents */
+  --color-cyan: #22d3ee;
+  --color-cyan-light: #7dd3fc;
+  --color-violet: #7c3aed;
+
+  /* Text */
+  --color-primary: #f8fafc;
+  --color-secondary: #cbd5e1;
+  --color-tertiary: #94a3b8;
+  --color-faint: #475569;
+
+  /* Status (semantic) */
+  --color-status-ok: #10b981;
+  --color-status-warn: #f59e0b;
+  --color-status-error: #ef4444;
+  --color-status-idle: #64748b;
+
+  /* Source brand colors (carried over from hero SVG) */
+  --color-source-rss: #fb923c;
+  --color-source-hn: #f97316;
+  --color-source-reddit: #ef4444;
+
+  /* Typography */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Monaco, "Cascadia Code", monospace;
+}
+
+/* Subtle background dot pattern matching the hero */
+body {
+  background-image: radial-gradient(circle at 1px 1px, rgb(31 42 68 / 0.45) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+/* Reduced-motion: respect user preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
