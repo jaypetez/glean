@@ -57,7 +57,8 @@ class FakeLLM:
     async def digest(self, items, prompt: str):  # type: ignore[no-untyped-def]
         return prompt
 
-    async def aclose(self) -> None: ...
+    async def aclose(self) -> None:
+        pass
 
 
 def _basic_cfg_yaml() -> str:
