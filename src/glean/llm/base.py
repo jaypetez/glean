@@ -32,4 +32,5 @@ class LLMProvider(Protocol):
         Returns {} on parse/extraction failure.
         """
 
-    async def aclose(self) -> None: ...
+    async def aclose(self) -> None:
+        pass

@@ -68,7 +68,8 @@ class FakeTelegram:
             raise RuntimeError("telegram failed")
         self.sent.append((chat_id, list(messages)))
 
-    async def aclose(self) -> None: ...
+    async def aclose(self) -> None:
+        pass
 
 
 def _config_with_sink_specs(sink_specs: list[dict[str, Any]]) -> Config:

@@ -34,4 +34,5 @@ class SearchBackend(Protocol):
         *,
         http: httpx.AsyncClient,
         limit: int = 10,
-    ) -> list[SearchResult]: ...
+    ) -> list[SearchResult]:
+        pass

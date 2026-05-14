@@ -51,7 +51,8 @@ class FakeLLM:
     async def digest(self, items, prompt: str) -> str:
         return prompt
 
-    async def aclose(self) -> None: ...
+    async def aclose(self) -> None:
+        pass
 
 
 class FakeTelegram:
@@ -65,7 +66,8 @@ class FakeTelegram:
     async def send_text(self, chat_id, text, *, style="html"):
         self.texts.append((chat_id, text))
 
-    async def aclose(self): ...
+    async def aclose(self):
+        pass
 
 
 def _cfg_yaml() -> str:
