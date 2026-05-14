@@ -1,10 +1,12 @@
 """FastAPI application factory."""
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, status
+from fastapi.staticfiles import StaticFiles
 
 from glean import __version__
 from glean.api.auth import auth_disabled, get_or_create_api_key, make_verify_api_key
@@ -72,7 +74,39 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
 
     app.include_router(api_router)
 
+    # Serve the pre-built SPA. MUST be mounted last so /api and /healthz
+    # routes win over the catch-all.
+    _mount_spa(app)
+
     return app
+
+
+def _spa_dist_path() -> Path | None:
+    """Locate the built SPA assets. Searches GLEAN_UI_DIST then default paths."""
+    if env := os.environ.get("GLEAN_UI_DIST"):
+        candidate = Path(env)
+        if candidate.is_dir() and (candidate / "index.html").is_file():
+            return candidate
+        return None
+
+    candidates = [
+        Path("/home/glean/ui/dist"),
+        Path(__file__).resolve().parent.parent.parent.parent / "ui" / "dist",
+    ]
+    for candidate in candidates:
+        if candidate.is_dir() and (candidate / "index.html").is_file():
+            return candidate
+    return None
+
+
+def _mount_spa(app: FastAPI) -> None:
+    """Mount the built SPA at / if a dist directory is available."""
+    dist = _spa_dist_path()
+    if dist is None:
+        logger.info("ui_spa_not_mounted", reason="no dist directory found")
+        return
+    app.mount("/", StaticFiles(directory=str(dist), html=True), name="ui")
+    logger.info("ui_spa_mounted", dist=str(dist))
 
 
 async def run_api_server(

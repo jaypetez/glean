@@ -1,0 +1,53 @@
+/**
+ * Minimal typed API client. Reads the API key from /api/v1/initialize on
+ * first load (cached in module state). All authenticated calls include
+ * X-Glean-Api-Key.
+ */
+
+let apiKeyPromise: Promise<string> | null = null;
+
+async function fetchApiKey(): Promise<string> {
+  const resp = await fetch("/api/v1/initialize");
+  if (!resp.ok) {
+    throw new Error(`/api/v1/initialize returned ${resp.status}`);
+  }
+  const body = (await resp.json()) as { api_key: string; auth_disabled: boolean };
+  return body.api_key;
+}
+
+function ensureApiKey(): Promise<string> {
+  if (!apiKeyPromise) {
+    apiKeyPromise = fetchApiKey();
+  }
+  return apiKeyPromise;
+}
+
+export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const key = await ensureApiKey();
+  const headers = new Headers(init.headers ?? {});
+  headers.set("X-Glean-Api-Key", key);
+  if (init.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  return fetch(path, { ...init, headers });
+}
+
+export async function apiJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const resp = await apiFetch(path, init);
+  if (!resp.ok) {
+    throw new Error(`${init?.method ?? "GET"} ${path} -> ${resp.status}`);
+  }
+  return (await resp.json()) as T;
+}
+
+export interface InitializeResponse {
+  version: string;
+  api_key: string;
+  auth_disabled: boolean;
+}
+
+export async function getInitialize(): Promise<InitializeResponse> {
+  const resp = await fetch("/api/v1/initialize");
+  if (!resp.ok) throw new Error(`initialize: ${resp.status}`);
+  return (await resp.json()) as InitializeResponse;
+}

@@ -125,3 +125,43 @@ async def test_openapi_schema_available(client: AsyncClient) -> None:
     assert resp.status_code == 200
     body = resp.json()
     assert body["info"]["title"] == "glean"
+
+
+async def test_spa_not_mounted_when_dist_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """If no dist dir is available, /api and /healthz still work; / 404s gracefully."""
+    monkeypatch.setenv("GLEAN_UI_DIST", str(tmp_path / "nonexistent"))
+    state = StateStore(tmp_path / "state.db")
+    await state.open()
+    try:
+        app = make_app(state, tmp_path / "state.db")
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            healthz = await ac.get("/healthz")
+            assert healthz.status_code == 200
+            root = await ac.get("/")
+            assert root.status_code == 404
+    finally:
+        await state.close()
+
+
+async def test_spa_mounted_when_dist_present(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """If a dist directory with index.html exists, / serves the SPA shell."""
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / "index.html").write_text("<html><body>glean ui</body></html>")
+    monkeypatch.setenv("GLEAN_UI_DIST", str(dist))
+    state = StateStore(tmp_path / "state.db")
+    await state.open()
+    try:
+        app = make_app(state, tmp_path / "state.db")
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            root = await ac.get("/")
+            assert root.status_code == 200
+            assert b"glean ui" in root.content
+            healthz = await ac.get("/healthz")
+            assert healthz.status_code == 200
+    finally:
+        await state.close()
