@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 import httpx
 
 from glean.logging import get_logger
-from glean.security.ssrf import validate_url
+from glean.security.ssrf import SSRFValidationError, validate_url
 from glean.security.ssrf_transport import SSRFGuardedTransport, outbound_timeout
 from glean.sinks.escape import escape_slack, safe_url
 from glean.sinks.registry import register_sink
@@ -20,6 +20,18 @@ logger = get_logger(__name__)
 
 SLACK_MAX_CHARS = 3000
 _TAG_RE = re.compile(r"<[^>]+>")
+_SLACK_WEBHOOK_RE = re.compile(
+    r"^https://hooks\.slack\.com/services/T[A-Z0-9]+/B[A-Z0-9]+/[A-Za-z0-9]+$"
+)
+
+
+def validate_slack_webhook_url(webhook_url: str) -> str:
+    if not _SLACK_WEBHOOK_RE.fullmatch(webhook_url):
+        raise ValueError("Invalid Slack webhook URL: must match Slack's webhook URL format")
+    try:
+        return validate_url(webhook_url)
+    except SSRFValidationError as exc:
+        raise ValueError(f"slack webhook_url: SSRF blocked: {exc}") from exc
 
 
 @register_sink("slack")
@@ -40,7 +52,7 @@ class SlackSink:
     ) -> None:
         if not webhook_url:
             raise ValueError("slack sink requires 'webhook_url'")
-        self.webhook_url = validate_url(webhook_url)
+        self.webhook_url = validate_slack_webhook_url(webhook_url)
         self.channel = channel
         self.username = username
         self.icon_emoji = icon_emoji
