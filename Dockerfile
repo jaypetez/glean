@@ -13,7 +13,7 @@ RUN npm run build
 
 
 ### Build stage (existing Python build) ###
-FROM python:3.13-slim-trixie@sha256:dc1546eefcbe8caaa1f004f16ab76b204b5e1dbd58ff81b899f21cd40541232f AS builder
+FROM python:3.14-slim-trixie@sha256:7a500125bc50693f2214e842a621440a1b1b9cbb2188f74ab045d29ed2ea5856 AS builder
 
 RUN apt-get update \
  && apt-get -y --no-install-recommends upgrade \
@@ -44,7 +44,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 
 ### Runtime stage ###
-FROM python:3.13-slim-trixie@sha256:dc1546eefcbe8caaa1f004f16ab76b204b5e1dbd58ff81b899f21cd40541232f AS runtime
+FROM python:3.14-slim-trixie@sha256:7a500125bc50693f2214e842a621440a1b1b9cbb2188f74ab045d29ed2ea5856 AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
