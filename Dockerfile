@@ -59,7 +59,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 RUN apt-get update \
  && apt-get -y --no-install-recommends upgrade \
- && apt-get install -y --no-install-recommends tzdata ca-certificates curl \
+ && apt-get install -y --no-install-recommends tzdata ca-certificates \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/* \
  && groupadd --system glean \
@@ -68,6 +68,8 @@ RUN apt-get update \
  && chown -R glean:glean /data /etc/glean /home/glean
 
 COPY --from=builder /opt/venv /opt/venv
+COPY docker/curl /usr/local/bin/curl
+RUN chmod 0755 /usr/local/bin/curl
 COPY --from=ui-builder --chown=glean:glean /ui/dist /home/glean/ui/dist
 
 USER glean
