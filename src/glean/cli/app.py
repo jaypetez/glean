@@ -219,9 +219,11 @@ def run(
 
 
 async def _run_async(cfg, db_path: Path, health_port: int) -> None:  # type: ignore[no-untyped-def]
+    import asyncio
+
     from apscheduler import AsyncScheduler
 
-    from glean.health import run_health_server
+    from glean.api.app import run_api_server
     from glean.pipeline.engine import Runner
     from glean.scheduler import schedule_feeds
     from glean.state.store import StateStore
@@ -231,7 +233,9 @@ async def _run_async(cfg, db_path: Path, health_port: int) -> None:  # type: ign
     await store.open()
     telegram = TelegramSender(_require_token())
     runner = Runner(cfg, store, telegram)
-    health_runner = await run_health_server(store, port=health_port)
+    server = await run_api_server(store, db_path, port=health_port)
+
+    api_task = asyncio.create_task(server.serve(), name="glean-api")
 
     stop_event = asyncio.Event()
     loop = asyncio.get_running_loop()
@@ -249,7 +253,9 @@ async def _run_async(cfg, db_path: Path, health_port: int) -> None:  # type: ign
             await stop_event.wait()
             logger.info("shutdown_requested")
     finally:
-        await health_runner.cleanup()
+        server.should_exit = True
+        with contextlib.suppress(asyncio.CancelledError, Exception):
+            await asyncio.wait_for(api_task, timeout=5.0)
         await runner.aclose()
         await store.close()
 

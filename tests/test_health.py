@@ -34,9 +34,10 @@ class _Db:
         return _Cursor()
 
 
-async def test_health_endpoint_returns_ok() -> None:
+async def test_health_shim_endpoint_returns_ok() -> None:
     state = SimpleNamespace(db=_Db())
-    app = health_module.make_app(state)
+    with pytest.deprecated_call(match="glean.health.make_app is deprecated"):
+        app = health_module.make_app(state)
     request = make_mocked_request("GET", "/healthz", app=app)
 
     response = await app._handle(request)
@@ -46,9 +47,10 @@ async def test_health_endpoint_returns_ok() -> None:
     assert state.db.queries == ["SELECT 1"]
 
 
-async def test_health_endpoint_reports_db_errors() -> None:
+async def test_health_shim_endpoint_reports_db_errors() -> None:
     state = SimpleNamespace(db=_Db(error=RuntimeError("boom")))
-    app = health_module.make_app(state)
+    with pytest.deprecated_call(match="glean.health.make_app is deprecated"):
+        app = health_module.make_app(state)
     request = make_mocked_request("GET", "/healthz", app=app)
 
     response = await app._handle(request)
@@ -57,9 +59,8 @@ async def test_health_endpoint_reports_db_errors() -> None:
     assert response.text == "db error: boom\n"
 
 
-async def test_run_health_server_starts_tcp_site(monkeypatch) -> None:
+async def test_run_health_server_starts_tcp_site(monkeypatch: pytest.MonkeyPatch) -> None:
     started: dict[str, object] = {}
-    logs: list[tuple[str, dict[str, object]]] = []
 
     class FakeSite:
         def __init__(self, runner: web.AppRunner, *, host: str, port: int) -> None:
@@ -70,14 +71,15 @@ async def test_run_health_server_starts_tcp_site(monkeypatch) -> None:
         async def start(self) -> None:
             started["started"] = True
 
-    monkeypatch.setattr(health_module.web, "TCPSite", FakeSite)
-    monkeypatch.setattr(
-        health_module,
-        "logger",
-        SimpleNamespace(info=lambda event, **kwargs: logs.append((event, kwargs))),
-    )
+    monkeypatch.setattr(web, "TCPSite", FakeSite)
 
-    runner = await health_module.run_health_server(SimpleNamespace(db=_Db()), port=9123)
+    with pytest.warns(DeprecationWarning) as captured_warnings:
+        runner = await health_module.run_health_server(SimpleNamespace(db=_Db()), port=9123)
+
+    assert [str(warning.message) for warning in captured_warnings] == [
+        "run_health_server is deprecated; use glean.api.app.run_api_server",
+        "glean.health.make_app is deprecated; use glean.api.app.make_app instead",
+    ]
 
     assert isinstance(runner, web.AppRunner)
     assert started == {
@@ -86,6 +88,5 @@ async def test_run_health_server_starts_tcp_site(monkeypatch) -> None:
         "port": 9123,
         "started": True,
     }
-    assert logs == [("health_listening", {"port": 9123})]
 
     await runner.cleanup()
