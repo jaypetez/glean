@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from glean.llm.common import INJECTION_GUARD_SYSTEM_PROMPT
 from glean.llm.ollama_provider import OllamaProvider
 from glean.sources.base import Item
 
@@ -54,6 +55,7 @@ async def test_ollama_rank_sends_expected_chat_request() -> None:
     assert kwargs["model"] == "qwen2.5:7b"
     assert kwargs["options"] == {"temperature": 0.0, "num_predict": 16}
     assert kwargs["messages"][0]["role"] == "system"
+    assert kwargs["messages"][0]["content"].startswith(INJECTION_GUARD_SYSTEM_PROMPT)
     assert "rank this" in kwargs["messages"][0]["content"]
     assert "Test article title" in kwargs["messages"][1]["content"]
 
@@ -96,7 +98,9 @@ async def test_ollama_summarize_uses_default_prompt() -> None:
     await provider.summarize(_item(), "  ")
 
     kwargs = provider._client.chat.await_args.kwargs
-    assert kwargs["messages"][0]["content"] == "Summarize the following content in one sentence."
+    system = kwargs["messages"][0]["content"]
+    assert system.startswith(INJECTION_GUARD_SYSTEM_PROMPT)
+    assert "Summarize the following content in one sentence." in system
     assert kwargs["options"] == {"temperature": 0.3, "num_predict": 256}
 
 
@@ -118,7 +122,10 @@ async def test_ollama_digest_uses_default_prompt() -> None:
     await provider.digest([_item()], "")
 
     kwargs = provider._client.chat.await_args.kwargs
-    assert kwargs["messages"][0]["content"] == "Write a 1-line digest header for the items below."
+    system = kwargs["messages"][0]["content"]
+    assert system.startswith(INJECTION_GUARD_SYSTEM_PROMPT)
+    assert "Write a 1-line digest header for the items below." in system
+    assert kwargs["options"] == {"temperature": 0.3, "num_predict": 512}
     assert "[1] Test article title" in kwargs["messages"][1]["content"]
 
 

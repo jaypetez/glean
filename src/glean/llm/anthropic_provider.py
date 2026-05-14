@@ -7,6 +7,7 @@ import anthropic
 from anthropic.types import TextBlock
 
 from glean.llm.common import (
+    INJECTION_GUARD_SYSTEM_PROMPT,
     item_as_prompt_context,
     items_as_prompt_context,
     parse_score,
@@ -46,6 +47,7 @@ class AnthropicProvider:
 
     async def rank(self, item: Item, prompt: str) -> float:
         system = (
+            f"{INJECTION_GUARD_SYSTEM_PROMPT}\n\n"
             f"{prompt.strip()}\n\n"
             "Respond with ONLY a single number between 0 and 1. No prose."
         )
@@ -53,17 +55,25 @@ class AnthropicProvider:
         return parse_score(out)
 
     async def summarize(self, item: Item, prompt: str) -> str:
+        system = (
+            f"{INJECTION_GUARD_SYSTEM_PROMPT}\n\n"
+            f"{prompt.strip() or 'Summarize the following content in one sentence.'}"
+        )
         return await self._complete(
-            prompt.strip() or "Summarize the following content in one sentence.",
+            system,
             item_as_prompt_context(item),
             max_tokens=256,
         )
 
     async def digest(self, items: list[Item], prompt: str) -> str:
+        system = (
+            f"{INJECTION_GUARD_SYSTEM_PROMPT}\n\n"
+            f"{prompt.strip() or 'Write a 1-line digest header for the items below.'}"
+        )
         return await self._complete(
-            prompt.strip() or "Write a 1-line digest header for the items below.",
+            system,
             items_as_prompt_context(items),
-            max_tokens=256,
+            max_tokens=512,
         )
 
     async def extract(

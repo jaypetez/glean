@@ -6,6 +6,7 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from glean.config.skills import SkillConfig, render_skill_prompt, skill_output_schema
+from glean.llm.output_filter import filter_llm_output
 from glean.logging import get_logger
 from glean.security.scrub import scrub
 from glean.sources.base import Item
@@ -75,7 +76,7 @@ async def summarize_stage(
     async def one(item: Item) -> Item:
         async with sem:
             try:
-                summary = await llm_for(item).summarize(item, prompt)
+                summary = filter_llm_output(await llm_for(item).summarize(item, prompt))
             except Exception as exc:
                 logger.warning(
                     "summarize_failed",
@@ -99,7 +100,7 @@ async def digest_intro(
     if not items:
         return prompt
     try:
-        return await llm.digest(items, prompt)
+        return filter_llm_output(await llm.digest(items, prompt))
     except Exception as exc:
         logger.warning("digest_failed", feed=feed, err=scrub(str(exc))[:500])
         return prompt
