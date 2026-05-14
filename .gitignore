@@ -23,4 +23,7 @@ feeds.yaml
 ui/node_modules/
 ui/dist/
 ui/.vite/
+ui/e2e/.tmp/
+ui/playwright-report/
+ui/test-results/
 ui/*.local

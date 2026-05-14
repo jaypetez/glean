@@ -1,0 +1,48 @@
+defaults:
+  llm:
+    provider: ollama
+    model: qwen2.5:7b
+    base_url: http://ollama:11434
+  render:
+    style: html
+    link_preview: false
+    max_items: 10
+  bootstrap: skip-and-mark
+  bootstrap_count: 5
+  failure:
+    alert_after: 3
+feeds:
+  - name: e2e-news
+    schedule: every 1h
+    sinks:
+      - type: file
+        path: e2e/.tmp/e2e-news.jsonl
+        format: jsonl
+    sources:
+      - type: rss
+        name: glean E2E Feed
+        url: http://localhost:8080/api/v1/test/rss
+    pipeline:
+      - dedup
+  - name: e2e-weekly
+    schedule: daily 09:00
+    sinks:
+      - type: file
+        path: e2e/.tmp/e2e-weekly.jsonl
+        format: jsonl
+    sources:
+      - type: rss
+        name: glean E2E Feed
+        url: http://localhost:8080/api/v1/test/rss
+    pipeline:
+      - dedup
+skills:
+  - name: e2e-summary
+    version: "1"
+    description: Extract a concise summary for E2E tests.
+    prompt: |
+      Extract from:
+      TITLE: {title}
+      BODY: {body}
+    output_schema:
+      summary: str

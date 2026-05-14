@@ -93,7 +93,7 @@
               type="button"
               class="rounded p-1 text-tertiary hover:bg-status-error/20 hover:text-status-error"
               onclick={() => removeSink(i)}
-              aria-label="Remove sink"><XIcon size={14} /></button
+              aria-label="Remove sink"><XIcon size={14} aria-hidden="true" /></button
             >
           </div>
           {#each fieldsForType(sink) as field}

@@ -82,6 +82,12 @@ docker exec -it glean glean test-feed ai-news-daily
 
 Want self-hosted web search too? See [Web search setup](./docs/getting-started/search.md) — uncomment SearXNG in `docker-compose.yml` and you're done in two more commands.
 
+## Web UI
+
+The built-in web UI is served by the same FastAPI process at `/`. It includes a live dashboard with SSE run status and run-now controls, feed and skill editors, a first-run setup wizard with starter templates, and a settings page for defaults, API key management, system info, and light/dark/system theme selection.
+
+The UI uses the single-user API key returned by `/api/v1/initialize` and sends it as `X-Glean-Api-Key` for REST calls. Keep the web port on loopback or behind a trusted reverse proxy unless you provide your own auth layer.
+
 ## Configuration
 
 Two files, two responsibilities:
@@ -324,7 +330,18 @@ curl http://localhost:8001/__messages | jq    # see what glean sent
 docker compose -f docker-compose.e2e.yml down -v
 ```
 
-CI runs lint + type-check + the full unit suite + the E2E stack on every PR.
+### Testing the web UI
+
+The Svelte UI has a Playwright suite with browser CRUD flows, axe-core accessibility checks, and visual snapshots. Its harness starts a local API with `GLEAN_TEST_MODE=1`; the `/api/v1/test/*` helpers are not registered in production. Run it locally after installing UI dependencies:
+
+```bash
+cd ui
+npm ci
+npx playwright install chromium
+npx playwright test
+```
+
+CI runs lint + type-check + the full unit suite, the Playwright UI suite, and the Docker E2E stack on every PR.
 
 ## Documentation
 

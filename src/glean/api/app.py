@@ -2,12 +2,15 @@
 from __future__ import annotations
 
 import os
+import shutil
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, status
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Response, status
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.types import Scope
 
 from glean import __version__
 from glean.api.auth import ApiKeyMaterial, auth_disabled, get_or_create_api_key, make_verify_api_key
@@ -26,6 +29,58 @@ if TYPE_CHECKING:
     from glean.state.store import StateStore
 
 logger = get_logger(__name__)
+
+
+class SPAStaticFiles(StaticFiles):
+    """StaticFiles variant that serves index.html for client-side routes."""
+
+    async def get_response(self, path: str, scope: Scope) -> Response:
+        normalized_path = path.lstrip("/")
+        request_path = str(scope.get("path", "")).lstrip("/")
+        reserved_route = (
+            normalized_path == "healthz"
+            or normalized_path.startswith("api/")
+            or request_path == "healthz"
+            or request_path.startswith("api/")
+        )
+        if reserved_route:
+            raise StarletteHTTPException(status_code=status.HTTP_404_NOT_FOUND)
+        try:
+            return await super().get_response(path, scope)
+        except StarletteHTTPException as exc:
+            route_missing = exc.status_code == status.HTTP_404_NOT_FOUND
+            method_can_fallback = scope["method"] in {"GET", "HEAD"}
+            if not route_missing or not method_can_fallback:
+                raise
+            return await super().get_response("index.html", scope)
+
+
+def _test_mode_enabled() -> bool:
+    """True when e2e-only API helpers are enabled."""
+    return os.environ.get("GLEAN_TEST_MODE", "").lower() in ("1", "true", "yes")
+
+
+async def _clear_test_state(state: StateStore) -> None:
+    """Clear state tables for Playwright e2e isolation."""
+    await state.db.execute("DELETE FROM seen_items")
+    await state.db.execute("DELETE FROM feed_runs")
+    await state.db.execute("DELETE FROM etag_cache")
+    await state.db.commit()
+
+
+def _restore_test_config(fixture_name: str) -> None:
+    """Restore the active config from the configured e2e fixture."""
+    if fixture_name == "empty":
+        fixture_env = "GLEAN_TEST_EMPTY_CONFIG_FIXTURE"
+    else:
+        fixture_env = "GLEAN_TEST_CONFIG_FIXTURE"
+    fixture = os.environ.get(fixture_env)
+    config = os.environ.get("GLEAN_CONFIG")
+    if not fixture or not config:
+        return
+    config_path = Path(config)
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(Path(fixture), config_path)
 
 
 def make_app(state: StateStore, db_path: Path) -> FastAPI:
@@ -95,6 +150,37 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
     async def api_health() -> dict[str, str]:
         return {"status": "ok"}
 
+    if _test_mode_enabled():
+
+        @api_router.post("/test/reset")
+        async def test_reset(fixture: str = "default") -> dict[str, object]:
+            if not _test_mode_enabled():
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not found")
+            await _clear_test_state(state)
+            _restore_test_config(fixture)
+            return {"ok": True, "message": "test state reset"}
+
+        @api_router.get("/test/rss")
+        async def test_rss() -> Response:
+            if not _test_mode_enabled():
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not found")
+            rss = """<?xml version=\"1.0\" encoding=\"UTF-8\" ?>
+<rss version=\"2.0\">
+  <channel>
+    <title>glean E2E Feed</title>
+    <link>http://localhost:8080/api/v1/test/rss</link>
+    <description>Static feed for Playwright e2e tests</description>
+    <item>
+      <title>Playwright E2E item</title>
+      <link>http://localhost:8080/items/playwright-e2e</link>
+      <description>Stable RSS item for test runs.</description>
+      <guid>playwright-e2e-item</guid>
+    </item>
+  </channel>
+</rss>
+"""
+            return Response(content=rss, media_type="application/rss+xml")
+
     api_router.include_router(auth_router)
     api_router.include_router(config_router)
     api_router.include_router(feeds_router)
@@ -140,7 +226,7 @@ def _mount_spa(app: FastAPI) -> None:
     if dist is None:
         logger.info("ui_spa_not_mounted", reason="no dist directory found")
         return
-    app.mount("/", StaticFiles(directory=str(dist), html=True), name="ui")
+    app.mount("/", SPAStaticFiles(directory=str(dist), html=True), name="ui")
     logger.info("ui_spa_mounted", dist=str(dist))
 
 

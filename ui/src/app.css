@@ -53,8 +53,8 @@ html.theme-light {
   --color-primary: #0f172a;
   --color-secondary: #334155;
   --color-tertiary: #475569;
-  --color-faint: #64748b;
-  --color-status-ok: #047857;
+  --color-faint: #475569;
+  --color-status-ok: #065f46;
   --color-status-warn: #92400e;
   --color-status-error: #b91c1c;
   --color-status-idle: #475569;

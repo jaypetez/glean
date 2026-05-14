@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
+    "test:e2e": "playwright test",
     "lint": "prettier --check .",
     "format": "prettier --write ."
   },
@@ -18,10 +19,13 @@
     "yaml": "^2.6.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.3",
+    "@playwright/test": "^1.60.0",
     "@sveltejs/vite-plugin-svelte": "^5.0.0",
     "@tailwindcss/vite": "^4.0.0",
     "@tsconfig/svelte": "^5.0.0",
     "@types/node": "^22.0.0",
+    "axe-core": "^4.11.4",
     "prettier": "^3.4.0",
     "prettier-plugin-svelte": "^3.3.0",
     "svelte-check": "^4.1.0",
