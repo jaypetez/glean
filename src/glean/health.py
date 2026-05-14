@@ -46,6 +46,6 @@ async def run_health_server(state: StateStore, port: int = 9090) -> web.AppRunne
     app = make_app(state)
     runner = web.AppRunner(app, access_log=None)
     await runner.setup()
-    site = web.TCPSite(runner, host="0.0.0.0", port=port)  # noqa: S104
+    site = web.TCPSite(runner, host="0.0.0.0", port=port)  # noqa: S104 # nosec
     await site.start()
     return runner

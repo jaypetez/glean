@@ -27,3 +27,9 @@ updates:
       interval: "weekly"
       day: "monday"
     labels: ["deps", "docker"]
+
+  - package-ecosystem: "npm"
+    directory: "/ui"
+    schedule:
+      interval: "weekly"
+    labels: ["deps", "npm"]

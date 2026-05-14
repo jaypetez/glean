@@ -288,7 +288,7 @@ async def run_api_server(
     state: StateStore,
     db_path: Path,
     port: int = 9090,
-    host: str = "0.0.0.0",  # noqa: S104 -- daemon listens on all interfaces by default
+    host: str = "0.0.0.0",  # noqa: S104 -- daemon listens on all interfaces by default # nosec
 ) -> uvicorn.Server:
     """Start uvicorn as an in-process task sharing the existing asyncio loop."""
     import uvicorn  # noqa: PLC0415
