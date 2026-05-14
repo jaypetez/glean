@@ -433,19 +433,23 @@ async def test_run_async_starts_scheduler_and_cleans_up(
         async def aclose(self) -> None:
             self.closed = True
 
-    class FakeHealthRunner:
+    class FakeApiServer:
         def __init__(self) -> None:
-            self.cleaned = False
+            self.should_exit = False
+            self.served = False
 
-        async def cleanup(self) -> None:
-            self.cleaned = True
+        async def serve(self) -> None:
+            self.served = True
+            while not self.should_exit:
+                await cli_module.asyncio.sleep(0)
 
-    health_runner = FakeHealthRunner()
+    api_server = FakeApiServer()
 
-    async def fake_run_health_server(store: FakeStore, *, port: int) -> FakeHealthRunner:
-        observed["health_store"] = store
-        observed["health_port"] = port
-        return health_runner
+    async def fake_run_api_server(store: FakeStore, db_path: Path, *, port: int) -> FakeApiServer:
+        observed["api_store"] = store
+        observed["api_db_path"] = db_path
+        observed["api_port"] = port
+        return api_server
 
     async def fake_schedule_feeds(scheduler: object, runner: FakeRunner) -> None:
         observed["schedule_args"] = (scheduler, runner)
@@ -476,7 +480,7 @@ async def test_run_async_starts_scheduler_and_cleans_up(
     monkeypatch.setattr("glean.state.store.StateStore", FakeStore)
     monkeypatch.setattr("glean.telegram.TelegramSender", FakeTelegramSender)
     monkeypatch.setattr("glean.pipeline.engine.Runner", FakeRunner)
-    monkeypatch.setattr("glean.health.run_health_server", fake_run_health_server)
+    monkeypatch.setattr("glean.api.app.run_api_server", fake_run_api_server)
     monkeypatch.setattr("glean.scheduler.schedule_feeds", fake_schedule_feeds)
     monkeypatch.setattr("apscheduler.AsyncScheduler", FakeAsyncScheduler)
     monkeypatch.setattr(cli_module.asyncio, "get_running_loop", lambda: fake_loop)
@@ -489,12 +493,14 @@ async def test_run_async_starts_scheduler_and_cleans_up(
     await cli_module._run_async(cfg, tmp_path / "state.db", 9123)
 
     assert observed["token"] == "run-token"
-    assert observed["health_port"] == 9123
+    assert observed["api_db_path"] == tmp_path / "state.db"
+    assert observed["api_port"] == 9123
+    assert api_server.served is True
+    assert api_server.should_exit is True
     assert observed["scheduler_started"] is True
     assert observed["schedule_args"] == (observed["scheduler"], observed["runner"])
     assert observed["runner"].closed is True
     assert observed["store"].closed is True
-    assert health_runner.cleaned is True
     assert observed["logs"] == [
         ("daemon_started", {"feeds": 1}),
         ("shutdown_requested", {}),
