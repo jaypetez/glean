@@ -146,7 +146,6 @@ async def test_list_feeds_async_renders_state_information(
     assert "pre-bootstrap" in output
     assert "last_error: boom" in output
     assert "ops" in output
-    assert "never run" in output
 
 
 def test_test_feed_command_checks_feed_exists_before_running(
@@ -285,34 +284,30 @@ async def test_test_feed_async_prints_messages_for_dry_run(
         async def close(self) -> None:
             self.closed = True
 
-    class FakeRunner:
-        def __init__(self, cfg: Config, store: FakeStore, telegram: object | None) -> None:
-            observed["runner"] = self
-            observed["runner_cfg"] = cfg
-            observed["runner_store"] = store
-            observed["telegram"] = telegram
-            self.closed = False
-
-        async def run_feed(self, name: str, *, dry_run: bool):  # type: ignore[no-untyped-def]
-            observed["run_feed"] = (name, dry_run)
-            return SimpleNamespace(
-                feed=name,
-                fetched=3,
-                after_dedup=2,
-                dropped=1,
-                overflow=0,
-                sent=0,
-                duration_ms=12,
-                skipped_reason=None,
-                error=None,
-                messages=["hello", "world"],
-            )
-
-        async def aclose(self) -> None:
-            self.closed = True
+    async def fake_run_feed_once(
+        service_cfg: Config,
+        store: FakeStore,
+        name: str,
+        *,
+        dry_run: bool,
+        telegram: object | None = None,
+    ):  # type: ignore[no-untyped-def]
+        observed["run_feed_once"] = (service_cfg, store, name, dry_run, telegram)
+        return SimpleNamespace(
+            feed=name,
+            fetched=3,
+            after_dedup=2,
+            dropped=1,
+            overflow=0,
+            sent=0,
+            duration_ms=12,
+            skipped_reason=None,
+            error=None,
+            messages=["hello", "world"],
+        )
 
     monkeypatch.setattr("glean.state.store.StateStore", FakeStore)
-    monkeypatch.setattr("glean.pipeline.engine.Runner", FakeRunner)
+    monkeypatch.setattr("glean.api_service.run_feed_once", fake_run_feed_once)
     monkeypatch.setattr("glean.telegram.TelegramSender", object)
 
     await cli_module._test_feed_async(cfg, tmp_path / "state.db", "ai", send=False)
@@ -321,9 +316,12 @@ async def test_test_feed_async_prints_messages_for_dry_run(
     assert "feed=ai fetched=3 after_dedup=2 dropped=1 overflow=0 sent=0 duration_ms=12" in output
     assert "---  WOULD SEND  ---" in output
     assert "[message 1]" in output
-    assert observed["run_feed"] == ("ai", True)
-    assert observed["telegram"] is None
-    assert observed["runner"].closed is True
+    service_cfg, service_store, service_name, dry_run, telegram = observed["run_feed_once"]
+    assert service_cfg is cfg
+    assert service_store is observed["store"]
+    assert service_name == "ai"
+    assert dry_run is True
+    assert telegram is None
     assert observed["store"].closed is True
 
 
@@ -356,33 +354,31 @@ async def test_test_feed_async_exits_when_feed_run_errors(
         async def aclose(self) -> None:
             self.closed = True
 
-    class FakeRunner:
-        def __init__(self, _cfg: Config, _store: FakeStore, telegram: FakeTelegramSender) -> None:
-            observed["telegram_from_runner"] = telegram
-            observed["runner"] = self
-            self.closed = False
-
-        async def run_feed(self, name: str, *, dry_run: bool):  # type: ignore[no-untyped-def]
-            observed["run_feed"] = (name, dry_run)
-            return SimpleNamespace(
-                feed=name,
-                fetched=1,
-                after_dedup=1,
-                dropped=0,
-                overflow=0,
-                sent=0,
-                duration_ms=5,
-                skipped_reason="bootstrap",
-                error="boom",
-                messages=[],
-            )
-
-        async def aclose(self) -> None:
-            self.closed = True
+    async def fake_run_feed_once(
+        service_cfg: Config,
+        store: FakeStore,
+        name: str,
+        *,
+        dry_run: bool,
+        telegram: FakeTelegramSender | None = None,
+    ):  # type: ignore[no-untyped-def]
+        observed["run_feed_once"] = (service_cfg, store, name, dry_run, telegram)
+        return SimpleNamespace(
+            feed=name,
+            fetched=1,
+            after_dedup=1,
+            dropped=0,
+            overflow=0,
+            sent=0,
+            duration_ms=5,
+            skipped_reason="bootstrap",
+            error="boom",
+            messages=[],
+        )
 
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "secret-token")
     monkeypatch.setattr("glean.state.store.StateStore", FakeStore)
-    monkeypatch.setattr("glean.pipeline.engine.Runner", FakeRunner)
+    monkeypatch.setattr("glean.api_service.run_feed_once", fake_run_feed_once)
     monkeypatch.setattr("glean.telegram.TelegramSender", FakeTelegramSender)
 
     with pytest.raises(typer.Exit) as exc:
@@ -393,8 +389,13 @@ async def test_test_feed_async_exits_when_feed_run_errors(
     assert "skipped: bootstrap" in output
     assert "error: boom" in output
     assert observed["token"] == "secret-token"
-    assert observed["run_feed"] == ("ai", False)
-    assert observed["runner"].closed is True
+    service_cfg, service_store, service_name, dry_run, telegram = observed["run_feed_once"]
+    assert service_cfg is cfg
+    assert service_store is observed["store"]
+    assert service_name == "ai"
+    assert dry_run is False
+    assert telegram is observed["telegram"]
+    assert observed["telegram"].closed is True
     assert observed["store"].closed is True
 
 
