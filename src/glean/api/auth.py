@@ -1,9 +1,9 @@
 """API key generation and verification.
 
 Single-user self-hosted pattern (Sonarr-style): one auto-generated key
-stored alongside the state DB. UI fetches it from /api/v1/initialize
-(unauthenticated) on first load and includes it as X-Glean-Api-Key on
-all subsequent requests.
+with a persisted verifier stored alongside the state DB. UI fetches the
+plaintext key from /api/v1/initialize only when it is first created or
+migrated, then includes it as X-Glean-Api-Key on subsequent requests.
 
 Override via GLEAN_API_KEY env var. Disable auth entirely (loopback-only
 deployments behind reverse proxies) via GLEAN_DISABLE_AUTH=1.
@@ -12,104 +12,124 @@ from __future__ import annotations
 
 import contextlib
 import hashlib
-import hmac
 import os
 import secrets
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Annotated, Final
+from typing import Annotated
 
 from fastapi import Header, HTTPException, Query, Request, status
 
-_KEY_HASH_PREFIX: Final = "pbkdf2_sha256"
-_KEY_HASH_ITERATIONS: Final = 210_000
-_KEY_CACHE: dict[Path, str] = {}
+_HASH_PREFIX = "pbkdf2_sha256"
+_HASH_ITERATIONS = 200_000
+
+
+@dataclass(frozen=True, slots=True)
+class ApiKeyRecord:
+    """Persisted verifier for an API key."""
+
+    iterations: int
+    salt_hex: str
+    digest_hex: str
+
+
+@dataclass(frozen=True, slots=True)
+class ApiKeyMaterial:
+    """Runtime API key material.
+
+    ``plaintext`` is present only for a generated, migrated, rotated, or env-provided key in the
+    current process. Restarts load only the persisted verifier.
+    """
+
+    plaintext: str | None
+    record: ApiKeyRecord | None
 
 
 def _key_path(state_db_path: Path) -> Path:
-    """Locate the API key file beside the state DB."""
+    """Locate the API key verifier file beside the state DB."""
     return state_db_path.parent / "api_key"
 
 
-def _cache_key(state_db_path: Path) -> Path:
-    """Normalize a state DB path for in-process key caching."""
-    return state_db_path.resolve()
-
-
-def _hash_api_key(api_key: str) -> str:
-    """Return a salted one-way verifier for an API key."""
-    salt = secrets.token_hex(16)
-    digest = hashlib.pbkdf2_hmac(
+def _derive_digest(secret: str, *, iterations: int, salt: bytes) -> str:
+    return hashlib.pbkdf2_hmac(
         "sha256",
-        api_key.encode("utf-8"),
-        salt.encode("ascii"),
-        _KEY_HASH_ITERATIONS,
+        secret.encode("utf-8"),
+        salt,
+        iterations,
     ).hex()
-    return f"{_KEY_HASH_PREFIX}${salt}${digest}"
 
 
-def _verify_api_key_hash(stored_hash: str, supplied_key: str) -> bool:
-    """Verify an API key against the persisted one-way verifier."""
-    parts = stored_hash.split("$", 2)
-    if len(parts) != 3 or parts[0] != _KEY_HASH_PREFIX:
-        return hmac.compare_digest(stored_hash, supplied_key)
-    _, salt, expected_digest = parts
-    actual_digest = hashlib.pbkdf2_hmac(
-        "sha256",
-        supplied_key.encode("utf-8"),
-        salt.encode("ascii"),
-        _KEY_HASH_ITERATIONS,
-    ).hex()
-    return hmac.compare_digest(actual_digest, expected_digest)
+def _hash_api_key(secret: str) -> ApiKeyRecord:
+    salt = secrets.token_bytes(16)
+    return ApiKeyRecord(
+        iterations=_HASH_ITERATIONS,
+        salt_hex=salt.hex(),
+        digest_hex=_derive_digest(secret, iterations=_HASH_ITERATIONS, salt=salt),
+    )
 
 
-def _persist_api_key(state_db_path: Path, api_key: str) -> None:
-    """Persist a one-way verifier beside the state DB and cache the API key in-process."""
+def _serialize_record(record: ApiKeyRecord) -> str:
+    return f"{_HASH_PREFIX}${record.iterations}${record.salt_hex}${record.digest_hex}"
+
+
+def _parse_record(raw: str) -> ApiKeyRecord | None:
+    parts = raw.strip().split("$")
+    if len(parts) != 4 or parts[0] != _HASH_PREFIX:
+        return None
+    try:
+        iterations = int(parts[1])
+        salt = bytes.fromhex(parts[2])
+        digest = bytes.fromhex(parts[3])
+    except ValueError:
+        return None
+    if iterations < 1 or not salt or len(digest) != hashlib.sha256().digest_size:
+        return None
+    return ApiKeyRecord(iterations=iterations, salt_hex=parts[2], digest_hex=parts[3])
+
+
+def _persist_api_key_record(state_db_path: Path, record: ApiKeyRecord) -> None:
+    """Persist an API key verifier beside the state DB."""
     key_file = _key_path(state_db_path)
     key_file.parent.mkdir(parents=True, exist_ok=True)
-    key_file.write_text(_hash_api_key(api_key), encoding="utf-8")
-    _KEY_CACHE[_cache_key(state_db_path)] = api_key
+    key_file.write_text(_serialize_record(record), encoding="utf-8")
     with contextlib.suppress(OSError, NotImplementedError):
         key_file.chmod(0o600)
 
 
-def verify_persisted_api_key(state_db_path: Path, supplied_key: str) -> bool:
-    """Return true when a supplied API key matches the persisted verifier."""
-    key_file = _key_path(state_db_path)
-    if not key_file.is_file():
-        return False
-    return _verify_api_key_hash(key_file.read_text(encoding="utf-8").strip(), supplied_key)
-
-
-def get_or_create_api_key(state_db_path: Path) -> str:
-    """Return the configured API key, generating one on first call if needed.
+def get_or_create_api_key(state_db_path: Path) -> ApiKeyMaterial:
+    """Return runtime API key material, generating and persisting a verifier if needed.
 
     Precedence:
-      1. GLEAN_API_KEY env var (explicit override)
-      2. Cached key file (generated previously)
-      3. Newly generated key (persisted for future runs)
+      1. GLEAN_API_KEY env var (explicit override, no persisted verifier)
+      2. Cached verifier file (no plaintext returned after restart)
+      3. Newly generated key (plaintext returned once, verifier persisted)
     """
     if env_key := os.environ.get("GLEAN_API_KEY"):
-        return env_key
-    cache_key = _cache_key(state_db_path)
-    if cached_key := _KEY_CACHE.get(cache_key):
-        return cached_key
+        return ApiKeyMaterial(plaintext=env_key, record=None)
+
     key_file = _key_path(state_db_path)
     if key_file.is_file():
-        stored = key_file.read_text(encoding="utf-8").strip()
-        if stored and not stored.startswith(f"{_KEY_HASH_PREFIX}$"):
-            _persist_api_key(state_db_path, stored)
-            return stored
+        raw = key_file.read_text(encoding="utf-8").strip()
+        if record := _parse_record(raw):
+            return ApiKeyMaterial(plaintext=None, record=record)
+        if raw:
+            record = _hash_api_key(raw)
+            _persist_api_key_record(state_db_path, record)
+            return ApiKeyMaterial(plaintext=raw, record=record)
+
     new_key = secrets.token_urlsafe(32)
-    _persist_api_key(state_db_path, new_key)
-    return new_key
+    record = _hash_api_key(new_key)
+    _persist_api_key_record(state_db_path, record)
+    return ApiKeyMaterial(plaintext=new_key, record=record)
 
 
-def rotate_api_key(state_db_path: Path) -> str:
-    """Generate and persist a replacement API key."""
+def rotate_api_key(state_db_path: Path) -> ApiKeyMaterial:
+    """Generate a replacement API key and persist only its verifier."""
     new_key = secrets.token_urlsafe(32)
-    _persist_api_key(state_db_path, new_key)
-    return new_key
+    record = _hash_api_key(new_key)
+    _persist_api_key_record(state_db_path, record)
+    return ApiKeyMaterial(plaintext=new_key, record=record)
 
 
 def auth_disabled() -> bool:
@@ -122,23 +142,51 @@ def api_key_env_override_active() -> bool:
     return bool(os.environ.get("GLEAN_API_KEY"))
 
 
-def _check_api_key(expected: str | Callable[[], str | None], supplied_key: str | None) -> None:
+ExpectedApiKey = ApiKeyMaterial | str | Callable[[], ApiKeyMaterial | str | None]
+
+
+def verify_api_key(material: ApiKeyMaterial, supplied_key: str | None) -> ApiKeyMaterial | None:
+    """Validate a supplied API key and return material with plaintext cached on success."""
+    if not supplied_key:
+        return None
+    if material.plaintext is not None and secrets.compare_digest(supplied_key, material.plaintext):
+        return material
+    if material.record is None:
+        return None
+    salt = bytes.fromhex(material.record.salt_hex)
+    supplied_digest = _derive_digest(
+        supplied_key,
+        iterations=material.record.iterations,
+        salt=salt,
+    )
+    if not secrets.compare_digest(supplied_digest, material.record.digest_hex):
+        return None
+    return ApiKeyMaterial(plaintext=supplied_key, record=material.record)
+
+
+def _check_api_key(expected: ExpectedApiKey, supplied_key: str | None) -> ApiKeyMaterial | None:
     expected_key = expected() if callable(expected) else expected
-    if (
-        not expected_key
-        or not supplied_key
-        or not secrets.compare_digest(supplied_key, expected_key)
-    ):
+    verified_material: ApiKeyMaterial | None = None
+    if isinstance(expected_key, ApiKeyMaterial):
+        verified_material = verify_api_key(expected_key, supplied_key)
+        valid = verified_material is not None
+    elif isinstance(expected_key, str) and supplied_key:
+        valid = secrets.compare_digest(supplied_key, expected_key)
+    else:
+        valid = False
+    if not valid:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="invalid or missing X-Glean-Api-Key header",
         )
+    return verified_material
 
 
 def make_verify_api_key(
-    expected: str | Callable[[], str | None],
+    expected: ExpectedApiKey,
     *,
     allow_query_for_events: bool = False,
+    on_verified: Callable[[ApiKeyMaterial], None] | None = None,
 ) -> Callable[..., Awaitable[None]]:
     """Build a FastAPI dependency that validates the X-Glean-Api-Key header."""
 
@@ -150,7 +198,9 @@ def make_verify_api_key(
     ) -> None:
         if auth_disabled():
             return
-        _check_api_key(expected, x_glean_api_key)
+        verified = _check_api_key(expected, x_glean_api_key)
+        if verified is not None and on_verified is not None:
+            on_verified(verified)
 
     async def verify_events(
         request: Request,
@@ -165,6 +215,8 @@ def make_verify_api_key(
         supplied_key = x_glean_api_key
         if supplied_key is None and request.scope.get("path") == "/api/v1/events":
             supplied_key = api_key
-        _check_api_key(expected, supplied_key)
+        verified = _check_api_key(expected, supplied_key)
+        if verified is not None and on_verified is not None:
+            on_verified(verified)
 
     return verify_events if allow_query_for_events else verify_header
