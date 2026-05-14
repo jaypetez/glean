@@ -9,7 +9,7 @@ from httpx import ASGITransport, AsyncClient
 from starlette.requests import Request
 
 from glean.api.app import make_app
-from glean.api.auth import make_verify_api_key
+from glean.api.auth import make_verify_api_key, verify_persisted_api_key
 from glean.state.store import StateStore
 
 pytestmark = pytest.mark.asyncio
@@ -61,7 +61,9 @@ async def test_rotate_returns_new_key_and_persists_it(app_client) -> None:
     assert isinstance(new_key, str)
     assert len(new_key) >= 32
     assert new_key != old_key
-    assert key_file.read_text(encoding="utf-8").strip() == new_key
+    persisted = key_file.read_text(encoding="utf-8").strip()
+    assert persisted != new_key
+    assert verify_persisted_api_key(key_file.parent / "state.db", new_key)
     assert app.state.glean_api_key == new_key
 
 
