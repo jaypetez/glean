@@ -166,10 +166,16 @@ async def test_query_api_key_only_authenticates_events_endpoint(app_client) -> N
     assert exc.value.status_code == 401
 
 
-async def test_openapi_only_advertises_query_api_key_for_events(app_client) -> None:
-    _, client, _ = app_client
-
-    resp = await client.get("/api/openapi.json")
+async def test_openapi_only_advertises_query_api_key_for_events(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("GLEAN_ENABLE_DOCS", "1")
+    state = StateStore(tmp_path / "state.db")
+    await state.open()
+    app = make_app(state, tmp_path / "state.db")
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get("/api/openapi.json")
+    await state.close()
 
     assert resp.status_code == 200
     paths = resp.json()["paths"]

@@ -4,19 +4,25 @@ from __future__ import annotations
 import os
 import shutil
 import time
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, Response, status
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, Response, status
 from fastapi.staticfiles import StaticFiles
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.util import get_remote_address
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.types import Scope
 
 from glean import __version__
 from glean.api.auth import ApiKeyMaterial, auth_disabled, get_or_create_api_key, make_verify_api_key
 from glean.api.events import EventBus
+from glean.api.middleware import LimitBodySizeMiddleware, SecurityHeadersMiddleware
 from glean.api.models import InitializeResponse
-from glean.api.routes.auth_routes import router as auth_router
+from glean.api.routes.auth_routes import build_auth_router
 from glean.api.routes.config import router as config_router
 from glean.api.routes.events import router as events_router
 from glean.api.routes.feeds import router as feeds_router
@@ -29,6 +35,7 @@ if TYPE_CHECKING:
     from glean.state.store import StateStore
 
 logger = get_logger(__name__)
+ExceptionHandler = Callable[[Request, Exception], Response | Awaitable[Response]]
 
 
 class SPAStaticFiles(StaticFiles):
@@ -74,6 +81,21 @@ def _warn_if_data_dir_insecure(data_dir: Path = Path("/data")) -> None:
         )
 
 
+def _max_body_bytes_from_env() -> int:
+    raw_value = os.environ.get("GLEAN_MAX_BODY_BYTES")
+    if raw_value is None:
+        return 1_048_576
+    try:
+        max_bytes = int(raw_value)
+    except ValueError:
+        logger.warning("invalid GLEAN_MAX_BODY_BYTES; using default", value=raw_value)
+        return 1_048_576
+    if max_bytes <= 0:
+        logger.warning("non-positive GLEAN_MAX_BODY_BYTES; using default", value=raw_value)
+        return 1_048_576
+    return max_bytes
+
+
 async def _clear_test_state(state: StateStore) -> None:
     """Clear state tables for Playwright e2e isolation."""
     await state.db.execute("DELETE FROM seen_items")
@@ -103,14 +125,24 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
     The ``state`` and ``db_path`` are stored on ``app.state`` so future routers
     can fetch them via ``request.app.state.glean_state``.
     """
+    docs_enabled = os.environ.get("GLEAN_ENABLE_DOCS") == "1"
+    docs_url = "/api/docs" if docs_enabled else None
+    openapi_url = "/api/openapi.json" if docs_enabled else None
     app = FastAPI(
         title="glean",
         version=__version__,
         description="Self-hosted content aggregation daemon — REST API",
-        docs_url="/api/docs",
+        docs_url=docs_url,
         redoc_url=None,
-        openapi_url="/api/openapi.json",
+        openapi_url=openapi_url,
     )
+    limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
+    app.state.limiter = limiter
+    rate_limit_handler = cast(ExceptionHandler, _rate_limit_exceeded_handler)
+    app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
+    app.add_middleware(SlowAPIMiddleware)
+    app.add_middleware(LimitBodySizeMiddleware, max_bytes=_max_body_bytes_from_env())
+    app.add_middleware(SecurityHeadersMiddleware)
 
     if auth_disabled():
         logger.warning(
@@ -155,7 +187,8 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
             ) from exc
 
     @health_router.get("/api/v1/initialize", response_model=InitializeResponse)
-    async def initialize() -> InitializeResponse:
+    @limiter.limit("10/minute")
+    async def initialize(request: Request) -> InitializeResponse:
         """Return bootstrap data for first-load UI initialization."""
         return InitializeResponse(
             version=__version__,
@@ -173,10 +206,11 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
     if _test_mode_enabled():
 
         @api_router.post("/test/reset")
-        async def test_reset(fixture: str = "default") -> dict[str, object]:
+        async def test_reset(request: Request, fixture: str = "default") -> dict[str, object]:
             if not _test_mode_enabled():
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not found")
             await _clear_test_state(state)
+            request.app.state.limiter.reset()
             _restore_test_config(fixture)
             return {"ok": True, "message": "test state reset"}
 
@@ -201,7 +235,7 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
 """
             return Response(content=rss, media_type="application/rss+xml")
 
-    api_router.include_router(auth_router)
+    api_router.include_router(build_auth_router(limiter))
     api_router.include_router(config_router)
     api_router.include_router(feeds_router)
     api_router.include_router(system_router)
@@ -254,6 +288,7 @@ async def run_api_server(
     state: StateStore,
     db_path: Path,
     port: int = 9090,
+    host: str = "0.0.0.0",  # noqa: S104 -- daemon listens on all interfaces by default
 ) -> uvicorn.Server:
     """Start uvicorn as an in-process task sharing the existing asyncio loop."""
     import uvicorn  # noqa: PLC0415
@@ -261,10 +296,14 @@ async def run_api_server(
     app = make_app(state, db_path)
     config = uvicorn.Config(
         app=app,
-        host="0.0.0.0",  # noqa: S104 -- daemon listens on all interfaces
+        host=host,
         port=port,
         log_config=None,
         access_log=False,
+        server_header=False,
+        date_header=False,
+        limit_concurrency=50,
+        h11_max_incomplete_event_size=65_536,
     )
     server = uvicorn.Server(config)
     server.config.setup_event_loop = lambda: None  # type: ignore[method-assign]

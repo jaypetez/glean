@@ -36,6 +36,7 @@ dependencies = [
     "structlog>=24.4",
     "typer>=0.15",
     "aiohttp>=3.10",
+    "slowapi>=0.1.9",
 ]
 
 [project.optional-dependencies]
