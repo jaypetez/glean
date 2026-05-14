@@ -20,6 +20,13 @@ logger = get_logger(__name__)
 NTFY_MAX_BODY = 4096
 NTFY_MAX_TITLE = 200
 _TAG_RE = re.compile(r"<[^>]+>")
+_TOPIC_RE = re.compile(r"^[a-zA-Z0-9_-]{1,64}$")
+
+
+def validate_ntfy_topic(topic: str) -> str:
+    if not _TOPIC_RE.fullmatch(topic):
+        raise ValueError(f"ntfy topic {topic!r} contains invalid characters or is too long")
+    return topic
 
 
 @register_sink("ntfy")
@@ -41,7 +48,7 @@ class NtfySink:
     ) -> None:
         if not topic:
             raise ValueError("ntfy sink requires 'topic'")
-        self.topic = topic
+        self.topic = validate_ntfy_topic(topic)
         self.base_url = validate_url(base_url).rstrip("/")
         self.token = token
         self.priority = str(priority) if priority is not None else None

@@ -6,7 +6,7 @@ import pytest
 
 
 @pytest.fixture(autouse=True)
-def _isolate_env(monkeypatch: pytest.MonkeyPatch) -> None:
+def _isolate_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     for key in [
         "TELEGRAM_BOT_TOKEN",
         "TELEGRAM_CHAT_AI",
@@ -22,8 +22,10 @@ def _isolate_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "SEARXNG_URL",
         "SEARCH_ENGINE",
         "GLEAN_SSRF_ALLOWED_HOSTS",
+        "GLEAN_FILE_SINK_ROOTS",
     ]:
         monkeypatch.delenv(key, raising=False)
+    monkeypatch.setenv("GLEAN_FILE_SINK_ROOTS", str(tmp_path))
 
 
 @pytest.fixture

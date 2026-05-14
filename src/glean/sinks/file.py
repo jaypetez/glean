@@ -3,16 +3,62 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Literal
 
 from glean.logging import get_logger
+from glean.sinks.escape import safe_url
 from glean.sinks.registry import register_sink
 
 if TYPE_CHECKING:
     from glean.sinks.base import SendContext
 
 logger = get_logger(__name__)
+
+_DEFAULT_ROOTS = ["/data", "/tmp/glean"]  # noqa: S108
+_MAX_PATH_SEGMENTS = 10
+
+
+def validate_file_sink_path(path: str) -> Path:
+    resolved = Path(path).resolve()
+    allowed_roots = _allowed_roots()
+    matched_root = next(
+        (root for root in allowed_roots if _is_under_allowed_root(resolved, root)), None
+    )
+    if matched_root is None:
+        raise ValueError(f"file sink path {resolved} is outside allowed roots {allowed_roots}")
+    if resolved == matched_root:
+        raise ValueError(f"file sink path {resolved} must name a file below an allowed root")
+
+    relative_parts = _relative_parts(resolved, matched_root)
+    if len(relative_parts) > _MAX_PATH_SEGMENTS:
+        raise ValueError(
+            f"file sink path {resolved} has more than {_MAX_PATH_SEGMENTS} path segments"
+        )
+    return resolved
+
+
+def _allowed_roots() -> list[Path]:
+    roots_env = os.environ.get("GLEAN_FILE_SINK_ROOTS", "").strip()
+    raw_roots = roots_env.split(",") if roots_env else _DEFAULT_ROOTS
+    allowed_roots = [Path(root.strip()).resolve() for root in raw_roots if root.strip()]
+    if not allowed_roots:
+        raise ValueError("GLEAN_FILE_SINK_ROOTS must contain at least one path")
+    return allowed_roots
+
+
+def _is_under_allowed_root(resolved: Path, root: Path) -> bool:
+    resolved_str = os.path.normcase(str(resolved))
+    root_str = os.path.normcase(str(root))
+    return resolved_str.startswith(root_str + os.sep) or resolved_str == root_str
+
+
+def _relative_parts(resolved: Path, root: Path) -> tuple[str, ...]:
+    if resolved == root:
+        return ()
+    relative = os.path.relpath(resolved, root)
+    return Path(relative).parts
 
 
 @register_sink("file")
@@ -30,7 +76,7 @@ class FileSink:
     ) -> None:
         if not path:
             raise ValueError("file sink requires 'path'")
-        self.path = Path(path)
+        self.path = validate_file_sink_path(path)
         self.format = format
         self.required = required
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -76,8 +122,9 @@ class FileSink:
                 summary = item.llm_summary or item.summary
                 if summary:
                     f.write(f"{summary}\n\n")
-                if item.canonical_url:
-                    f.write(f"[link]({item.canonical_url})  \n")
+                url = safe_url(item.canonical_url)
+                if url:
+                    f.write(f"[link]({url})  \n")
                 if item.source_name:
                     f.write(f"_{item.source_name}_\n\n")
             f.write("\n---\n\n")

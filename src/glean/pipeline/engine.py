@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import dataclasses
+import html
 import os
 import time
 from collections.abc import Callable
@@ -387,9 +388,10 @@ class Runner:
                 )
                 if should_alert and fc.ops_chat_id and self.telegram is not None:
                     try:
+                        alert_error = html.escape(result.error)
                         await self.telegram.send_text(
                             fc.ops_chat_id,
-                            f"🚨 <b>{name}</b> failing: {result.error}",
+                            f"🚨 <b>{html.escape(name)}</b> failing: {alert_error}",
                         )
                     except Exception:  # noqa: BLE001
                         logger.exception("ops_alert_send_failed", feed=name)

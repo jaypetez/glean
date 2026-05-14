@@ -40,6 +40,36 @@ def test_html_escapes_intro() -> None:
     assert "&lt;script&gt;alert(1)&lt;/script&gt;" in msgs[0]
 
 
+def test_html_drops_unsafe_link_url() -> None:
+    items = [_item("danger", url="javascript:alert(1)")]
+    msgs = render_digest(items, intro="hi", render=RenderConfig())
+
+    assert "javascript:alert(1)" not in msgs[0]
+    assert "<a href=" not in msgs[0]
+
+
+def test_markdown_v2_drops_unsafe_link_url() -> None:
+    items = [_item("danger", url="javascript:alert(1)")]
+    msgs = render_digest(items, intro="hi", render=RenderConfig(style="markdown_v2"))
+
+    assert "javascript:alert(1)" not in msgs[0]
+    assert "[link](" not in msgs[0]
+
+
+def test_markdown_v2_keeps_safe_link_url() -> None:
+    items = [_item("safe", url="https://example.com/x")]
+    msgs = render_digest(items, intro="hi", render=RenderConfig(style="markdown_v2"))
+
+    assert "[link](https://example.com/x)" in msgs[0]
+
+
+def test_markdown_v2_escapes_link_url_delimiters() -> None:
+    items = [_item("safe", url=r"https://example.com/a)b\c")]
+    msgs = render_digest(items, intro="hi", render=RenderConfig(style="markdown_v2"))
+
+    assert r"[link](https://example.com/a\)b\\c)" in msgs[0]
+
+
 def test_chunking_when_too_long() -> None:
     big_body = "x" * 600
     items = [_item(f"item {i}", body=big_body) for i in range(20)]

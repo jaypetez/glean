@@ -7,8 +7,9 @@ from typing import TYPE_CHECKING, Any, ClassVar
 import httpx
 
 from glean.logging import get_logger
-from glean.security.ssrf import validate_url
+from glean.security.ssrf import SSRFValidationError, validate_url
 from glean.security.ssrf_transport import SSRFGuardedTransport, outbound_timeout
+from glean.sinks.escape import escape_slack, safe_url
 from glean.sinks.registry import register_sink
 
 if TYPE_CHECKING:
@@ -19,6 +20,18 @@ logger = get_logger(__name__)
 
 SLACK_MAX_CHARS = 3000
 _TAG_RE = re.compile(r"<[^>]+>")
+_SLACK_WEBHOOK_RE = re.compile(
+    r"^https://hooks\.slack\.com/services/T[A-Z0-9]+/B[A-Z0-9]+/[A-Za-z0-9]+$"
+)
+
+
+def validate_slack_webhook_url(webhook_url: str) -> str:
+    if not _SLACK_WEBHOOK_RE.fullmatch(webhook_url):
+        raise ValueError("Invalid Slack webhook URL: must match Slack's webhook URL format")
+    try:
+        return validate_url(webhook_url)
+    except SSRFValidationError as exc:
+        raise ValueError(f"slack webhook_url: SSRF blocked: {exc}") from exc
 
 
 @register_sink("slack")
@@ -39,7 +52,7 @@ class SlackSink:
     ) -> None:
         if not webhook_url:
             raise ValueError("slack sink requires 'webhook_url'")
-        self.webhook_url = validate_url(webhook_url)
+        self.webhook_url = validate_slack_webhook_url(webhook_url)
         self.channel = channel
         self.username = username
         self.icon_emoji = icon_emoji
@@ -77,9 +90,9 @@ def _render_slack(items: list[Item], *, intro: str) -> list[str]:
             blocks.append(f"*{clean}*")
 
     for item in items:
-        title = item.title or "(untitled)"
-        summary = item.llm_summary or item.summary or ""
-        url = item.canonical_url or ""
+        title = escape_slack(item.title or "(untitled)")
+        summary = escape_slack(_strip_html(item.llm_summary or item.summary or ""))
+        url = _escape_slack_link_url(safe_url(item.canonical_url))
         source = item.source_name or item.source_type or ""
 
         if url:
@@ -87,7 +100,7 @@ def _render_slack(items: list[Item], *, intro: str) -> list[str]:
         else:
             lines = [f"*{title}*"]
         if summary:
-            lines.append(_strip_html(summary))
+            lines.append(summary)
         if source:
             lines.append(f"_{source}_")
         blocks.append("\n".join(lines))
@@ -97,6 +110,15 @@ def _render_slack(items: list[Item], *, intro: str) -> list[str]:
 
 def _strip_html(text: str) -> str:
     return _TAG_RE.sub("", text).strip()
+
+
+def _escape_slack_link_url(url: str) -> str:
+    return (
+        url.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("|", "%7C")
+    )
 
 
 def _chunk(blocks: list[str], max_chars: int) -> list[str]:

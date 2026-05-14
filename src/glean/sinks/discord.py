@@ -7,8 +7,9 @@ from typing import TYPE_CHECKING, Any, ClassVar
 import httpx
 
 from glean.logging import get_logger
-from glean.security.ssrf import validate_url
+from glean.security.ssrf import SSRFValidationError, validate_url
 from glean.security.ssrf_transport import SSRFGuardedTransport, outbound_timeout
+from glean.sinks.escape import escape_discord, safe_url
 from glean.sinks.registry import register_sink
 
 if TYPE_CHECKING:
@@ -19,6 +20,27 @@ logger = get_logger(__name__)
 
 DISCORD_MAX_CHARS = 2000
 _TAG_RE = re.compile(r"<[^>]+>")
+_DISCORD_WEBHOOK_RE = re.compile(
+    r"^https://discord\.com/api/webhooks/\d+/[A-Za-z0-9_.-]+$"
+)
+
+
+def validate_discord_webhook_url(webhook_url: str) -> str:
+    if not _DISCORD_WEBHOOK_RE.fullmatch(webhook_url):
+        raise ValueError("Invalid Discord webhook URL: must match Discord's webhook URL format")
+    try:
+        return validate_url(webhook_url)
+    except SSRFValidationError as exc:
+        raise ValueError(f"discord webhook_url: SSRF blocked: {exc}") from exc
+
+
+def validate_discord_avatar_url(avatar_url: str | None) -> str | None:
+    if not avatar_url:
+        return avatar_url
+    try:
+        return validate_url(avatar_url)
+    except SSRFValidationError as exc:
+        raise ValueError(f"discord avatar_url: SSRF blocked: {exc}") from exc
 
 
 @register_sink("discord")
@@ -38,9 +60,9 @@ class DiscordSink:
     ) -> None:
         if not webhook_url:
             raise ValueError("discord sink requires 'webhook_url'")
-        self.webhook_url = validate_url(webhook_url)
+        self.webhook_url = validate_discord_webhook_url(webhook_url)
         self.username = username
-        self.avatar_url = avatar_url
+        self.avatar_url = validate_discord_avatar_url(avatar_url)
         self.required = required
         self._client = httpx.AsyncClient(
             timeout=outbound_timeout(read=timeout_s),
@@ -51,7 +73,10 @@ class DiscordSink:
     async def send(self, ctx: SendContext) -> None:
         chunks = _render_discord(ctx.items, intro=ctx.intro)
         for chunk in chunks:
-            payload: dict[str, Any] = {"content": chunk}
+            payload: dict[str, Any] = {
+                "content": chunk,
+                "allowed_mentions": {"parse": []},
+            }
             if self.username:
                 payload["username"] = self.username
             if self.avatar_url:
@@ -73,14 +98,14 @@ def _render_discord(items: list[Item], *, intro: str) -> list[str]:
             blocks.append(f"**{clean_intro}**")
 
     for item in items:
-        title = item.title or "(untitled)"
-        summary = item.llm_summary or item.summary or ""
-        url = item.canonical_url or ""
+        title = escape_discord(item.title or "(untitled)")
+        summary = escape_discord(_strip_html(item.llm_summary or item.summary or ""))
+        url = safe_url(item.canonical_url)
         source = item.source_name or item.source_type or ""
 
         lines = [f"**{title}**"]
         if summary:
-            lines.append(_strip_html(summary))
+            lines.append(summary)
         footer_parts = []
         if source:
             footer_parts.append(f"_{source}_")

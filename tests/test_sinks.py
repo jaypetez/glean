@@ -353,6 +353,45 @@ async def test_discord_sink_strips_html_in_intro() -> None:
 
 
 @respx.mock
+async def test_discord_sink_escapes_markdown_and_drops_unsafe_url() -> None:
+    route = respx.post("https://discord.com/api/webhooks/123/abc").mock(
+        return_value=httpx.Response(204)
+    )
+    item = Item(
+        canonical_url="javascript:alert(1)",
+        title="[click](evil) *bold* @everyone <@everyone>",
+        source_type="rss",
+        source_name="ex",
+        llm_summary="summary <b>_here_</b> `code` | > quote",
+    )
+    sink = build_sink(
+        {
+            "type": "discord",
+            "webhook_url": "https://discord.com/api/webhooks/123/abc",
+        }
+    )
+    try:
+        await sink.send(
+            SendContext(
+                feed="t1",
+                items=[item],
+                messages=["raw msg"],
+                intro="",
+                render=RenderConfig(),
+            )
+        )
+    finally:
+        await sink.aclose()
+
+    body = json.loads(route.calls.last.request.read().decode())
+    assert body["allowed_mentions"] == {"parse": []}
+    assert r"**\[click\]\(evil\) \*bold\* \@everyone \<\@everyone\>**" in body["content"]
+    assert r"summary \_here\_ \`code\` \| \> quote" in body["content"]
+    assert "<b>" not in body["content"]
+    assert "javascript:alert(1)" not in body["content"]
+
+
+@respx.mock
 async def test_ntfy_sink_posts_with_headers() -> None:
     route = respx.post("https://ntfy.sh/my-topic").mock(
         return_value=httpx.Response(200, json={"id": "1"})
@@ -466,7 +505,7 @@ async def test_slack_sink_splits_oversized_item_blocks() -> None:
         calls.append(json.loads(request.content)["text"])
         return httpx.Response(200, text="ok")
 
-    respx.post("https://hooks.slack.com/services/T/B/X").mock(side_effect=handler)
+    respx.post("https://hooks.slack.com/services/TABC123/BDEF456/XYZ789").mock(side_effect=handler)
     item = Item(
         canonical_url="https://example.com/long",
         title="Long title",
@@ -477,7 +516,7 @@ async def test_slack_sink_splits_oversized_item_blocks() -> None:
     sink = build_sink(
         {
             "type": "slack",
-            "webhook_url": "https://hooks.slack.com/services/T/B/X",
+            "webhook_url": "https://hooks.slack.com/services/TABC123/BDEF456/XYZ789",
         }
     )
     try:
@@ -499,13 +538,13 @@ async def test_slack_sink_splits_oversized_item_blocks() -> None:
 
 @respx.mock
 async def test_slack_sink_posts_webhook() -> None:
-    route = respx.post("https://hooks.slack.com/services/T/B/X").mock(
+    route = respx.post("https://hooks.slack.com/services/TABC123/BDEF456/XYZ789").mock(
         return_value=httpx.Response(200, text="ok")
     )
     sink = build_sink(
         {
             "type": "slack",
-            "webhook_url": "https://hooks.slack.com/services/T/B/X",
+            "webhook_url": "https://hooks.slack.com/services/TABC123/BDEF456/XYZ789",
             "channel": "#news",
             "icon_emoji": ":robot_face:",
         }
@@ -520,6 +559,78 @@ async def test_slack_sink_posts_webhook() -> None:
     assert body["channel"] == "#news"
     assert body["icon_emoji"] == ":robot_face:"
     assert "*<https://example.com/a|A title>*" in body["text"]
+
+
+@respx.mock
+async def test_slack_sink_escapes_entities_formatting_and_drops_unsafe_url() -> None:
+    route = respx.post("https://hooks.slack.com/services/TABC123/BDEF456/XYZ789").mock(
+        return_value=httpx.Response(200, text="ok")
+    )
+    item = Item(
+        canonical_url="javascript:alert(1)",
+        title="*bold* <script> _x_",
+        source_type="rss",
+        source_name="ex",
+        llm_summary="`code` & <script> ~strike~",
+    )
+    sink = build_sink(
+        {
+            "type": "slack",
+            "webhook_url": "https://hooks.slack.com/services/TABC123/BDEF456/XYZ789",
+        }
+    )
+    try:
+        await sink.send(
+            SendContext(
+                feed="t1",
+                items=[item],
+                messages=["raw msg"],
+                intro="",
+                render=RenderConfig(),
+            )
+        )
+    finally:
+        await sink.aclose()
+
+    body = json.loads(route.calls.last.request.read().decode())
+    assert r"*\*bold\* &lt;script&gt; \_x\_*" in body["text"]
+    assert r"\`code\` &amp;  \~strike\~" in body["text"]
+    assert "&lt;script&gt;" not in body["text"].split("\n", maxsplit=1)[1]
+    assert "javascript:alert(1)" not in body["text"]
+
+
+@respx.mock
+async def test_slack_sink_escapes_link_url_delimiters() -> None:
+    route = respx.post("https://hooks.slack.com/services/TABC123/BDEF456/XYZ789").mock(
+        return_value=httpx.Response(200, text="ok")
+    )
+    item = Item(
+        canonical_url="https://example.com/a>b|c&d",
+        title="safe",
+        source_type="rss",
+        source_name="ex",
+    )
+    sink = build_sink(
+        {
+            "type": "slack",
+            "webhook_url": "https://hooks.slack.com/services/TABC123/BDEF456/XYZ789",
+        }
+    )
+    try:
+        await sink.send(
+            SendContext(
+                feed="t1",
+                items=[item],
+                messages=["raw msg"],
+                intro="",
+                render=RenderConfig(),
+            )
+        )
+    finally:
+        await sink.aclose()
+
+    body = json.loads(route.calls.last.request.read().decode())
+    assert "*<https://example.com/a&gt;b%7Cc&amp;d|safe>*" in body["text"]
 
 
 async def test_each_sink_raises_on_missing_required_field() -> None:
@@ -693,6 +804,28 @@ async def test_file_sink_markdown_format(tmp_path: Path) -> None:
     assert "## intro line" in content
     assert "### A" in content
     assert "### B" in content
+
+
+@pytest.mark.asyncio
+async def test_file_sink_markdown_drops_unsafe_url(tmp_path: Path) -> None:
+    out = tmp_path / "out.md"
+    sink = build_sink({"type": "file", "path": str(out), "format": "markdown"})
+    await sink.send(
+        _make_ctx(
+            [
+                Item(
+                    canonical_url="javascript:alert(1)",
+                    title="Unsafe",
+                    source_type="rss",
+                    source_name="ex",
+                )
+            ]
+        )
+    )
+    await sink.aclose()
+    content = out.read_text(encoding="utf-8")
+    assert "javascript:alert(1)" not in content
+    assert "[link](" not in content
 
 
 @pytest.mark.asyncio
