@@ -77,11 +77,17 @@ def validate_config(
     log_level: LogLevelOpt = "WARNING",
 ) -> None:
     """Parse feeds.yaml and exit 0 if valid, 1 otherwise."""
+    from glean.api_service import validate_config_summary
+
     configure_logging(log_level)
-    cfg = _load_or_exit(config)
-    typer.echo(f"OK — {len(cfg.feeds)} feed(s)")
-    for feed in cfg.feeds:
-        typer.echo(f"  - {feed.name}: schedule={feed.schedule!r} sources={len(feed.sources)}")
+    try:
+        summary = validate_config_summary(config)
+    except ConfigError as exc:
+        typer.secho(str(exc), fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from None
+    typer.echo(f"OK — {summary.feeds_count} feed(s)")
+    for feed in summary.feeds:
+        typer.echo(f"  - {feed.name}: schedule={feed.schedule!r} sources={feed.sources_count}")
 
 
 @app.command("list-feeds")
@@ -97,41 +103,31 @@ def list_feeds(
 
 
 async def _list_feeds_async(cfg, db_path: Path) -> None:  # type: ignore[no-untyped-def]
+    from glean.api_service import list_feeds_with_status
     from glean.state.store import StateStore
 
     store = StateStore(db_path)
     await store.open()
     try:
-        for feed in cfg.feeds:
-            async with store.db.execute(
-                "SELECT last_success_at, last_error, consecutive_failures, "
-                "alert_active, bootstrapped FROM feed_runs WHERE feed = ?",
-                (feed.name,),
-            ) as cur:
-                row = await cur.fetchone()
-            if row is None:
-                state_str = "never run"
-            else:
-                ls, le, cf, alert, boot = row
-                bits = []
-                if ls:
-                    import datetime as dt
-
-                    bits.append(f"last_ok={dt.datetime.fromtimestamp(ls).isoformat()}")
-                if cf:
-                    bits.append(f"failures={cf}")
-                if alert:
-                    bits.append("ALERTING")
-                if not boot:
-                    bits.append("pre-bootstrap")
-                state_str = ", ".join(bits) or "ok"
-            llm = feed.effective_llm(cfg.defaults)
+        statuses = await list_feeds_with_status(cfg, store)
+        for s in statuses:
+            bits: list[str] = []
+            if s.last_success_at:
+                bits.append(f"last_ok={s.last_success_at.isoformat()}")
+            if s.consecutive_failures:
+                bits.append(f"failures={s.consecutive_failures}")
+            if s.alert_active:
+                bits.append("ALERTING")
+            if not s.bootstrapped:
+                bits.append("pre-bootstrap")
+            state_str = ", ".join(bits) or "ok"
+            llm_label = f"{s.llm_provider}:{s.llm_model}"
             typer.echo(
-                f"{feed.name:20s}  schedule={feed.schedule!r:18s}  "
-                f"llm={llm.provider}:{llm.model:18s}  {state_str}"
+                f"{s.name:20s}  schedule={s.schedule!r:18s}  "
+                f"llm={llm_label:25s}  {state_str}"
             )
-            if row and row[1]:
-                typer.echo(f"  last_error: {row[1]}")
+            if s.last_error:
+                typer.echo(f"  last_error: {s.last_error}")
     finally:
         await store.close()
 
@@ -156,16 +152,15 @@ def test_feed(
 
 
 async def _test_feed_async(cfg, db_path: Path, name: str, *, send: bool) -> None:  # type: ignore[no-untyped-def]
-    from glean.pipeline.engine import Runner
+    from glean.api_service import run_feed_once
     from glean.state.store import StateStore
     from glean.telegram import TelegramSender
 
     store = StateStore(db_path)
     await store.open()
     telegram = TelegramSender(_require_token()) if send else None
-    runner = Runner(cfg, store, telegram)
     try:
-        result = await runner.run_feed(name, dry_run=not send)
+        result = await run_feed_once(cfg, store, name, dry_run=not send, telegram=telegram)
         typer.echo("---")
         typer.echo(
             f"feed={result.feed} fetched={result.fetched} "
@@ -183,7 +178,8 @@ async def _test_feed_async(cfg, db_path: Path, name: str, *, send: bool) -> None
             for i, msg in enumerate(result.messages, 1):
                 typer.echo(f"\n[message {i}]\n{msg}")
     finally:
-        await runner.aclose()
+        if telegram is not None:
+            await telegram.aclose()
         await store.close()
 
 
