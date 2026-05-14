@@ -12,12 +12,18 @@ from glean.api_service.config_service import (
     validate_config_summary,
     write_config,
 )
-from glean.api_service.run_service import FeedStatus, list_feeds_with_status, run_feed_once
+from glean.api_service.run_service import (
+    FeedStatus,
+    get_feed_status,
+    list_feeds_with_status,
+    run_feed_once,
+)
 
 __all__ = [
     "ConfigSummary",
     "FeedStatus",
     "FeedSummary",
+    "get_feed_status",
     "list_feeds_with_status",
     "run_feed_once",
     "validate_config_summary",

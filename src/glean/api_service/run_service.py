@@ -78,10 +78,20 @@ async def run_feed_once(
     dry_run: bool,
     telegram: TelegramSender | None = None,
 ) -> RunResult:
-    """Run a single feed once. Caller manages lifecycle (telegram + Runner)."""
+    """Run a single feed once. Caller manages injected telegram lifecycle."""
     cfg.feed(name)  # raises KeyError if feed missing — let caller handle
-    runner = Runner(cfg, state, telegram)
+    runner = Runner(cfg, state, telegram, close_telegram=False)
     try:
         return await runner.run_feed(name, dry_run=dry_run)
     finally:
         await runner.aclose()
+
+
+async def get_feed_status(cfg: Config, state: StateStore, name: str) -> FeedStatus:
+    """Get the runtime status for a single feed. Raises KeyError if not found."""
+    cfg.feed(name)  # raises KeyError if missing
+    statuses = await list_feeds_with_status(cfg, state)
+    for status in statuses:
+        if status.name == name:
+            return status
+    raise KeyError(f"feed not found in status list: {name!r}")

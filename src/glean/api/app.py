@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from glean import __version__
 from glean.api.auth import auth_disabled, get_or_create_api_key, make_verify_api_key
 from glean.api.routes.config import router as config_router
+from glean.api.routes.feeds import router as feeds_router
 from glean.logging import get_logger
 
 if TYPE_CHECKING:
@@ -74,6 +75,7 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
         return {"status": "ok"}
 
     api_router.include_router(config_router)
+    api_router.include_router(feeds_router)
     app.include_router(api_router)
 
     # Serve the pre-built SPA. MUST be mounted last so /api and /healthz
