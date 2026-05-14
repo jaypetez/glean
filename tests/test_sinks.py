@@ -505,7 +505,7 @@ async def test_slack_sink_splits_oversized_item_blocks() -> None:
         calls.append(json.loads(request.content)["text"])
         return httpx.Response(200, text="ok")
 
-    respx.post("https://hooks.slack.com/services/T/B/X").mock(side_effect=handler)
+    respx.post("https://hooks.slack.com/services/TABC123/BDEF456/XYZ789").mock(side_effect=handler)
     item = Item(
         canonical_url="https://example.com/long",
         title="Long title",
@@ -516,7 +516,7 @@ async def test_slack_sink_splits_oversized_item_blocks() -> None:
     sink = build_sink(
         {
             "type": "slack",
-            "webhook_url": "https://hooks.slack.com/services/T/B/X",
+            "webhook_url": "https://hooks.slack.com/services/TABC123/BDEF456/XYZ789",
         }
     )
     try:
@@ -538,13 +538,13 @@ async def test_slack_sink_splits_oversized_item_blocks() -> None:
 
 @respx.mock
 async def test_slack_sink_posts_webhook() -> None:
-    route = respx.post("https://hooks.slack.com/services/T/B/X").mock(
+    route = respx.post("https://hooks.slack.com/services/TABC123/BDEF456/XYZ789").mock(
         return_value=httpx.Response(200, text="ok")
     )
     sink = build_sink(
         {
             "type": "slack",
-            "webhook_url": "https://hooks.slack.com/services/T/B/X",
+            "webhook_url": "https://hooks.slack.com/services/TABC123/BDEF456/XYZ789",
             "channel": "#news",
             "icon_emoji": ":robot_face:",
         }
@@ -563,7 +563,7 @@ async def test_slack_sink_posts_webhook() -> None:
 
 @respx.mock
 async def test_slack_sink_escapes_entities_formatting_and_drops_unsafe_url() -> None:
-    route = respx.post("https://hooks.slack.com/services/T/B/X").mock(
+    route = respx.post("https://hooks.slack.com/services/TABC123/BDEF456/XYZ789").mock(
         return_value=httpx.Response(200, text="ok")
     )
     item = Item(
@@ -576,7 +576,7 @@ async def test_slack_sink_escapes_entities_formatting_and_drops_unsafe_url() -> 
     sink = build_sink(
         {
             "type": "slack",
-            "webhook_url": "https://hooks.slack.com/services/T/B/X",
+            "webhook_url": "https://hooks.slack.com/services/TABC123/BDEF456/XYZ789",
         }
     )
     try:
@@ -601,7 +601,7 @@ async def test_slack_sink_escapes_entities_formatting_and_drops_unsafe_url() -> 
 
 @respx.mock
 async def test_slack_sink_escapes_link_url_delimiters() -> None:
-    route = respx.post("https://hooks.slack.com/services/T/B/X").mock(
+    route = respx.post("https://hooks.slack.com/services/TABC123/BDEF456/XYZ789").mock(
         return_value=httpx.Response(200, text="ok")
     )
     item = Item(
@@ -613,7 +613,7 @@ async def test_slack_sink_escapes_link_url_delimiters() -> None:
     sink = build_sink(
         {
             "type": "slack",
-            "webhook_url": "https://hooks.slack.com/services/T/B/X",
+            "webhook_url": "https://hooks.slack.com/services/TABC123/BDEF456/XYZ789",
         }
     )
     try:

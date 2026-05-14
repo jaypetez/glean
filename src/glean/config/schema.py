@@ -56,10 +56,39 @@ def _validate_sink_urls(sinks: list[dict[str, Any]] | None, *, field: str) -> No
             if method not in _WEBHOOK_METHODS:
                 allowed = ", ".join(sorted(_WEBHOOK_METHODS))
                 raise ValueError(f"{prefix}.method must be one of: {allowed}")
-        elif sink_type in {"discord", "slack"}:
-            _validate_url_field(spec.get("webhook_url"), field=f"{prefix}.webhook_url")
-        elif sink_type in {"ntfy", "telegram"}:
+        elif sink_type == "discord":
+            from glean.sinks.discord import (  # noqa: PLC0415
+                validate_discord_avatar_url,
+                validate_discord_webhook_url,
+            )
+
+            webhook_url = spec.get("webhook_url")
+            if isinstance(webhook_url, str) and webhook_url:
+                validate_discord_webhook_url(webhook_url)
+            avatar_url = spec.get("avatar_url")
+            if isinstance(avatar_url, str) and avatar_url:
+                validate_discord_avatar_url(avatar_url)
+        elif sink_type == "slack":
+            from glean.sinks.slack import validate_slack_webhook_url  # noqa: PLC0415
+
+            webhook_url = spec.get("webhook_url")
+            if isinstance(webhook_url, str) and webhook_url:
+                validate_slack_webhook_url(webhook_url)
+        elif sink_type == "ntfy":
+            from glean.sinks.ntfy import validate_ntfy_topic  # noqa: PLC0415
+
+            topic = spec.get("topic")
+            if isinstance(topic, str) and topic:
+                validate_ntfy_topic(topic)
             _validate_url_field(spec.get("base_url"), field=f"{prefix}.base_url")
+        elif sink_type == "telegram":
+            _validate_url_field(spec.get("base_url"), field=f"{prefix}.base_url")
+        elif sink_type == "file":
+            from glean.sinks.file import validate_file_sink_path  # noqa: PLC0415
+
+            path = spec.get("path")
+            if isinstance(path, str) and path:
+                validate_file_sink_path(path)
 
 
 class RenderConfig(BaseModel):

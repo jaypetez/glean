@@ -155,16 +155,16 @@ feeds:
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `webhook_url` | yes | Discord webhook URL |
+| `webhook_url` | yes | Discord webhook URL. Must match `https://discord.com/api/webhooks/<digits>/<token>` where `<token>` contains only letters, digits, `_`, `.`, or `-`. |
 | `username` | no | Override webhook username |
-| `avatar_url` | no | Override webhook avatar |
+| `avatar_url` | no | Override webhook avatar. Must be an SSRF-safe HTTP(S) URL. |
 | `required` | no | Default `true` |
 
 #### `slack`
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `webhook_url` | yes | Slack incoming webhook URL |
+| `webhook_url` | yes | Slack incoming webhook URL. Must match `https://hooks.slack.com/services/T.../B.../<token>` with uppercase alphanumeric `T`/`B` segments and an alphanumeric token. |
 | `channel` | no | Override default channel (e.g., `#news`) |
 | `username` | no | Override webhook username |
 | `icon_emoji` | no | Override webhook icon (e.g., `:robot_face:`) |
@@ -174,7 +174,7 @@ feeds:
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `topic` | yes | ntfy topic name |
+| `topic` | yes | ntfy topic name. Must be 1-64 characters: letters, digits, `_`, or `-`. |
 | `base_url` | no | Defaults to `https://ntfy.sh` |
 | `token` | no | Bearer token for private servers |
 | `priority` | no | Message priority (1-5) |
@@ -207,9 +207,11 @@ The webhook payload is JSON:
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `path` | yes | Local file path (parent dirs created automatically) |
+| `path` | yes | Local file path under an allowed root (parent dirs created automatically) |
 | `format` | no | One of `text`, `jsonl`, `markdown` (default `text`) |
 | `required` | no | Default `true` |
+
+File sink paths must resolve under `/data` or `/tmp/glean` by default and may not exceed 10 path segments below the allowed root. Set `GLEAN_FILE_SINK_ROOTS` to a comma-separated list of allowed root directories to customize this allowlist (for example, `GLEAN_FILE_SINK_ROOTS=/data,/archive`). On Windows, set `GLEAN_FILE_SINK_ROOTS` explicitly because the defaults are container/Linux paths. Ensure allowed roots exist and are writable by the glean process.
 
 ### Multiple sinks (fan-out)
 
