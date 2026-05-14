@@ -7,6 +7,7 @@ import httpx
 import pytest
 import respx
 
+from glean.sources._fetch import DEFAULT_MAX_BYTES, ResponseTooLargeError
 from glean.sources.rss import RSSSource, _strip_html
 
 pytestmark = pytest.mark.asyncio
@@ -49,6 +50,21 @@ _RSS_FEED = '''<?xml version="1.0" encoding="utf-8"?>
     </item>
   </channel>
 </rss>'''
+
+
+async def test_rss_defaults_to_ten_mib_response_cap() -> None:
+    src = RSSSource(url="https://example.com/feed")
+
+    assert src.max_response_bytes == DEFAULT_MAX_BYTES
+
+
+@respx.mock
+async def test_rss_uses_configured_response_cap(fetch_context):
+    respx.get("https://example.com/feed").mock(return_value=httpx.Response(200, content=b"abcde"))
+    src = RSSSource(url="https://example.com/feed", max_response_bytes=4)
+
+    with pytest.raises(ResponseTooLargeError, match="content-length 5 exceeds cap 4"):
+        await src.fetch(fetch_context)
 
 
 @respx.mock

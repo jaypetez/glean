@@ -6,6 +6,7 @@ from typing import Any, ClassVar
 
 import feedparser
 
+from glean.sources._fetch import DEFAULT_MAX_BYTES, limited_get
 from glean.sources.base import FetchContext, Item
 from glean.sources.registry import register_source
 
@@ -17,9 +18,16 @@ _WS_RE = re.compile(r"\s+")
 class RSSSource:
     type: ClassVar[str] = "rss"
 
-    def __init__(self, url: str, *, name: str | None = None) -> None:
+    def __init__(
+        self,
+        url: str,
+        *,
+        name: str | None = None,
+        max_response_bytes: int = DEFAULT_MAX_BYTES,
+    ) -> None:
         self.url = url
         self.name = name or url
+        self.max_response_bytes = max_response_bytes
 
     async def fetch(self, ctx: FetchContext) -> list[Item]:
         etag, last_modified = await ctx.state.get_etag(self.url)
@@ -29,7 +37,12 @@ class RSSSource:
         if last_modified:
             headers["If-Modified-Since"] = last_modified
 
-        resp = await ctx.http.get(self.url, headers=headers, follow_redirects=True)
+        resp = await limited_get(
+            ctx.http,
+            self.url,
+            headers=headers,
+            max_bytes=self.max_response_bytes,
+        )
         if resp.status_code == 304:
             return []
         resp.raise_for_status()
