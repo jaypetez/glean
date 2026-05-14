@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from glean.config.skills import SkillConfig, render_skill_prompt, skill_output_schema
 from glean.logging import get_logger
+from glean.security.scrub import scrub
 from glean.sources.base import Item
 
 if TYPE_CHECKING:
@@ -47,7 +48,7 @@ async def rank_stage(
                     "rank_failed",
                     feed=feed,
                     url=item.canonical_url,
-                    err=str(exc),
+                    err=scrub(str(exc))[:500],
                 )
                 s = 0.0
             return dataclasses.replace(item, relevance=s)
@@ -80,7 +81,7 @@ async def summarize_stage(
                     "summarize_failed",
                     feed=feed,
                     url=item.canonical_url,
-                    err=str(exc),
+                    err=scrub(str(exc))[:500],
                 )
                 summary = item.summary or ""
             return dataclasses.replace(item, llm_summary=summary)
@@ -100,7 +101,7 @@ async def digest_intro(
     try:
         return await llm.digest(items, prompt)
     except Exception as exc:
-        logger.warning("digest_failed", feed=feed, err=str(exc))
+        logger.warning("digest_failed", feed=feed, err=scrub(str(exc))[:500])
         return prompt
 
 
@@ -149,7 +150,7 @@ async def apply_skill_stage(
                     feed=feed,
                     skill=skill.name,
                     url=item.canonical_url,
-                    err=str(exc),
+                    err=scrub(str(exc))[:500],
                 )
                 result = {}
 

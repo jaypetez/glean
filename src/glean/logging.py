@@ -1,9 +1,33 @@
+from __future__ import annotations
+
 import logging
 import os
 import sys
-from typing import cast
+from typing import Any, cast
 
 import structlog
+
+from glean.security.scrub import scrub
+
+
+def _scrub_value(value: Any) -> Any:
+    if isinstance(value, str):
+        return scrub(value)
+    if isinstance(value, dict):
+        return {key: _scrub_value(nested) for key, nested in value.items()}
+    if isinstance(value, list):
+        return [_scrub_value(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_scrub_value(item) for item in value)
+    return value
+
+
+def _scrub_event_values(
+    logger: Any,
+    method_name: str,
+    event_dict: structlog.types.EventDict,
+) -> structlog.types.EventDict:
+    return {key: _scrub_value(value) for key, value in event_dict.items()}
 
 
 def configure_logging(level: str | None = None, *, json_logs: bool | None = None) -> None:
@@ -18,6 +42,7 @@ def configure_logging(level: str | None = None, *, json_logs: bool | None = None
         timestamper,
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
+        _scrub_event_values,
     ]
 
     renderer: structlog.types.Processor = (

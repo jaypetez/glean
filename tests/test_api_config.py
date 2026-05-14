@@ -17,7 +17,7 @@ pytestmark = pytest.mark.asyncio
 _SAMPLE_YAML = textwrap.dedent(
     """
     defaults:
-      llm: {provider: ollama, model: qwen2.5:7b}
+      llm: {provider: ollama, model: "qwen2.5:7b"}
     skills:
       - name: example-skill
         prompt: "Extract from {title}"
@@ -403,7 +403,7 @@ async def test_list_feeds_supports_empty_first_run_config(
         textwrap.dedent(
             """
             defaults:
-              llm: {provider: ollama, model: qwen2.5:7b}
+              llm: {provider: ollama, model: "qwen2.5:7b"}
             feeds: []
             """
         ),

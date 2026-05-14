@@ -23,6 +23,7 @@ from glean.pipeline.stages import (
     rank_stage,
     summarize_stage,
 )
+from glean.security.scrub import scrub
 from glean.sinks import SendContext, Sink, build_sink
 from glean.sources import FetchContext, build_source
 from glean.sources.base import Item
@@ -212,7 +213,7 @@ class Runner:
             if isinstance(result, BaseException):
                 if not isinstance(result, Exception):
                     raise result
-                err = f"{type(result).__name__}: {result}"
+                err = f"{type(result).__name__}: {scrub(str(result))[:500]}"
                 if sink.required:
                     logger.error("sink_failed", feed=feed.name, sink=sink.type, err=err)
                     required_errors.append(f"{sink.type}: {err}")
@@ -359,7 +360,7 @@ class Runner:
                 result.sent = len(new_items)
 
         except Exception as exc:
-            result.error = f"{type(exc).__name__}: {exc}"
+            result.error = f"{type(exc).__name__}: {scrub(str(exc))[:500]}"
             logger.error("feed_failed", feed=name, err=result.error)
             if not dry_run:
                 fc = feed.effective_failure(self.config.defaults)
@@ -395,7 +396,7 @@ class Runner:
                     "source_failed",
                     feed=feed.name,
                     source=spec.get("type"),
-                    err=str(exc),
+                    err=scrub(str(exc))[:500],
                 )
         return out
 

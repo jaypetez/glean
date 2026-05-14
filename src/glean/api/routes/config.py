@@ -14,6 +14,7 @@ from glean.config import Config, load_config
 from glean.config.loader import ConfigError
 from glean.config.schema import Defaults, FeedConfig
 from glean.config.skills import SkillConfig
+from glean.security.scrub import scrub
 
 router = APIRouter(prefix="/config", tags=["config"])
 
@@ -29,7 +30,7 @@ def _load_or_400() -> Config:
     except ConfigError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"config load error: {exc}",
+            detail=f"config load error: {scrub(str(exc))[:500]}",
         ) from exc
 
 
@@ -39,7 +40,7 @@ def _ensure_valid_for_write(cfg: Config) -> Config:
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
+            detail=scrub(str(exc))[:500],
         ) from exc
 
 
@@ -231,7 +232,7 @@ async def validate_config_endpoint(
                 valid=False,
                 feeds_count=0,
                 skills_count=0,
-                errors=[str(exc)],
+                errors=[scrub(str(exc))[:500]],
             )
     else:
         try:
