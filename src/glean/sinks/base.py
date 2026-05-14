@@ -26,6 +26,8 @@ class Sink(Protocol):
     type: ClassVar[str]
     required: bool
 
-    async def send(self, ctx: SendContext) -> None: ...
+    async def send(self, ctx: SendContext) -> None:
+        pass
 
-    async def aclose(self) -> None: ...
+    async def aclose(self) -> None:
+        pass

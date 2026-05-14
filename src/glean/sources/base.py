@@ -46,4 +46,5 @@ class FetchContext:
 class Source(Protocol):
     type: ClassVar[str]
 
-    async def fetch(self, ctx: FetchContext) -> list[Item]: ...
+    async def fetch(self, ctx: FetchContext) -> list[Item]:
+        pass

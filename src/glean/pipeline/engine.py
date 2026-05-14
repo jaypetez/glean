@@ -61,7 +61,8 @@ class _InjectedTelegramSink:
             link_preview=ctx.render.link_preview,
         )
 
-    async def aclose(self) -> None: ...
+    async def aclose(self) -> None:
+        pass
 
 
 @dataclass(slots=True)
