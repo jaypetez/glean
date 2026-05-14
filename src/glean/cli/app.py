@@ -14,6 +14,7 @@ from glean import __version__
 from glean.config import Config, load_config
 from glean.config.loader import ConfigError
 from glean.logging import configure_logging, get_logger
+from glean.security.scrub import scrub
 
 app = typer.Typer(
     add_completion=False,
@@ -53,7 +54,7 @@ def _load_or_exit(path: Path) -> Config:
     try:
         return load_config(path)
     except ConfigError as exc:
-        typer.secho(str(exc), fg=typer.colors.RED, err=True)
+        typer.secho(scrub(str(exc))[:500], fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from None
 
 
@@ -83,7 +84,7 @@ def validate_config(
     try:
         summary = validate_config_summary(config)
     except ConfigError as exc:
-        typer.secho(str(exc), fg=typer.colors.RED, err=True)
+        typer.secho(scrub(str(exc))[:500], fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from None
     typer.echo(f"OK — {summary.feeds_count} feed(s)")
     for feed in summary.feeds:
@@ -127,7 +128,7 @@ async def _list_feeds_async(cfg, db_path: Path) -> None:  # type: ignore[no-unty
                 f"llm={llm_label:25s}  {state_str}"
             )
             if s.last_error:
-                typer.echo(f"  last_error: {s.last_error}")
+                typer.echo(f"  last_error: {scrub(s.last_error)[:500]}")
     finally:
         await store.close()
 
@@ -171,7 +172,7 @@ async def _test_feed_async(cfg, db_path: Path, name: str, *, send: bool) -> None
         if result.skipped_reason:
             typer.echo(f"skipped: {result.skipped_reason}")
         if result.error:
-            typer.secho(f"error: {result.error}", fg=typer.colors.RED)
+            typer.secho(f"error: {scrub(result.error)[:500]}", fg=typer.colors.RED)
             raise typer.Exit(code=2)
         if result.messages and not send:
             typer.echo("---  WOULD SEND  ---")

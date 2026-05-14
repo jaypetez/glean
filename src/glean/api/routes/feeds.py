@@ -11,6 +11,7 @@ from glean.api.models import FeedStatusResponse, RunResultResponse
 from glean.api_service.run_service import get_feed_status, list_feeds_with_status, run_feed_once
 from glean.config import Config, load_config
 from glean.config.loader import ConfigError
+from glean.security.scrub import scrub
 from glean.telegram import TelegramSender
 
 if TYPE_CHECKING:
@@ -110,7 +111,7 @@ def _to_status_response(status_result: FeedStatus) -> FeedStatusResponse:
         llm_model=status_result.llm_model,
         last_success_at=status_result.last_success_at,
         last_attempt_at=status_result.last_attempt_at,
-        last_error=status_result.last_error,
+        last_error=scrub(status_result.last_error)[:500] if status_result.last_error else None,
         consecutive_failures=status_result.consecutive_failures,
         alert_active=status_result.alert_active,
         bootstrapped=status_result.bootstrapped,
@@ -126,7 +127,7 @@ def _to_run_response(result: RunResult) -> RunResultResponse:
         dropped=result.dropped,
         overflow=result.overflow,
         duration_ms=result.duration_ms,
-        error=result.error,
+        error=scrub(result.error)[:500] if result.error else None,
         skipped_reason=result.skipped_reason,
         messages=result.messages,
     )

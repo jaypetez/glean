@@ -62,14 +62,39 @@ class FakeTelegram:
         self.sent: list[tuple[int | str, list[str]]] = []
         self.texts: list[tuple[int | str, str]] = []
 
-    async def send_digest(self, chat_id, messages, *, style="html", link_preview=False):
+    async def send_digest(
+        self,
+        chat_id: int | str,
+        messages: list[str],
+        *,
+        style: str = "html",
+        link_preview: bool = False,
+    ) -> None:
         self.sent.append((chat_id, list(messages)))
 
-    async def send_text(self, chat_id, text, *, style="html"):
+    async def send_text(
+        self,
+        chat_id: int | str,
+        text: str,
+        *,
+        style: str = "html",
+    ) -> None:
         self.texts.append((chat_id, text))
 
-    async def aclose(self):
+    async def aclose(self) -> None:
         pass
+
+
+class FailingDigestTelegram(FakeTelegram):
+    async def send_digest(
+        self,
+        chat_id: int | str,
+        messages: list[str],
+        *,
+        style: str = "html",
+        link_preview: bool = False,
+    ) -> None:
+        raise RuntimeError("sink failed with sk-abc12345")
 
 
 def _cfg_yaml() -> str:
@@ -307,3 +332,49 @@ async def test_run_feed_emits_failure_event(tmp_path: Path, write_yaml) -> None:
     assert failed.feed == "t1"
     assert failed.error == result.error
     assert failed.duration_ms == result.duration_ms
+
+
+async def test_ops_alert_redacts_api_key_from_failure(
+    tmp_path: Path, write_yaml
+) -> None:
+    cfg_yaml = textwrap.dedent(
+        """
+        defaults:
+          llm:
+            provider: fake
+            model: fake
+          failure:
+            ops_chat_id: ops
+            alert_after: 1
+        feeds:
+          - name: t1
+            schedule: "every 1h"
+            chat_id: -1
+            sources:
+              - type: fake
+                items:
+                  - {url: "https://secret", title: "Secret"}
+            pipeline:
+              - dedup
+              - digest:
+                  intro: "intro"
+        """
+    )
+    cfg = load_config(write_yaml(cfg_yaml))
+    state = StateStore(tmp_path / "s.db")
+    await state.open()
+    await state.set_bootstrapped("t1")
+    fake_tg = FailingDigestTelegram()
+    runner = Runner(cfg, state, telegram=fake_tg)  # type: ignore[arg-type]
+    try:
+        result = await runner.run_feed("t1")
+    finally:
+        await runner.aclose()
+        await state.close()
+
+    assert result.error is not None
+    assert "sk-[REDACTED]" in result.error
+    assert "sk-abc12345" not in result.error
+    assert fake_tg.texts == [("ops", f"🚨 <b>t1</b> failing: {result.error}")]
+    assert "sk-[REDACTED]" in fake_tg.texts[0][1]
+    assert "sk-abc12345" not in fake_tg.texts[0][1]

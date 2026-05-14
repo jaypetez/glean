@@ -5,6 +5,7 @@ from typing import ClassVar
 import trafilatura
 
 from glean.logging import get_logger
+from glean.security.scrub import scrub
 from glean.sources.base import FetchContext, Item
 from glean.sources.registry import register_source
 
@@ -33,7 +34,7 @@ class ScraperSource:
                 )
                 resp.raise_for_status()
             except Exception as exc:  # noqa: BLE001
-                logger.warning("scraper_fetch_failed", url=url, err=str(exc))
+                logger.warning("scraper_fetch_failed", url=url, err=scrub(str(exc))[:500])
                 continue
 
             extracted = trafilatura.extract(
