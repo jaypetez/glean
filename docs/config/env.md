@@ -14,4 +14,5 @@
 | `LOG_FORMAT` | No | Set to `json` for JSON logs |
 | `GLEAN_CONFIG` | No | Config path (default: `/etc/glean/feeds.yaml`) |
 | `GLEAN_DB` | No | DB path (default: `/data/state.db`) |
+| `GLEAN_DB_ROOT` | No | Comma-separated allowed DB root paths (default: `/data`) |
 | `HEALTH_PORT` | No | Health endpoint port (default: `9090`) |
