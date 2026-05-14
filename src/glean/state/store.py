@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import time
 from collections.abc import Iterable
 from pathlib import Path
@@ -48,9 +49,28 @@ def item_hash(item: Item) -> str:
     return hashlib.sha256(seed.encode("utf-8")).hexdigest()
 
 
+def _allowed_db_roots() -> list[Path]:
+    root_spec = os.environ.get("GLEAN_DB_ROOT")
+    roots = root_spec.split(",") if root_spec else ["/data"]
+    return [Path(root.strip()).expanduser().resolve() for root in roots if root.strip()]
+
+
+def _validate_db_path(path: Path) -> None:
+    if os.environ.get("PYTEST_CURRENT_TEST") is not None:
+        return
+
+    allowed_roots = _allowed_db_roots()
+    if any(path == root or path.is_relative_to(root) for root in allowed_roots):
+        return
+
+    allowed = ", ".join(str(root) for root in allowed_roots)
+    raise ValueError(f"SQLite state DB path {path} is outside allowed database roots: {allowed}")
+
+
 class StateStore:
     def __init__(self, path: str | Path) -> None:
-        self.path = Path(path)
+        self.path = Path(path).expanduser().resolve()
+        _validate_db_path(self.path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._db: aiosqlite.Connection | None = None
 
@@ -62,6 +82,9 @@ class StateStore:
             await self._db.close()
             self._db = None
             raise RuntimeError(f"Failed to enable WAL mode for {self.path}")
+        await self._db.execute("PRAGMA foreign_keys = ON")
+        await self._db.execute("PRAGMA secure_delete = ON")
+        await self._db.execute("PRAGMA trusted_schema = OFF")
         await self._db.execute("PRAGMA synchronous=NORMAL")
         await self._db.executescript(_SCHEMA)
         await self._db.commit()

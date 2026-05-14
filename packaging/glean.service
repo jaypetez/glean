@@ -7,6 +7,7 @@ Wants=network-online.target
 Type=simple
 User=glean
 Group=glean
+Environment=GLEAN_DB_ROOT=/var/lib/glean
 ExecStart=/usr/bin/glean run --config /etc/glean/feeds.yaml --db /var/lib/glean/state.db
 Restart=on-failure
 RestartSec=10

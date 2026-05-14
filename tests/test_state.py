@@ -96,6 +96,68 @@ async def test_open_enables_wal_mode(tmp_db: Path) -> None:
         await s.close()
 
 
+async def test_open_enables_security_pragmas(tmp_db: Path) -> None:
+    s = StateStore(tmp_db)
+    try:
+        await s.open()
+        async with s.db.execute("SELECT * FROM pragma_foreign_keys") as cur:
+            foreign_keys = await cur.fetchone()
+        async with s.db.execute("SELECT * FROM pragma_secure_delete") as cur:
+            secure_delete = await cur.fetchone()
+        async with s.db.execute("SELECT * FROM pragma_trusted_schema") as cur:
+            trusted_schema = await cur.fetchone()
+        assert foreign_keys == (1,)
+        assert secure_delete == (1,)
+        assert trusted_schema == (0,)
+    finally:
+        await s.close()
+
+
+async def test_db_root_override_allows_tmp_path_outside_pytest(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    root = tmp_path / "allowed"
+    db_path = root / "state.db"
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
+    monkeypatch.setenv("GLEAN_DB_ROOT", str(root))
+
+    s = StateStore(db_path)
+    try:
+        await s.open()
+        assert db_path.exists()
+    finally:
+        await s.close()
+
+
+async def test_db_root_override_supports_comma_separated_roots(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    first_root = tmp_path / "first"
+    second_root = tmp_path / "second"
+    db_path = second_root / "state.db"
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
+    monkeypatch.setenv("GLEAN_DB_ROOT", f"{first_root},{second_root}")
+
+    s = StateStore(db_path)
+    try:
+        await s.open()
+        assert db_path.exists()
+    finally:
+        await s.close()
+
+
+async def test_db_path_outside_allowed_root_raises_value_error(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    root = tmp_path / "allowed"
+    db_path = tmp_path / "other" / "state.db"
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
+    monkeypatch.setenv("GLEAN_DB_ROOT", str(root))
+
+    with pytest.raises(ValueError, match="outside allowed database roots"):
+        StateStore(db_path)
+
+
 async def test_open_raises_when_wal_mode_cannot_be_enabled(
     monkeypatch: pytest.MonkeyPatch, tmp_db: Path
 ) -> None:
