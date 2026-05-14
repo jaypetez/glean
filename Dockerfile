@@ -13,7 +13,12 @@ RUN npm run build
 
 
 ### Build stage (existing Python build) ###
-FROM python:3.12-slim-bookworm AS builder
+FROM python:3.13-slim-trixie AS builder
+
+RUN apt-get update \
+ && apt-get -y --no-install-recommends upgrade \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -39,7 +44,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 
 ### Runtime stage ###
-FROM python:3.12-slim-bookworm AS runtime
+FROM python:3.13-slim-trixie AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -53,7 +58,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     TZ=UTC
 
 RUN apt-get update \
+ && apt-get -y --no-install-recommends upgrade \
  && apt-get install -y --no-install-recommends tzdata ca-certificates \
+ && apt-get clean \
  && rm -rf /var/lib/apt/lists/* \
  && groupadd --system glean \
  && useradd --system --no-log-init --gid glean --home /home/glean --create-home glean \

@@ -1,0 +1,11 @@
+# zlib1g CVE-2023-45853 (MiniZip ZIP creation) - will_not_fix in Debian; not used by glean
+CVE-2023-45853
+
+# libcap2 CVE-2026-4878 - unfixed in Debian 13; glean runs non-root and does not manage Linux capabilities
+CVE-2026-4878
+
+# ncurses CVE-2025-69720 - unfixed in Debian 13; terminal/terminfo tooling is not used by the daemon
+CVE-2025-69720
+
+# libsystemd0/libudev1 CVE-2026-29111 - unfixed in Debian 13; systemd/udev APIs are not used by glean
+CVE-2026-29111
