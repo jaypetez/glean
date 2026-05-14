@@ -49,6 +49,8 @@ class LimitBodySizeMiddleware(BaseHTTPMiddleware):
                 if int(content_length) > self.max_bytes:
                     return JSONResponse({"detail": "request too large"}, status_code=413)
             except ValueError:
+                # Malformed Content-Length header; fall through to streaming
+                # cap below which enforces the limit independently.
                 pass
 
         body = bytearray()
