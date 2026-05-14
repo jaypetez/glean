@@ -4,6 +4,8 @@
  * X-Glean-Api-Key.
  */
 
+import type { SkillConfig } from "./types";
+
 let apiKeyPromise: Promise<string> | null = null;
 
 async function fetchApiKey(): Promise<string> {
@@ -50,4 +52,44 @@ export async function getInitialize(): Promise<InitializeResponse> {
   const resp = await fetch("/api/v1/initialize");
   if (!resp.ok) throw new Error(`initialize: ${resp.status}`);
   return (await resp.json()) as InitializeResponse;
+}
+
+export async function listSkills(): Promise<SkillConfig[]> {
+  return apiJson<SkillConfig[]>("/api/v1/config/skills");
+}
+
+export async function getSkill(name: string): Promise<SkillConfig> {
+  return apiJson<SkillConfig>(`/api/v1/config/skills/${encodeURIComponent(name)}`);
+}
+
+export async function createSkill(skill: SkillConfig): Promise<void> {
+  const resp = await apiFetch("/api/v1/config/skills", {
+    method: "POST",
+    body: JSON.stringify(skill),
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`create skill failed: ${resp.status} ${text}`);
+  }
+}
+
+export async function updateSkill(name: string, skill: SkillConfig): Promise<void> {
+  const resp = await apiFetch(`/api/v1/config/skills/${encodeURIComponent(name)}`, {
+    method: "PUT",
+    body: JSON.stringify(skill),
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`update skill failed: ${resp.status} ${text}`);
+  }
+}
+
+export async function deleteSkill(name: string): Promise<void> {
+  const resp = await apiFetch(`/api/v1/config/skills/${encodeURIComponent(name)}`, {
+    method: "DELETE",
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`delete skill failed: ${resp.status} ${text}`);
+  }
 }
