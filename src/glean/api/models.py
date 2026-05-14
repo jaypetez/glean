@@ -70,3 +70,29 @@ class RunResultResponse(BaseModel):
     error: str | None
     skipped_reason: str | None
     messages: list[str] = Field(default_factory=list)
+
+
+class RotateResponse(BaseModel):
+    """One-time API key rotation response."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    api_key: str
+
+
+class SystemInfoResponse(BaseModel):
+    """Runtime system information for the About settings tab."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    version: str
+    hostname: str
+    python: str
+    platform: str
+    database_path: str
+    config_path: str
+    feeds_count: int
+    uptime_seconds: float
+    started_at: dt.datetime
+    llm_provider: str | None
+    llm_model: str | None

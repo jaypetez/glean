@@ -108,9 +108,10 @@ class FeedConfig(BaseModel):
         return self.render or defaults.render
 
     def effective_sinks(self, defaults: Defaults) -> list[dict[str, Any]]:
-        sinks = self.sinks or defaults.sinks
-        if sinks is not None:
-            return sinks
+        if self.sinks is not None:
+            return self.sinks
+        if defaults.sinks is not None:
+            return defaults.sinks
         if defaults.telegram.chat_id is not None:
             telegram_sink: dict[str, Any] = {
                 "type": "telegram",
@@ -119,7 +120,9 @@ class FeedConfig(BaseModel):
             if defaults.telegram.bot_token is not None:
                 telegram_sink["token"] = defaults.telegram.bot_token
             return [telegram_sink]
-        raise ValueError("feed must have feed-level sinks/chat_id or Telegram defaults")
+        raise ValueError(
+            "feed must have feed-level sinks/chat_id, defaults.sinks, or Telegram defaults"
+        )
 
     def effective_bootstrap(self, defaults: Defaults) -> str:
         return self.bootstrap or defaults.bootstrap
@@ -157,6 +160,18 @@ class Config(BaseModel):
                 raise ValueError(f"duplicate feed name: {f.name!r}")
             seen.add(f.name)
         return v
+
+    @model_validator(mode="after")
+    def _validate_effective_sinks(self) -> Self:
+        return self.ensure_effective_sinks()
+
+    def ensure_effective_sinks(self) -> Self:
+        for feed in self.feeds:
+            try:
+                feed.effective_sinks(self.defaults)
+            except ValueError as exc:
+                raise ValueError(f"feed {feed.name!r}: {exc}") from exc
+        return self
 
     def skill(self, name: str) -> SkillConfig:
         for s in self.skills:

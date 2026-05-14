@@ -5,23 +5,34 @@
  */
 
 import type {
+  Defaults,
   DefaultsConfig,
   FeedConfig,
   FeedListItem,
   FeedStatus,
+  RotateResponse,
   SkillConfig,
+  SystemInfo,
   ValidateResponse,
 } from "./types";
 
+const API_KEY_STORAGE_KEY = "glean.api_key";
+
 let apiKeyPromise: Promise<string> | null = null;
 
+function storage(): Storage | null {
+  if (typeof window === "undefined") return null;
+  return window.localStorage;
+}
+
+export function setApiKey(newKey: string): void {
+  storage()?.setItem(API_KEY_STORAGE_KEY, newKey);
+  apiKeyPromise = Promise.resolve(newKey);
+}
+
 async function fetchApiKey(): Promise<string> {
-  const resp = await fetch("/api/v1/initialize");
-  if (!resp.ok) {
-    throw new Error(`/api/v1/initialize returned ${resp.status}`);
-  }
-  const body = (await resp.json()) as { api_key: string; auth_disabled: boolean };
-  return body.api_key;
+  const init = await getInitialize();
+  return init.api_key;
 }
 
 function ensureApiKey(): Promise<string> {
@@ -62,13 +73,15 @@ export interface InitializeResponse {
 export async function getInitialize(): Promise<InitializeResponse> {
   const resp = await fetch("/api/v1/initialize");
   if (!resp.ok) throw new Error(`initialize: ${resp.status}`);
-  return (await resp.json()) as InitializeResponse;
+  const body = (await resp.json()) as InitializeResponse;
+  setApiKey(body.api_key);
+  return body;
 }
 
 // --- Defaults ---
 
-export async function getDefaults(): Promise<DefaultsConfig> {
-  return apiJson<DefaultsConfig>("/api/v1/config/defaults");
+export async function getDefaults(): Promise<Defaults> {
+  return apiJson<Defaults>("/api/v1/config/defaults");
 }
 
 export async function updateDefaults(defaults: DefaultsConfig): Promise<void> {
@@ -80,6 +93,16 @@ export async function updateDefaults(defaults: DefaultsConfig): Promise<void> {
     const text = await resp.text();
     throw new Error(`update defaults failed: ${resp.status} ${text}`);
   }
+}
+
+export async function rotateApiKey(): Promise<RotateResponse> {
+  const response = await apiJson<RotateResponse>("/api/v1/auth/rotate", { method: "POST" });
+  setApiKey(response.api_key);
+  return response;
+}
+
+export async function getSystemInfo(): Promise<SystemInfo> {
+  return apiJson<SystemInfo>("/api/v1/system/info");
 }
 
 // --- Feed config CRUD ---

@@ -36,9 +36,49 @@
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Monaco, "Cascadia Code", monospace;
 }
 
+html {
+  --glean-dot-color: rgb(31 42 68 / 0.45);
+  --glean-density-y: 1;
+}
+
+html.theme-light {
+  --color-base: #f8fafc;
+  --color-surface: #ffffff;
+  --color-elevated: #e2e8f0;
+  --color-muted: #cbd5e1;
+  --color-border: #94a3b8;
+  --color-cyan: #0369a1;
+  --color-cyan-light: #0284c7;
+  --color-violet: #6d28d9;
+  --color-primary: #0f172a;
+  --color-secondary: #334155;
+  --color-tertiary: #475569;
+  --color-faint: #64748b;
+  --color-status-ok: #047857;
+  --color-status-warn: #92400e;
+  --color-status-error: #b91c1c;
+  --color-status-idle: #475569;
+  --color-source-rss: #c2410c;
+  --color-source-hn: #c2410c;
+  --color-source-reddit: #b91c1c;
+  --glean-dot-color: rgb(148 163 184 / 0.35);
+}
+
+html.density-compact {
+  --glean-density-y: 0.75;
+}
+
+.density-section {
+  padding-block: calc(1.25rem * var(--glean-density-y));
+}
+
+.density-control {
+  padding-block: calc(0.5rem * var(--glean-density-y));
+}
+
 /* Subtle background dot pattern matching the hero */
 body {
-  background-image: radial-gradient(circle at 1px 1px, rgb(31 42 68 / 0.45) 1px, transparent 0);
+  background-image: radial-gradient(circle at 1px 1px, var(--glean-dot-color) 1px, transparent 0);
   background-size: 24px 24px;
 }
 

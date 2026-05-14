@@ -114,6 +114,150 @@ async def test_put_defaults_accepts_telegram_defaults(
     assert cfg.defaults.failure.ops_chat_id == "-100999"
 
 
+async def test_put_defaults_preserves_env_placeholders_when_values_are_unchanged(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "secret-token")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-secret")
+    cfg_path = tmp_path / "feeds.yaml"
+    cfg_path.write_text(
+        textwrap.dedent(
+            """
+            defaults:
+              telegram:
+                bot_token: ${TELEGRAM_BOT_TOKEN}
+                chat_id: -1001
+              llm:
+                provider: openai
+                model: gpt-4o-mini
+                api_key: ${OPENAI_API_KEY}
+              render:
+                max_items: 10
+            feeds:
+              - name: alpha
+                schedule: "every 1h"
+                sources:
+                  - type: rss
+                    url: https://example.com/a.xml
+                pipeline:
+                  - dedup
+            """
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("GLEAN_CONFIG", str(cfg_path))
+    state = StateStore(tmp_path / "state.db")
+    await state.open()
+    app = make_app(state, tmp_path / "state.db")
+    headers = {"X-Glean-Api-Key": app.state.glean_api_key}
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        defaults_resp = await ac.get("/api/v1/config/defaults", headers=headers)
+        defaults = defaults_resp.json()
+        defaults["render"]["max_items"] = 12
+        resp = await ac.put("/api/v1/config/defaults", headers=headers, json=defaults)
+    await state.close()
+
+    assert resp.status_code == 200
+    written = cfg_path.read_text(encoding="utf-8")
+    assert "${TELEGRAM_BOT_TOKEN}" in written
+    assert "${OPENAI_API_KEY}" in written
+    assert "secret-token" not in written
+    assert "sk-secret" not in written
+    assert "max_items: 12" in written
+
+
+async def test_delete_feed_preserves_env_placeholders_on_remaining_feed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("TELEGRAM_CHAT_BETA", "-1002")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "secret-token")
+    cfg_path = tmp_path / "feeds.yaml"
+    cfg_path.write_text(
+        textwrap.dedent(
+            """
+            feeds:
+              - name: alpha
+                schedule: "every 1h"
+                sinks:
+                  - type: telegram
+                    chat_id: -1001
+                sources:
+                  - type: rss
+                    url: https://example.com/a.xml
+                pipeline:
+                  - dedup
+              - name: beta
+                schedule: "every 2h"
+                sinks:
+                  - type: telegram
+                    chat_id: ${TELEGRAM_CHAT_BETA}
+                    token: ${TELEGRAM_BOT_TOKEN}
+                sources:
+                  - type: rss
+                    url: https://example.com/b.xml
+                pipeline:
+                  - dedup
+            """
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("GLEAN_CONFIG", str(cfg_path))
+    state = StateStore(tmp_path / "state.db")
+    await state.open()
+    app = make_app(state, tmp_path / "state.db")
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        resp = await ac.delete(
+            "/api/v1/config/feeds/alpha",
+            headers={"X-Glean-Api-Key": app.state.glean_api_key},
+        )
+    await state.close()
+
+    assert resp.status_code == 200
+    written = cfg_path.read_text(encoding="utf-8")
+    assert "name: beta" in written
+    assert "${TELEGRAM_CHAT_BETA}" in written
+    assert "${TELEGRAM_BOT_TOKEN}" in written
+    assert "secret-token" not in written
+
+
+async def test_put_defaults_rejects_removing_required_telegram_default(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    cfg_path = tmp_path / "feeds.yaml"
+    cfg_path.write_text(
+        textwrap.dedent(
+            """
+            defaults:
+              telegram:
+                chat_id: -1001
+            feeds:
+              - name: alpha
+                schedule: "every 1h"
+                sources:
+                  - type: rss
+                    url: https://example.com/a.xml
+                pipeline:
+                  - dedup
+            """
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("GLEAN_CONFIG", str(cfg_path))
+    state = StateStore(tmp_path / "state.db")
+    await state.open()
+    app = make_app(state, tmp_path / "state.db")
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        resp = await ac.put(
+            "/api/v1/config/defaults",
+            headers={"X-Glean-Api-Key": app.state.glean_api_key},
+            json={},
+        )
+    await state.close()
+
+    assert resp.status_code == 400
+    assert "feed must have feed-level sinks/chat_id" in resp.text
+
+
 # === Feeds ===
 
 
