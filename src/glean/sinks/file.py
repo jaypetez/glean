@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Literal
 
 from glean.logging import get_logger
+from glean.sinks.escape import safe_url
 from glean.sinks.registry import register_sink
 
 if TYPE_CHECKING:
@@ -76,8 +77,9 @@ class FileSink:
                 summary = item.llm_summary or item.summary
                 if summary:
                     f.write(f"{summary}\n\n")
-                if item.canonical_url:
-                    f.write(f"[link]({item.canonical_url})  \n")
+                url = safe_url(item.canonical_url)
+                if url:
+                    f.write(f"[link]({url})  \n")
                 if item.source_name:
                     f.write(f"_{item.source_name}_\n\n")
             f.write("\n---\n\n")

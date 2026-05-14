@@ -9,6 +9,7 @@ import httpx
 from glean.logging import get_logger
 from glean.security.ssrf import validate_url
 from glean.security.ssrf_transport import SSRFGuardedTransport, outbound_timeout
+from glean.sinks.escape import escape_discord, safe_url
 from glean.sinks.registry import register_sink
 
 if TYPE_CHECKING:
@@ -51,7 +52,10 @@ class DiscordSink:
     async def send(self, ctx: SendContext) -> None:
         chunks = _render_discord(ctx.items, intro=ctx.intro)
         for chunk in chunks:
-            payload: dict[str, Any] = {"content": chunk}
+            payload: dict[str, Any] = {
+                "content": chunk,
+                "allowed_mentions": {"parse": []},
+            }
             if self.username:
                 payload["username"] = self.username
             if self.avatar_url:
@@ -73,14 +77,14 @@ def _render_discord(items: list[Item], *, intro: str) -> list[str]:
             blocks.append(f"**{clean_intro}**")
 
     for item in items:
-        title = item.title or "(untitled)"
-        summary = item.llm_summary or item.summary or ""
-        url = item.canonical_url or ""
+        title = escape_discord(item.title or "(untitled)")
+        summary = escape_discord(_strip_html(item.llm_summary or item.summary or ""))
+        url = safe_url(item.canonical_url)
         source = item.source_name or item.source_type or ""
 
         lines = [f"**{title}**"]
         if summary:
-            lines.append(_strip_html(summary))
+            lines.append(summary)
         footer_parts = []
         if source:
             footer_parts.append(f"_{source}_")

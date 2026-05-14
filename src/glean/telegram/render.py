@@ -4,6 +4,7 @@ import re
 from html import escape
 
 from glean.config.schema import RenderConfig
+from glean.sinks.escape import safe_url
 from glean.sources.base import Item
 
 _TAG_RE = re.compile(r"<[^>]+>")
@@ -52,7 +53,7 @@ def _format_item_html(item: Item) -> str:
     title = escape(item.title or "(untitled)")
     summary = escape(item.llm_summary or item.summary or "")
     source_name = escape(item.source_name or item.source_type or "")
-    url = escape(item.canonical_url or "")
+    url = escape(safe_url(item.canonical_url))
 
     lines = [f"<b>{title}</b>"]
     if summary:
@@ -69,7 +70,7 @@ def _format_item_markdown(item: Item) -> str:
     title = _md_escape(item.title or "(untitled)")
     summary = _md_escape(item.llm_summary or item.summary or "")
     source_name = _md_escape(item.source_name or item.source_type or "")
-    url = item.canonical_url or ""
+    url = _md_link_url_escape(safe_url(item.canonical_url))
 
     lines = [f"*{title}*"]
     if summary:
@@ -79,6 +80,10 @@ def _format_item_markdown(item: Item) -> str:
         footer += f" · [link]({url})"
     lines.append(footer)
     return "\n".join(lines)
+
+
+def _md_link_url_escape(url: str) -> str:
+    return url.replace("\\", "\\\\").replace(")", r"\)")
 
 
 def _format_item_plain(item: Item) -> str:

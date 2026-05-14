@@ -9,6 +9,7 @@ import httpx
 from glean.logging import get_logger
 from glean.security.ssrf import validate_url
 from glean.security.ssrf_transport import SSRFGuardedTransport, outbound_timeout
+from glean.sinks.escape import escape_slack, safe_url
 from glean.sinks.registry import register_sink
 
 if TYPE_CHECKING:
@@ -77,9 +78,9 @@ def _render_slack(items: list[Item], *, intro: str) -> list[str]:
             blocks.append(f"*{clean}*")
 
     for item in items:
-        title = item.title or "(untitled)"
-        summary = item.llm_summary or item.summary or ""
-        url = item.canonical_url or ""
+        title = escape_slack(item.title or "(untitled)")
+        summary = escape_slack(_strip_html(item.llm_summary or item.summary or ""))
+        url = _escape_slack_link_url(safe_url(item.canonical_url))
         source = item.source_name or item.source_type or ""
 
         if url:
@@ -87,7 +88,7 @@ def _render_slack(items: list[Item], *, intro: str) -> list[str]:
         else:
             lines = [f"*{title}*"]
         if summary:
-            lines.append(_strip_html(summary))
+            lines.append(summary)
         if source:
             lines.append(f"_{source}_")
         blocks.append("\n".join(lines))
@@ -97,6 +98,15 @@ def _render_slack(items: list[Item], *, intro: str) -> list[str]:
 
 def _strip_html(text: str) -> str:
     return _TAG_RE.sub("", text).strip()
+
+
+def _escape_slack_link_url(url: str) -> str:
+    return (
+        url.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("|", "%7C")
+    )
 
 
 def _chunk(blocks: list[str], max_chars: int) -> list[str]:
