@@ -172,6 +172,7 @@ async def test_run_feed_404_does_not_construct_telegram(
 async def test_run_feed_closes_route_owned_telegram(
     client,
     auth_headers,
+    configured_app,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     observed: dict[str, object] = {}
@@ -192,8 +193,9 @@ async def test_run_feed_closes_route_owned_telegram(
         *,
         dry_run: bool,
         telegram: FakeTelegramSender | None = None,
+        event_bus: object | None = None,
     ) -> SimpleNamespace:
-        observed["run"] = (cfg, state, name, dry_run, telegram)
+        observed["run"] = (cfg, state, name, dry_run, telegram, event_bus)
         return SimpleNamespace(
             feed=name,
             fetched=1,
@@ -216,10 +218,12 @@ async def test_run_feed_closes_route_owned_telegram(
     assert resp.status_code == 200
     assert resp.json()["feed"] == "alpha"
     assert observed["token"] == "secret-token"
-    _, _, service_name, dry_run, telegram = observed["run"]
+    app, _ = configured_app
+    _, _, service_name, dry_run, telegram, event_bus = observed["run"]
     assert service_name == "alpha"
     assert dry_run is False
     assert telegram is observed["telegram"]
+    assert event_bus is app.state.glean_event_bus
     assert observed["telegram"].close_count == 1
 
 

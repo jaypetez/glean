@@ -65,6 +65,7 @@ async def test_feed(request: Request, name: str) -> RunResultResponse:
         name,
         dry_run=True,
         telegram=None,
+        event_bus=request.app.state.glean_event_bus,
     )
     return _to_run_response(result)
 
@@ -83,6 +84,7 @@ async def run_feed_now(request: Request, name: str) -> RunResultResponse:
             name,
             dry_run=False,
             telegram=telegram,
+            event_bus=request.app.state.glean_event_bus,
         )
     finally:
         if telegram is not None:
