@@ -24,7 +24,7 @@ def mock_bot(monkeypatch: pytest.MonkeyPatch) -> tuple[AsyncMock, AsyncMock]:
         send_message = mock_send
         shutdown = mock_shutdown
 
-        def __init__(self, token: str) -> None:
+        def __init__(self, token: str, **_kwargs: object) -> None:
             self.token = token
 
     monkeypatch.setattr(tc, "Bot", FakeBot)
@@ -89,7 +89,7 @@ async def test_send_with_retry_handles_retry_after(monkeypatch: pytest.MonkeyPat
         send_message = staticmethod(flaky_send)
         shutdown = AsyncMock()
 
-        def __init__(self, token: str) -> None:
+        def __init__(self, token: str, **_kwargs: object) -> None:
             self.token = token
 
     monkeypatch.setattr(tc, "Bot", FakeBot)
@@ -117,7 +117,7 @@ async def test_send_with_retry_handles_timeout(monkeypatch: pytest.MonkeyPatch) 
         send_message = staticmethod(flaky_send)
         shutdown = AsyncMock()
 
-        def __init__(self, token: str) -> None:
+        def __init__(self, token: str, **_kwargs: object) -> None:
             self.token = token
 
     monkeypatch.setattr(tc, "Bot", FakeBot)
@@ -144,7 +144,7 @@ async def test_send_with_retry_gives_up_after_max_attempts(
         send_message = staticmethod(always_timeout)
         shutdown = AsyncMock()
 
-        def __init__(self, token: str) -> None:
+        def __init__(self, token: str, **_kwargs: object) -> None:
             self.token = token
 
     monkeypatch.setattr(tc, "Bot", FakeBot)

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from glean.search.base import SearchResult
 from glean.search.registry import register_backend
+from glean.security.ssrf_transport import outbound_timeout
 
 if TYPE_CHECKING:
     import httpx
@@ -59,7 +60,7 @@ class ExaBackend:
             "https://api.exa.ai/search",
             headers={"x-api-key": self._api_key, "Content-Type": "application/json"},
             json=payload,
-            timeout=30.0,
+            timeout=outbound_timeout(),
         )
         resp.raise_for_status()
         results = resp.json().get("results") or []

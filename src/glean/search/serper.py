@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 from glean.search.base import SearchResult
 from glean.search.registry import register_backend
+from glean.security.ssrf_transport import outbound_timeout
 
 if TYPE_CHECKING:
     import httpx
@@ -32,7 +33,7 @@ class SerperBackend:
             "https://google.serper.dev/search",
             headers={"X-API-KEY": self._api_key, "Content-Type": "application/json"},
             json={"q": query, "num": limit, "gl": self.country},
-            timeout=30.0,
+            timeout=outbound_timeout(),
         )
         resp.raise_for_status()
         results = resp.json().get("organic") or []

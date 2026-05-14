@@ -21,6 +21,7 @@ def _isolate_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "EXA_API_KEY",
         "SEARXNG_URL",
         "SEARCH_ENGINE",
+        "GLEAN_SSRF_ALLOWED_HOSTS",
     ]:
         monkeypatch.delenv(key, raising=False)
 

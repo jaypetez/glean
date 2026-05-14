@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import ClassVar
 
+from glean.security.ssrf_transport import outbound_timeout
 from glean.sources.base import FetchContext, Item
 from glean.sources.registry import register_source
 
@@ -36,7 +37,7 @@ class RedditSource:
             url,
             params=params,
             headers={"User-Agent": "glean/0.1 (+https://github.com/jaypetez/glean)"},
-            timeout=30.0,
+            timeout=outbound_timeout(),
         )
         resp.raise_for_status()
         data = resp.json()

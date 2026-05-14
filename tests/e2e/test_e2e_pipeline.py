@@ -6,6 +6,8 @@ import time
 import httpx
 import pytest
 
+from tests.e2e.urls import OLLAMA_URL, TELEGRAM_URL
+
 pytestmark = pytest.mark.e2e
 
 
@@ -34,7 +36,7 @@ def test_glean_sends_digest_to_telegram(e2e_stack: None) -> None:
     """After the e2e stack is up, glean should send at least one digest to mock-telegram."""
     # Schedule is "every 10s" + bootstrap: send-all → first tick should fire ~immediately
     msgs = _wait_for_messages(
-        "http://localhost:8001/__messages",
+        f"{TELEGRAM_URL}/__messages",
         min_count=1,
         timeout=60,
         chat_id="1234",
@@ -53,9 +55,9 @@ def test_glean_sends_digest_to_telegram(e2e_stack: None) -> None:
 def test_glean_calls_mock_ollama_for_summarization(e2e_stack: None) -> None:
     """The pipeline includes a summarize stage, so mock-ollama should receive chat calls."""
     # Ensure glean has had time to tick
-    _wait_for_messages("http://localhost:8001/__messages", min_count=1, timeout=60)
+    _wait_for_messages(f"{TELEGRAM_URL}/__messages", min_count=1, timeout=60)
 
-    calls = httpx.get("http://localhost:11434/__calls", timeout=5).json()
+    calls = httpx.get(f"{OLLAMA_URL}/__calls", timeout=5).json()
     assert len(calls) > 0, "mock-ollama received no LLM calls"
 
     # Each call should have a model name and messages list

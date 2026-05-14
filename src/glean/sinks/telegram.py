@@ -4,6 +4,7 @@ import os
 from typing import TYPE_CHECKING, ClassVar
 
 from glean.logging import get_logger
+from glean.security.ssrf import SSRFValidationError, validate_url
 from glean.sinks.registry import register_sink
 from glean.telegram.client import TelegramSender
 from glean.telegram.render import render_digest
@@ -34,6 +35,11 @@ class TelegramSink:
                 "telegram sink requires a token (set TELEGRAM_BOT_TOKEN or pass 'token' in YAML)"
             )
         resolved_base_url = base_url or os.environ.get("TELEGRAM_BASE_URL")
+        if resolved_base_url:
+            try:
+                validate_url(resolved_base_url)
+            except SSRFValidationError as exc:
+                raise ValueError(f"telegram base_url: SSRF blocked: {exc}") from exc
         self._sender = TelegramSender(resolved_token, base_url=resolved_base_url)
 
     async def send(self, ctx: SendContext) -> None:

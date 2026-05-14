@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, ClassVar
 import httpx
 
 from glean.logging import get_logger
+from glean.security.ssrf import validate_url
+from glean.security.ssrf_transport import SSRFGuardedTransport, outbound_timeout
 from glean.sinks.registry import register_sink
 
 if TYPE_CHECKING:
@@ -40,12 +42,16 @@ class NtfySink:
         if not topic:
             raise ValueError("ntfy sink requires 'topic'")
         self.topic = topic
-        self.base_url = base_url.rstrip("/")
+        self.base_url = validate_url(base_url).rstrip("/")
         self.token = token
         self.priority = str(priority) if priority is not None else None
         self.tags = tags
         self.required = required
-        self._client = httpx.AsyncClient(timeout=timeout_s)
+        self._client = httpx.AsyncClient(
+            timeout=outbound_timeout(read=timeout_s),
+            follow_redirects=False,
+            transport=SSRFGuardedTransport(allow_private=False),
+        )
 
     async def send(self, ctx: SendContext) -> None:
         title = _ntfy_header(_strip_html(ctx.intro) if ctx.intro else f"glean: {ctx.feed}")

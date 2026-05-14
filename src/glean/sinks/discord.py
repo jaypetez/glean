@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING, Any, ClassVar
 import httpx
 
 from glean.logging import get_logger
+from glean.security.ssrf import validate_url
+from glean.security.ssrf_transport import SSRFGuardedTransport, outbound_timeout
 from glean.sinks.registry import register_sink
 
 if TYPE_CHECKING:
@@ -36,11 +38,15 @@ class DiscordSink:
     ) -> None:
         if not webhook_url:
             raise ValueError("discord sink requires 'webhook_url'")
-        self.webhook_url = webhook_url
+        self.webhook_url = validate_url(webhook_url)
         self.username = username
         self.avatar_url = avatar_url
         self.required = required
-        self._client = httpx.AsyncClient(timeout=timeout_s)
+        self._client = httpx.AsyncClient(
+            timeout=outbound_timeout(read=timeout_s),
+            follow_redirects=False,
+            transport=SSRFGuardedTransport(allow_private=False),
+        )
 
     async def send(self, ctx: SendContext) -> None:
         chunks = _render_discord(ctx.items, intro=ctx.intro)

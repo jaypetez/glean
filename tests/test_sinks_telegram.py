@@ -150,6 +150,7 @@ def test_telegram_sink_reads_env_base_url(monkeypatch: pytest.MonkeyPatch) -> No
     """If no explicit base_url, fall back to TELEGRAM_BASE_URL env var."""
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "fake-token")
     monkeypatch.setenv("TELEGRAM_BASE_URL", "http://localhost:8001/")
+    monkeypatch.setenv("GLEAN_SSRF_ALLOWED_HOSTS", "localhost")
     captured: dict[str, object] = {}
 
     class StubBot:
@@ -166,6 +167,17 @@ def test_telegram_sink_reads_env_base_url(monkeypatch: pytest.MonkeyPatch) -> No
 
     assert captured["base_url"] == "http://localhost:8001/bot"
     assert captured["base_file_url"] == "http://localhost:8001/file/bot"
+
+
+def test_telegram_sink_rejects_env_metadata_base_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    """TELEGRAM_BASE_URL is validated before constructing the Bot."""
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "fake-token")
+    monkeypatch.setenv("TELEGRAM_BASE_URL", "http://169.254.169.254/")
+
+    from glean.sinks.registry import build_sink
+
+    with pytest.raises(ValueError, match="telegram base_url: SSRF blocked"):
+        build_sink({"type": "telegram", "chat_id": 12345})
 
 
 def test_telegram_sink_no_base_url_uses_default(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -186,5 +198,12 @@ def test_telegram_sink_no_base_url_uses_default(monkeypatch: pytest.MonkeyPatch)
 
     build_sink({"type": "telegram", "chat_id": 12345})
 
+    from telegram.request import HTTPXRequest
+
+    from glean.security.ssrf_transport import SSRFGuardedTransport
+
     assert "base_url" not in captured
     assert "base_file_url" not in captured
+    request = captured["request"]
+    assert isinstance(request, HTTPXRequest)
+    assert isinstance(request._client_kwargs["transport"], SSRFGuardedTransport)

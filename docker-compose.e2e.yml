@@ -9,12 +9,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: glean-e2e
+    container_name: ${GLEAN_E2E_CONTAINER_PREFIX:-}glean-e2e
     init: true
     stop_grace_period: 10s
     environment:
       TELEGRAM_BOT_TOKEN: fake-bot-token
       TELEGRAM_BASE_URL: http://mock-telegram:8001
+      GLEAN_SSRF_ALLOWED_HOSTS: mock-rss,mock-ollama,mock-searxng,mock-telegram
       LOG_LEVEL: DEBUG
       TZ: UTC
     volumes:
@@ -35,7 +36,7 @@ services:
   mock-telegram:
     build:
       context: ./tests/e2e/services
-    container_name: mock-telegram
+    container_name: ${GLEAN_E2E_CONTAINER_PREFIX:-}mock-telegram
     command: uvicorn mock_telegram:app --host 0.0.0.0 --port 8001
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
@@ -44,14 +45,14 @@ services:
       retries: 10
       start_period: 5s
     ports:
-      - "127.0.0.1:8001:8001"
+      - "127.0.0.1:${GLEAN_E2E_TELEGRAM_PORT:-8001}:8001"
     networks:
       - e2e
 
   mock-ollama:
     build:
       context: ./tests/e2e/services
-    container_name: mock-ollama
+    container_name: ${GLEAN_E2E_CONTAINER_PREFIX:-}mock-ollama
     command: uvicorn mock_ollama:app --host 0.0.0.0 --port 11434
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:11434/health"]
@@ -60,14 +61,14 @@ services:
       retries: 10
       start_period: 5s
     ports:
-      - "127.0.0.1:11434:11434"
+      - "127.0.0.1:${GLEAN_E2E_OLLAMA_PORT:-11434}:11434"
     networks:
       - e2e
 
   mock-rss:
     build:
       context: ./tests/e2e/services
-    container_name: mock-rss
+    container_name: ${GLEAN_E2E_CONTAINER_PREFIX:-}mock-rss
     command: uvicorn mock_rss:app --host 0.0.0.0 --port 8002
     environment:
       MOCK_RSS_INITIAL: "5"
@@ -78,14 +79,14 @@ services:
       retries: 10
       start_period: 5s
     ports:
-      - "127.0.0.1:8002:8002"
+      - "127.0.0.1:${GLEAN_E2E_RSS_PORT:-8002}:8002"
     networks:
       - e2e
 
   mock-searxng:
     build:
       context: ./tests/e2e/services
-    container_name: mock-searxng
+    container_name: ${GLEAN_E2E_CONTAINER_PREFIX:-}mock-searxng
     command: uvicorn mock_searxng:app --host 0.0.0.0 --port 8003
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
@@ -94,7 +95,7 @@ services:
       retries: 10
       start_period: 5s
     ports:
-      - "127.0.0.1:8003:8003"
+      - "127.0.0.1:${GLEAN_E2E_SEARXNG_PORT:-8003}:8003"
     networks:
       - e2e
 

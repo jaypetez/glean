@@ -6,7 +6,8 @@ from typing import Any, ClassVar
 
 import feedparser
 
-from glean.sources._fetch import DEFAULT_MAX_BYTES, limited_get
+from glean.security.ssrf import validate_url
+from glean.sources._fetch import DEFAULT_MAX_BYTES, follow_with_validation
 from glean.sources.base import FetchContext, Item
 from glean.sources.registry import register_source
 
@@ -25,7 +26,7 @@ class RSSSource:
         name: str | None = None,
         max_response_bytes: int = DEFAULT_MAX_BYTES,
     ) -> None:
-        self.url = url
+        self.url = validate_url(url)
         self.name = name or url
         self.max_response_bytes = max_response_bytes
 
@@ -37,7 +38,7 @@ class RSSSource:
         if last_modified:
             headers["If-Modified-Since"] = last_modified
 
-        resp = await limited_get(
+        resp = await follow_with_validation(
             ctx.http,
             self.url,
             headers=headers,

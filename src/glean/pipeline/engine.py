@@ -24,6 +24,7 @@ from glean.pipeline.stages import (
     summarize_stage,
 )
 from glean.security.scrub import scrub
+from glean.security.ssrf_transport import SSRFGuardedTransport, outbound_timeout
 from glean.sinks import SendContext, Sink, build_sink
 from glean.sources import FetchContext, build_source
 from glean.sources.base import Item
@@ -95,7 +96,13 @@ class Runner:
         self.config = config
         self.state = state
         self.telegram = telegram
-        self.http = http or httpx.AsyncClient(timeout=30.0)
+        timeout = outbound_timeout()
+        self.http = http or httpx.AsyncClient(
+            timeout=timeout,
+            follow_redirects=False,
+            max_redirects=0,
+            transport=SSRFGuardedTransport(allow_private=False),
+        )
         self._owns_http = http is None
         self._close_telegram = close_telegram
         self._event_bus = event_bus

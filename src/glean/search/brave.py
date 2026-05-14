@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 from glean.search.base import SearchResult
 from glean.search.registry import register_backend
+from glean.security.ssrf_transport import outbound_timeout
 
 if TYPE_CHECKING:
     import httpx
@@ -31,7 +32,7 @@ class BraveBackend:
             "https://api.search.brave.com/res/v1/web/search",
             params={"q": query, "count": limit},
             headers={"X-Subscription-Token": self._api_key, "Accept": "application/json"},
-            timeout=30.0,
+            timeout=outbound_timeout(),
         )
         resp.raise_for_status()
         results = resp.json().get("web", {}).get("results", []) or []

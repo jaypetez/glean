@@ -29,6 +29,7 @@ async def main() -> None:
 
     os.environ.setdefault("GLEAN_DISABLE_AUTH", "1")
     os.environ.setdefault("GLEAN_TEST_MODE", "1")
+    os.environ.setdefault("GLEAN_SSRF_ALLOWED_HOSTS", "localhost")
     os.environ.setdefault("GLEAN_CONFIG", str(active_config))
     os.environ.setdefault("GLEAN_DB", str(db_path))
     os.environ.setdefault("GLEAN_DB_ROOT", str(tmp_dir))

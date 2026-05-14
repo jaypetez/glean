@@ -7,10 +7,22 @@ from typing import Any, Literal
 from telegram import Bot, LinkPreviewOptions
 from telegram.constants import ParseMode
 from telegram.error import RetryAfter, TimedOut
+from telegram.request import BaseRequest, HTTPXRequest
 
 from glean.logging import get_logger
+from glean.security.ssrf_transport import SSRFGuardedTransport
 
 logger = get_logger(__name__)
+
+
+def _guarded_request() -> HTTPXRequest:
+    return HTTPXRequest(
+        connect_timeout=5.0,
+        read_timeout=15.0,
+        write_timeout=5.0,
+        pool_timeout=5.0,
+        httpx_kwargs={"transport": SSRFGuardedTransport()},
+    )
 
 
 _PARSE_MODE_MAP: dict[str, str | None] = {
@@ -21,8 +33,14 @@ _PARSE_MODE_MAP: dict[str, str | None] = {
 
 
 class TelegramSender:
-    def __init__(self, token: str, *, base_url: str | None = None) -> None:
-        kwargs: dict[str, Any] = {"token": token}
+    def __init__(
+        self,
+        token: str,
+        *,
+        base_url: str | None = None,
+        request: BaseRequest | None = None,
+    ) -> None:
+        kwargs: dict[str, Any] = {"token": token, "request": request or _guarded_request()}
         if base_url:
             # python-telegram-bot expects base_url/base_file_url to include the /bot prefix.
             normalized = base_url.rstrip("/")

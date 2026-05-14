@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 from glean.search.base import SearchResult
 from glean.search.registry import register_backend
+from glean.security.ssrf_transport import outbound_timeout
 
 if TYPE_CHECKING:
     import httpx
@@ -41,7 +42,7 @@ class TavilyBackend:
                 "max_results": limit,
                 "search_depth": self.search_depth,
             },
-            timeout=30.0,
+            timeout=outbound_timeout(),
         )
         resp.raise_for_status()
         results = resp.json().get("results") or []
