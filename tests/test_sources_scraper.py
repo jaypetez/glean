@@ -5,6 +5,7 @@ import httpx
 import pytest
 import respx
 
+from glean.sources._fetch import DEFAULT_MAX_BYTES
 from glean.sources.scraper import ScraperSource
 
 pytestmark = pytest.mark.asyncio
@@ -24,6 +25,22 @@ _HTML_PAGE = """
 </body>
 </html>
 """
+
+
+async def test_scraper_defaults_to_ten_mib_response_cap() -> None:
+    src = ScraperSource(urls=["https://example.com/a"])
+
+    assert src.max_response_bytes == DEFAULT_MAX_BYTES
+
+
+@respx.mock
+async def test_scraper_uses_configured_response_cap(fetch_context):
+    respx.get("https://example.com/a").mock(return_value=httpx.Response(200, content=b"abcde"))
+    src = ScraperSource(urls=["https://example.com/a"], max_response_bytes=4)
+
+    items = await src.fetch(fetch_context)
+
+    assert items == []
 
 
 @respx.mock

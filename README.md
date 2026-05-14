@@ -217,8 +217,8 @@ This single feed:
 
 | Type      | Args                                                            |
 |-----------|-----------------------------------------------------------------|
-| `rss`     | `url`                                                           |
-| `scraper` | `urls: [list of article URLs]`                                  |
+| `rss`     | `url`, `max_response_bytes` (default `10485760`, 10 MiB)        |
+| `scraper` | `urls: [list of article URLs]`, `max_response_bytes` (default `10485760`, 10 MiB) |
 | `hn`      | `query`, `tags` (default `story`), `min_points`, `window_hours` |
 | `reddit`  | `subreddit`, `sort` (`top`/`new`/`hot`), `timeframe`, `limit`   |
 | `search`  | `query`, `engine`, `limit`, plus engine-specific kwargs ([6 backends](./docs/getting-started/search.md)) |

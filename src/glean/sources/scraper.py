@@ -6,6 +6,7 @@ import trafilatura
 
 from glean.logging import get_logger
 from glean.security.scrub import scrub
+from glean.sources._fetch import DEFAULT_MAX_BYTES, limited_get
 from glean.sources.base import FetchContext, Item
 from glean.sources.registry import register_source
 
@@ -18,19 +19,21 @@ class ScraperSource:
 
     type: ClassVar[str] = "scraper"
 
-    def __init__(self, urls: list[str]) -> None:
+    def __init__(self, urls: list[str], *, max_response_bytes: int = DEFAULT_MAX_BYTES) -> None:
         if not urls:
             raise ValueError("scraper source requires at least one url")
         self.urls = urls
+        self.max_response_bytes = max_response_bytes
 
     async def fetch(self, ctx: FetchContext) -> list[Item]:
         items: list[Item] = []
         for url in self.urls:
             try:
-                resp = await ctx.http.get(
+                resp = await limited_get(
+                    ctx.http,
                     url,
-                    follow_redirects=True,
                     headers={"User-Agent": "glean/0.1"},
+                    max_bytes=self.max_response_bytes,
                 )
                 resp.raise_for_status()
             except Exception as exc:  # noqa: BLE001
