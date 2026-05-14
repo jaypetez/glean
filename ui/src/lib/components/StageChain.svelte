@@ -79,20 +79,20 @@
             class="rounded p-1 text-tertiary hover:bg-muted hover:text-primary disabled:opacity-30"
             disabled={i === 0}
             onclick={() => moveUp(i)}
-            aria-label="Move stage up"><CaretUpIcon size={14} /></button
+            aria-label="Move stage up"><CaretUpIcon size={14} aria-hidden="true" /></button
           >
           <button
             type="button"
             class="rounded p-1 text-tertiary hover:bg-muted hover:text-primary disabled:opacity-30"
             disabled={i === pipeline.length - 1}
             onclick={() => moveDown(i)}
-            aria-label="Move stage down"><CaretDownIcon size={14} /></button
+            aria-label="Move stage down"><CaretDownIcon size={14} aria-hidden="true" /></button
           >
           <button
             type="button"
             class="rounded p-1 text-tertiary hover:bg-status-error/20 hover:text-status-error"
             onclick={() => removeStage(i)}
-            aria-label="Remove stage"><XIcon size={14} /></button
+            aria-label="Remove stage"><XIcon size={14} aria-hidden="true" /></button
           >
         </li>
       {/each}

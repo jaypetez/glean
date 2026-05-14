@@ -161,6 +161,11 @@ async def test_spa_mounted_when_dist_present(
             root = await ac.get("/")
             assert root.status_code == 200
             assert b"glean ui" in root.content
+            nested = await ac.get("/feeds/new")
+            assert nested.status_code == 200
+            assert b"glean ui" in nested.content
+            unknown_api = await ac.get("/api/v1/missing")
+            assert unknown_api.status_code == 404
             healthz = await ac.get("/healthz")
             assert healthz.status_code == 200
     finally:

@@ -327,7 +327,7 @@
                 aria-label={showTelegramToken ? "Hide Telegram bot token" : "Show Telegram bot token"}
                 onclick={() => (showTelegramToken = !showTelegramToken)}
               >
-                {#if showTelegramToken}<EyeSlash size={16} />{:else}<Eye size={16} />{/if}
+                {#if showTelegramToken}<EyeSlash size={16} aria-hidden="true" />{:else}<Eye size={16} aria-hidden="true" />{/if}
               </button>
             </span>
           </label>
@@ -412,7 +412,7 @@
                 aria-label={showLlmKey ? "Hide LLM API key" : "Show LLM API key"}
                 onclick={() => (showLlmKey = !showLlmKey)}
               >
-                {#if showLlmKey}<EyeSlash size={16} />{:else}<Eye size={16} />{/if}
+                {#if showLlmKey}<EyeSlash size={16} aria-hidden="true" />{:else}<Eye size={16} aria-hidden="true" />{/if}
               </button>
             </span>
           </label>
@@ -509,14 +509,14 @@
                 onclick={() => (showCurrentApiKey = !showCurrentApiKey)}
                 class="density-control inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm text-secondary hover:bg-surface"
               >
-                {#if showCurrentApiKey}<EyeSlash size={16} /> Hide{:else}<Eye size={16} /> Show{/if}
+                {#if showCurrentApiKey}<EyeSlash size={16} aria-hidden="true" /> Hide{:else}<Eye size={16} aria-hidden="true" /> Show{/if}
               </button>
               <button
                 type="button"
                 onclick={() => initialize?.api_key && copyText(initialize.api_key, "API key copied.")}
                 class="density-control inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm text-secondary hover:bg-surface"
               >
-                <Copy size={16} /> Copy
+                <Copy size={16} aria-hidden="true" /> Copy
               </button>
             </div>
           </div>
@@ -527,7 +527,7 @@
           onclick={() => (showRotateDialog = true)}
           class="density-control mt-4 inline-flex items-center gap-2 rounded-md border border-status-warn/40 bg-status-warn/10 px-3 py-2 text-sm font-medium text-status-warn hover:bg-status-warn/20"
         >
-          <ArrowClockwise size={16} /> Rotate API key
+          <ArrowClockwise size={16} aria-hidden="true" /> Rotate API key
         </button>
       </div>
 
@@ -543,7 +543,7 @@
             onclick={copyRotatedAndContinue}
             class="density-control mt-3 inline-flex items-center gap-2 rounded-md bg-cyan px-3 py-2 text-sm font-medium text-base hover:bg-cyan-light"
           >
-            <Copy size={16} /> Copy and continue
+            <Copy size={16} aria-hidden="true" /> Copy and continue
           </button>
         </div>
       {/if}

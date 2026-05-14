@@ -1,0 +1,15 @@
+defaults:
+  llm:
+    provider: ollama
+    model: qwen2.5:7b
+    base_url: http://ollama:11434
+  render:
+    style: html
+    link_preview: false
+    max_items: 10
+  bootstrap: skip-and-mark
+  bootstrap_count: 5
+  failure:
+    alert_after: 3
+feeds: []
+skills: []

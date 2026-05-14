@@ -94,7 +94,7 @@
               type="button"
               class="rounded p-1 text-tertiary hover:bg-status-error/20 hover:text-status-error"
               onclick={() => removeSource(i)}
-              aria-label="Remove source"><XIcon size={14} /></button
+              aria-label="Remove source"><XIcon size={14} aria-hidden="true" /></button
             >
           </div>
           {#each fieldsForType(source) as field}
