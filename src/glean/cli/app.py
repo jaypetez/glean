@@ -219,8 +219,6 @@ def run(
 
 
 async def _run_async(cfg, db_path: Path, health_port: int) -> None:  # type: ignore[no-untyped-def]
-    import asyncio
-
     from apscheduler import AsyncScheduler
 
     from glean.api.app import run_api_server

@@ -29,8 +29,8 @@ def make_app(state: StateStore) -> web.Application:
             async with state.db.execute("SELECT 1") as cur:
                 await cur.fetchone()
             return web.Response(text="ok\n")
-        except Exception as exc:
-            return web.Response(status=503, text=f"db error: {exc}\n")
+        except Exception:
+            return web.Response(status=503, text="db error\n")
 
     app.router.add_get("/healthz", healthz)
     return app

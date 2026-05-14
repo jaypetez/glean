@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -39,6 +40,21 @@ async def test_healthz_unauthenticated(client: AsyncClient) -> None:
     resp = await client.get("/healthz")
     assert resp.status_code == 200
     assert resp.json() == {"status": "ok"}
+
+
+async def test_healthz_reports_generic_db_error(tmp_path: Path) -> None:
+    """/healthz must not expose exception details to callers."""
+
+    class BrokenDb:
+        def execute(self, _query: str):
+            raise RuntimeError("sensitive database path")
+
+    app = make_app(SimpleNamespace(db=BrokenDb()), tmp_path / "state.db")
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        resp = await ac.get("/healthz")
+
+    assert resp.status_code == 503
+    assert resp.json() == {"detail": "db error"}
 
 
 async def test_initialize_returns_api_key(client: AsyncClient, api_key: str) -> None:

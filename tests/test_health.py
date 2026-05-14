@@ -56,7 +56,7 @@ async def test_health_shim_endpoint_reports_db_errors() -> None:
     response = await app._handle(request)
 
     assert response.status == 503
-    assert response.text == "db error: boom\n"
+    assert response.text == "db error\n"
 
 
 async def test_run_health_server_starts_tcp_site(monkeypatch: pytest.MonkeyPatch) -> None:

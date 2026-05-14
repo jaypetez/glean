@@ -50,7 +50,7 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
         except Exception as exc:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=f"db error: {exc}",
+                detail="db error",
             ) from exc
 
     @health_router.get("/api/v1/initialize")
