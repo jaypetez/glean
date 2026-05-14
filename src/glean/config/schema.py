@@ -23,11 +23,20 @@ class FailureConfig(BaseModel):
     ops_chat_id: str | int | None = None
 
 
+class TelegramDefaults(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    bot_token: str | None = None
+    chat_id: str | int | None = None
+
+
 class Defaults(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    telegram: TelegramDefaults = Field(default_factory=TelegramDefaults)
     llm: LLMConfig = Field(default_factory=LLMConfig)
     render: RenderConfig = Field(default_factory=RenderConfig)
+    sinks: list[dict[str, Any]] | None = Field(default=None, min_length=1)
     bootstrap: Literal["skip-and-mark", "send-last-N", "send-all"] = "skip-and-mark"
     bootstrap_count: int = Field(default=5, ge=1)
     failure: FailureConfig = Field(default_factory=FailureConfig)
@@ -77,13 +86,10 @@ class FeedConfig(BaseModel):
         return [StageSpec.from_raw(x) if not isinstance(x, StageSpec) else x for x in v]
 
     @model_validator(mode="after")
-    def _ensure_sinks(self) -> Self:
-        if self.sinks is not None:
-            return self
-        if self.chat_id is not None:
+    def _normalize_legacy_chat_id(self) -> Self:
+        if self.sinks is None and self.chat_id is not None:
             self.sinks = [{"type": "telegram", "chat_id": self.chat_id}]
-            return self
-        raise ValueError("feed must have either 'chat_id' or 'sinks'")
+        return self
 
     @model_validator(mode="after")
     def _validate_source_llm_specs(self) -> Self:
@@ -102,9 +108,18 @@ class FeedConfig(BaseModel):
         return self.render or defaults.render
 
     def effective_sinks(self, defaults: Defaults) -> list[dict[str, Any]]:
-        if self.sinks is None:
-            raise ValueError("feed must have either 'chat_id' or 'sinks'")
-        return self.sinks
+        sinks = self.sinks or defaults.sinks
+        if sinks is not None:
+            return sinks
+        if defaults.telegram.chat_id is not None:
+            telegram_sink: dict[str, Any] = {
+                "type": "telegram",
+                "chat_id": defaults.telegram.chat_id,
+            }
+            if defaults.telegram.bot_token is not None:
+                telegram_sink["token"] = defaults.telegram.bot_token
+            return [telegram_sink]
+        raise ValueError("feed must have feed-level sinks/chat_id or Telegram defaults")
 
     def effective_bootstrap(self, defaults: Defaults) -> str:
         return self.bootstrap or defaults.bootstrap
@@ -121,7 +136,7 @@ class Config(BaseModel):
 
     defaults: Defaults = Field(default_factory=Defaults)
     skills: list[SkillConfig] = Field(default_factory=list)
-    feeds: list[FeedConfig] = Field(min_length=1)
+    feeds: list[FeedConfig] = Field(default_factory=list)
 
     @field_validator("skills")
     @classmethod

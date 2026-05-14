@@ -89,6 +89,31 @@ async def test_put_defaults_writes_yaml(
     assert cfg.defaults.llm.provider == "openai"
 
 
+async def test_put_defaults_accepts_telegram_defaults(
+    client: AsyncClient, auth_headers, configured_app
+) -> None:
+    _, cfg_path, _ = configured_app
+    new_defaults = {
+        "telegram": {
+            "bot_token": "test-token",
+            "chat_id": "-100123",
+        },
+        "failure": {"ops_chat_id": "-100999", "alert_after": 4},
+    }
+
+    resp = await client.put(
+        "/api/v1/config/defaults",
+        headers=auth_headers,
+        json=new_defaults,
+    )
+
+    assert resp.status_code == 200
+    cfg = load_config(cfg_path)
+    assert cfg.defaults.telegram.bot_token == "test-token"
+    assert cfg.defaults.telegram.chat_id == "-100123"
+    assert cfg.defaults.failure.ops_chat_id == "-100999"
+
+
 # === Feeds ===
 
 
@@ -214,10 +239,83 @@ async def test_delete_feed_removes_from_yaml(
     assert all(f.name != "alpha" for f in cfg.feeds)
 
 
-async def test_delete_last_feed_400(client: AsyncClient, auth_headers) -> None:
-    """Cannot delete last feed because config requires at least one."""
+async def test_delete_last_feed_allows_first_run_empty_config(
+    client: AsyncClient, auth_headers, configured_app
+) -> None:
+    _, cfg_path, _ = configured_app
+
     resp = await client.delete("/api/v1/config/feeds/alpha", headers=auth_headers)
-    assert resp.status_code == 400
+
+    assert resp.status_code == 200
+    cfg = load_config(cfg_path)
+    assert cfg.feeds == []
+
+
+async def test_list_feeds_supports_empty_first_run_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    cfg_path = tmp_path / "feeds.yaml"
+    cfg_path.write_text(
+        textwrap.dedent(
+            """
+            defaults:
+              llm: {provider: ollama, model: qwen2.5:7b}
+            feeds: []
+            """
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("GLEAN_CONFIG", str(cfg_path))
+    state = StateStore(tmp_path / "state.db")
+    await state.open()
+    try:
+        app = make_app(state, tmp_path / "state.db")
+        headers = {"X-Glean-Api-Key": app.state.glean_api_key}
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            resp = await ac.get("/api/v1/config/feeds", headers=headers)
+    finally:
+        await state.close()
+
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+
+async def test_list_feeds_counts_inherited_default_sinks(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    cfg_path = tmp_path / "feeds.yaml"
+    cfg_path.write_text(
+        textwrap.dedent(
+            """
+            defaults:
+              telegram:
+                bot_token: test-token
+                chat_id: -100123
+            feeds:
+              - name: alpha
+                schedule: "every 1h"
+                sources:
+                  - type: rss
+                    url: https://example.com/a.xml
+                pipeline:
+                  - dedup
+            """
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("GLEAN_CONFIG", str(cfg_path))
+    state = StateStore(tmp_path / "state.db")
+    await state.open()
+    try:
+        app = make_app(state, tmp_path / "state.db")
+        headers = {"X-Glean-Api-Key": app.state.glean_api_key}
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            resp = await ac.get("/api/v1/config/feeds", headers=headers)
+    finally:
+        await state.close()
+
+    assert resp.status_code == 200
+    assert resp.json()[0]["sinks_count"] == 1
 
 
 # === Skills ===

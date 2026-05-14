@@ -5,6 +5,7 @@
  */
 
 import type {
+  DefaultsConfig,
   FeedConfig,
   FeedListItem,
   FeedStatus,
@@ -64,6 +65,23 @@ export async function getInitialize(): Promise<InitializeResponse> {
   return (await resp.json()) as InitializeResponse;
 }
 
+// --- Defaults ---
+
+export async function getDefaults(): Promise<DefaultsConfig> {
+  return apiJson<DefaultsConfig>("/api/v1/config/defaults");
+}
+
+export async function updateDefaults(defaults: DefaultsConfig): Promise<void> {
+  const resp = await apiFetch("/api/v1/config/defaults", {
+    method: "PUT",
+    body: JSON.stringify(defaults),
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`update defaults failed: ${resp.status} ${text}`);
+  }
+}
+
 // --- Feed config CRUD ---
 
 export async function listFeedConfigs(): Promise<FeedListItem[]> {
@@ -106,11 +124,21 @@ export async function deleteFeedConfig(name: string): Promise<void> {
   }
 }
 
-export async function validateFeedConfig(feed: FeedConfig): Promise<ValidateResponse> {
+export async function validateConfig(config: {
+  defaults?: DefaultsConfig;
+  feeds?: FeedConfig[];
+}): Promise<ValidateResponse> {
   return apiJson<ValidateResponse>("/api/v1/config/validate", {
     method: "POST",
-    body: JSON.stringify({ defaults: {}, feeds: [feed] }),
+    body: JSON.stringify({ feeds: [], ...config }),
   });
+}
+
+export async function validateFeedConfig(
+  feed: FeedConfig,
+  defaults: DefaultsConfig = {}
+): Promise<ValidateResponse> {
+  return validateConfig({ defaults, feeds: [feed] });
 }
 
 export async function listFeedStatuses(): Promise<FeedStatus[]> {
