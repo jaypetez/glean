@@ -17,6 +17,7 @@ from glean.llm import build_provider
 from glean.llm.base import LLMProvider
 from glean.logging import get_logger
 from glean.pipeline.stages import (
+    LLMCallCounter,
     apply_skill_stage,
     dedup_stage,
     digest_intro,
@@ -316,11 +317,21 @@ class Runner:
 
             default_llm = self._get_llm(feed)
             llm_for = self._llm_resolver(feed)
+            llm_counter = LLMCallCounter(
+                feed.effective_max_llm_calls_per_run(self.config.defaults)
+            )
             intro: str = ""
 
             for stage in feed.pipeline:
                 new_items, intro = await self._run_stage(
-                    feed, stage, new_items, llm_for, default_llm, intro, result
+                    feed,
+                    stage,
+                    new_items,
+                    llm_for,
+                    default_llm,
+                    llm_counter,
+                    intro,
+                    result,
                 )
                 if not new_items:
                     break
@@ -414,6 +425,7 @@ class Runner:
         items: list[Item],
         llm_for: Callable[[Item], LLMProvider],
         default_llm: LLMProvider,
+        llm_counter: LLMCallCounter,
         intro: str,
         result: RunResult,
     ) -> tuple[list[Item], str]:
@@ -439,24 +451,37 @@ class Runner:
                 llm_for,
                 prompt=params.get("prompt", ""),
                 min_relevance=float(params.get("min_relevance", 0.5)),
+                llm_counter=llm_counter,
             )
             result.dropped += len(dropped)
             return kept, intro
 
         if name == "summarize":
             return await summarize_stage(
-                feed.name, items, llm_for, prompt=params.get("prompt", "")
+                feed.name,
+                items,
+                llm_for,
+                prompt=params.get("prompt", ""),
+                llm_counter=llm_counter,
             ), intro
 
         if name == "digest":
             base = params.get("intro", "")
             llm_prompt = params.get("prompt")
             if llm_prompt:
-                base = await digest_intro(feed.name, items, default_llm, prompt=llm_prompt)
+                base = await digest_intro(
+                    feed.name,
+                    items,
+                    default_llm,
+                    prompt=llm_prompt,
+                    llm_counter=llm_counter,
+                )
             return items, base
 
         if name == "apply_skill":
-            return await self._run_apply_skill_stage(feed, stage, items, llm_for, intro)
+            return await self._run_apply_skill_stage(
+                feed, stage, items, llm_for, llm_counter, intro
+            )
 
         logger.warning("unknown_stage", stage=name, feed=feed.name)
         return items, intro
@@ -467,6 +492,7 @@ class Runner:
         stage: StageSpec,
         items: list[Item],
         llm_for: Callable[[Item], LLMProvider],
+        llm_counter: LLMCallCounter,
         intro: str,
     ) -> tuple[list[Item], str]:
         params = stage.params
@@ -492,5 +518,6 @@ class Runner:
             llm_for,
             skill=skill,
             skill_llm=skill_llm,
+            llm_counter=llm_counter,
         )
         return new_items, intro

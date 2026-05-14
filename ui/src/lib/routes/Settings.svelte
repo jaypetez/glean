@@ -156,6 +156,7 @@
         link_preview: form.render.link_preview,
         max_items: Number(form.render.max_items),
       },
+      max_llm_calls_per_run: defaults?.max_llm_calls_per_run ?? null,
       bootstrap: defaults?.bootstrap ?? "skip-and-mark",
       bootstrap_count: defaults?.bootstrap_count ?? 5,
       failure: {
