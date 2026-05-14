@@ -22,7 +22,7 @@
 
 ## Status
 
-**v1.0** — stable core surfaces. Six shipped sinks (Telegram, Discord, Slack, ntfy.sh, Webhook, File), six search backends (SearXNG self-hosted + Brave / Tavily / Serper / Exa / MWMBL), three LLM providers (Ollama, Anthropic, OpenAI), per-source LLM dispatch (each source can use its own model), reusable structured **skills** that produce JSON output, and a four-layer plugin system (Source, Sink, LLM Provider, Search Backend) — all extendable in a single file.
+**v1.1** — stable core + full management web UI. Six shipped sinks (Telegram, Discord, Slack, ntfy.sh, Webhook, File), six search backends (SearXNG self-hosted + Brave / Tavily / Serper / Exa / MWMBL), three LLM providers (Ollama, Anthropic, OpenAI), per-source LLM dispatch (each source can use its own model), reusable structured **skills** that produce JSON output, a four-layer plugin system (Source, Sink, LLM Provider, Search Backend), and a built-in web UI with live SSE dashboard, visual feed/skill editors, first-run setup wizard, and settings — all behind an auto-generated API key.
 
 See [DESIGN.md](./DESIGN.md) for the long view.
 
@@ -50,6 +50,13 @@ The longer game: any "periodically pull X, process with an LLM, deliver to Y" wo
 - **Per-source LLM models** — each source within a feed can use its own LLM. Cheap local model for noisy RSS, Claude Haiku for the curated subreddit, premium Sonnet for the security feed. Cost-optimize without splitting feeds. See [`docs/config/per-source-llm.md`](./docs/config/per-source-llm.md).
 - **Reusable structured skills** — define named extraction templates with JSON output schemas, reference them from any feed via the `apply_skill` stage. Each provider uses its native structured-output mode (Ollama `format=schema`, Anthropic forced tool-use, OpenAI `response_format` json_schema). Built-in examples: deal-finder, CVE extractor, paper digest, job posting. See [`docs/config/skills.md`](./docs/config/skills.md).
 - **LLM precedence** — `Skill LLM > Source LLM > Feed LLM > Defaults LLM`. Skills can demand specific models for tasks that require them; sources can route to cheap or premium tiers based on signal-to-noise.
+
+### Built-in web UI
+- **Live dashboard** — feed cards with status pills, run-now buttons, summary strip (total / running / healthy / alerts), and a live SSE connection that updates as runs start, complete, or fail.
+- **Visual editors** — feed editor with split-pane live YAML preview; skill editor for the structured-extraction templates with field-by-field schema builder.
+- **First-run setup wizard** — five-step guided onboarding (welcome → Telegram → LLM → templates → done) with six starter feed templates (AI/ML news, Reddit pulse, web search briefing, engineering blogs, GitHub trending, custom).
+- **Settings page** — defaults editor, API key rotation, dark/light/system theme toggle, density toggle, system info.
+- **API-first** — every UI action is a documented `/api/v1/*` REST call with auto-generated `X-Glean-Api-Key` auth (Sonarr-style). The CLI uses the same shared service layer, so they never disagree on truth.
 
 ### Distribution & operations
 - **Cross-platform** — runs as a Docker container or a standalone binary. Linux (x86_64 + arm64), macOS (arm64), and Windows (x86_64) builds attached to every release.
@@ -84,9 +91,34 @@ Want self-hosted web search too? See [Web search setup](./docs/getting-started/s
 
 ## Web UI
 
-The built-in web UI is served by the same FastAPI process at `/`. It includes a live dashboard with SSE run status and run-now controls, feed and skill editors, a first-run setup wizard with starter templates, and a settings page for defaults, API key management, system info, and light/dark/system theme selection.
+Open `http://localhost:9090` after `docker compose up` and you get a full management UI served by the same FastAPI process. Every action goes through the documented `/api/v1/*` REST surface — the CLI shares the same code path, so they always agree.
 
-The UI uses the single-user API key returned by `/api/v1/initialize` and sends it as `X-Glean-Api-Key` for REST calls. Keep the web port on loopback or behind a trusted reverse proxy unless you provide your own auth layer.
+### Dashboard
+Live status grid for every configured feed. Status pills update over SSE as runs start, complete, or fail; the "Run now" button kicks an off-schedule run; the connection indicator at the bottom shows whether the live stream is up.
+
+![glean dashboard with three feeds (ai-news-hourly, pc-deals, security-cves), a summary strip showing 3 total / 0 running / 3 healthy / 0 alerts, pipeline pill chains and "Run now" buttons on each card, and a "Connected" indicator at the bottom](./assets/screenshots/dashboard.png)
+
+### Feed editor
+Form on the left, live YAML preview on the right. Sources, sinks, and pipeline stages each have type-aware fields with inline validation. The YAML re-renders on every keystroke so you can see exactly what's being persisted before you save.
+
+![New feed editor showing a Basics section with Name "ai-news-hourly" and Schedule "every 1h", Sources / Pipeline / Sinks panels with inline validation messages, and a YAML preview pane on the right showing the live serialized config](./assets/screenshots/feed-editor.png)
+
+### Skill editor
+Manage the structured-extraction templates — prompt, system prompt, output schema with field-by-field type picker. Reference any saved skill from a feed pipeline with `apply_skill`.
+
+![Edit skill page for "deal-finder" showing Basics (name, version, description), Prompts (system prompt, prompt template with {title}/{body} variables documented inline), and an Output Schema table with deal_quality (str), discount_percent (float | None), sale_price (str | None), summary (str)](./assets/screenshots/skill-editor.png)
+
+### First-run setup wizard
+When the config is empty, navigating to the dashboard redirects to a five-step guided wizard: welcome → Telegram credentials → LLM provider → starter template → done. Six starter templates cover the most common use cases (AI/ML news, Reddit pulse, web search briefing, engineering blogs, GitHub trending, custom blank).
+
+![First-run setup wizard with a 5-step stepper (Welcome / Telegram / LLM / Templates / Done) at the top, the welcome step active showing "Welcome to glean" and an "I'm ready to start" checkbox, plus Back and Next buttons](./assets/screenshots/setup-wizard.png)
+
+### Settings
+Defaults editor (Telegram / LLM / render / failure), API key rotation, theme toggle (dark / light / system), density toggle, and an About tab with system info. The API key is auto-generated on first boot and stored as a verifier on disk; rotation invalidates all clients atomically.
+
+![Settings page with Defaults / API Key / Appearance / About tabs at the top, a Telegram defaults section with bot token (masked) / default chat ID / ops chat ID inputs, an LLM defaults section with provider (ollama) / model (qwen2.5:7b) / base URL, and Render + Failure defaults panels](./assets/screenshots/settings.png)
+
+The UI authenticates with the single-user API key returned by `/api/v1/initialize` and sends it as `X-Glean-Api-Key` for REST calls. Keep port 9090 on loopback or behind a trusted reverse proxy unless you provide your own auth layer.
 
 ## Configuration
 
