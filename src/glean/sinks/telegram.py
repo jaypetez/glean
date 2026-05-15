@@ -43,9 +43,7 @@ class TelegramSink:
         self._sender = TelegramSender(resolved_token, base_url=resolved_base_url)
 
     async def send(self, ctx: SendContext) -> None:
-        messages = ctx.messages or render_digest(
-            ctx.items, intro=ctx.intro, render=ctx.render
-        )
+        messages = ctx.messages or render_digest(ctx.items, intro=ctx.intro, render=ctx.render)
         await self._sender.send_digest(
             self.chat_id,
             messages,

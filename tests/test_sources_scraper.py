@@ -1,4 +1,5 @@
 """Scraper source tests."""
+
 from __future__ import annotations
 
 import httpx

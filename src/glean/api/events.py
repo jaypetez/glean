@@ -3,6 +3,7 @@
 A single shared bus is mounted on the FastAPI app. The Runner publishes
 RunEvent records as feeds run; SSE subscribers each get their own queue.
 """
+
 from __future__ import annotations
 
 import asyncio

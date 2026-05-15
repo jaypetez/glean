@@ -13,11 +13,22 @@ INJECTION_GUARD_SYSTEM_PROMPT = (
 
 _NUM_RE = re.compile(r"(-?\d+(?:\.\d+)?)\s*%?")
 _WORD_SCORES = {
-    "irrelevant": 0.0, "no": 0.0, "skip": 0.0, "drop": 0.0,
-    "low": 0.2, "weak": 0.2,
-    "medium": 0.5, "mid": 0.5, "neutral": 0.5,
-    "high": 0.8, "strong": 0.8, "yes": 0.9, "relevant": 0.85,
-    "very": 0.9, "critical": 1.0, "essential": 1.0,
+    "irrelevant": 0.0,
+    "no": 0.0,
+    "skip": 0.0,
+    "drop": 0.0,
+    "low": 0.2,
+    "weak": 0.2,
+    "medium": 0.5,
+    "mid": 0.5,
+    "neutral": 0.5,
+    "high": 0.8,
+    "strong": 0.8,
+    "yes": 0.9,
+    "relevant": 0.85,
+    "very": 0.9,
+    "critical": 1.0,
+    "essential": 1.0,
 }
 
 

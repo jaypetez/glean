@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { resetState } from "./helpers";
 
 test("redirects to setup and installs a starter template", async ({ page }) => {

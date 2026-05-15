@@ -57,9 +57,7 @@ def _trigger_from_schedule(sched: Schedule) -> IntervalTrigger | CronTrigger:
     raise ValueError(f"unexpected schedule type: {sched!r}")
 
 
-async def _add_feed_job(
-    scheduler: AsyncScheduler, runner: Runner, feed: FeedConfig
-) -> None:
+async def _add_feed_job(scheduler: AsyncScheduler, runner: Runner, feed: FeedConfig) -> None:
     sched = parse_schedule(feed.schedule)
     trigger = _trigger_from_schedule(sched)
 

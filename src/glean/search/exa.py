@@ -1,4 +1,5 @@
 """Exa.ai (formerly Metaphor) semantic search backend."""
+
 from __future__ import annotations
 
 import os

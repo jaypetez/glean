@@ -1,4 +1,5 @@
 """Mock RSS feed server for E2E testing."""
+
 from __future__ import annotations
 
 import os
@@ -8,16 +9,18 @@ from fastapi import FastAPI, Response
 app = FastAPI(title="mock-rss")
 
 _counter = {"n": int(os.environ.get("MOCK_RSS_INITIAL", "5"))}
+_generation = {"n": 0}
 
 
-def _build_feed(n: int) -> str:
+def _build_feed(n: int, generation: int) -> str:
     items = []
     for i in range(n):
+        article_id = f"{generation}-{i + 1}"
         items.append(f"""
   <entry>
     <title>Mock article {i + 1}</title>
-    <link href="https://example.com/articles/{i + 1}"/>
-    <id>https://example.com/articles/{i + 1}</id>
+    <link href="https://example.com/articles/{article_id}"/>
+    <id>https://example.com/articles/{article_id}</id>
     <updated>2024-01-{15 + i:02d}T12:00:00Z</updated>
     <published>2024-01-{15 + i:02d}T11:00:00Z</published>
     <summary>This is mock article {i + 1}'s summary content.</summary>
@@ -41,7 +44,10 @@ def health() -> dict[str, str]:
 
 @app.get("/feed.xml")
 def feed() -> Response:
-    return Response(content=_build_feed(_counter["n"]), media_type="application/atom+xml")
+    return Response(
+        content=_build_feed(_counter["n"], _generation["n"]),
+        media_type="application/atom+xml",
+    )
 
 
 @app.post("/__set_count/{n}")
@@ -53,4 +59,5 @@ def set_count(n: int) -> dict[str, int]:
 @app.post("/__reset")
 def reset() -> dict[str, str]:
     _counter["n"] = int(os.environ.get("MOCK_RSS_INITIAL", "5"))
+    _generation["n"] += 1
     return {"status": "reset"}

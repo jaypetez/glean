@@ -22,9 +22,7 @@ def build_source(spec: dict[str, Any]) -> Source:
         raise ValueError(f"source spec missing 'type': {spec!r}")
     factory = _REGISTRY.get(type_name)
     if factory is None:
-        raise ValueError(
-            f"unknown source type: {type_name!r}. registered: {sorted(_REGISTRY)}"
-        )
+        raise ValueError(f"unknown source type: {type_name!r}. registered: {sorted(_REGISTRY)}")
     kwargs = {k: v for k, v in spec.items() if k not in ("type", "llm")}
     return factory(**kwargs)
 

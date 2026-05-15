@@ -146,9 +146,7 @@ async def test_bootstrap_skips_send(tmp_path: Path, write_yaml) -> None:
         await state.close()
 
 
-async def test_full_pipeline_sends_after_new_item(
-    tmp_path: Path, write_yaml
-) -> None:
+async def test_full_pipeline_sends_after_new_item(tmp_path: Path, write_yaml) -> None:
     cfg = load_config(write_yaml(_cfg_yaml()))
     state = StateStore(tmp_path / "s.db")
     await state.open()
@@ -334,9 +332,7 @@ async def test_run_feed_emits_failure_event(tmp_path: Path, write_yaml) -> None:
     assert failed.duration_ms == result.duration_ms
 
 
-async def test_ops_alert_redacts_api_key_from_failure(
-    tmp_path: Path, write_yaml
-) -> None:
+async def test_ops_alert_redacts_api_key_from_failure(tmp_path: Path, write_yaml) -> None:
     cfg_yaml = textwrap.dedent(
         """
         defaults:

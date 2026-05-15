@@ -227,9 +227,7 @@ class Runner:
                     logger.error("sink_failed", feed=feed.name, sink=sink.type, err=err)
                     required_errors.append(f"{sink.type}: {err}")
                 else:
-                    logger.warning(
-                        "sink_failed_optional", feed=feed.name, sink=sink.type, err=err
-                    )
+                    logger.warning("sink_failed_optional", feed=feed.name, sink=sink.type, err=err)
 
         if required_errors:
             raise RuntimeError(f"required sinks failed: {'; '.join(required_errors)}")
@@ -302,9 +300,7 @@ class Runner:
                     await self.state.record_success(name)
                 result.skipped_reason = "bootstrap"
                 result.after_dedup = 0
-                logger.info(
-                    "bootstrap_skip", feed=name, indexed=len(items), dry_run=dry_run
-                )
+                logger.info("bootstrap_skip", feed=name, indexed=len(items), dry_run=dry_run)
                 return await self._finalize_run_result(result, started, dry_run=dry_run)
 
             # Run pipeline stages
@@ -318,9 +314,7 @@ class Runner:
 
             default_llm = self._get_llm(feed)
             llm_for = self._llm_resolver(feed)
-            llm_counter = LLMCallCounter(
-                feed.effective_max_llm_calls_per_run(self.config.defaults)
-            )
+            llm_counter = LLMCallCounter(feed.effective_max_llm_calls_per_run(self.config.defaults))
             intro: str = ""
 
             for stage in feed.pipeline:
@@ -358,9 +352,7 @@ class Runner:
             result.messages = messages
 
             if dry_run:
-                logger.info(
-                    "dry_run", feed=name, would_send=len(messages), items=ranked_count
-                )
+                logger.info("dry_run", feed=name, would_send=len(messages), items=ranked_count)
             else:
                 await self._dispatch_sinks(feed, new_items, messages, intro, render_cfg)
                 await self.state.mark_seen(name, new_items, sent=True)

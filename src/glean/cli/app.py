@@ -124,8 +124,7 @@ async def _list_feeds_async(cfg, db_path: Path) -> None:  # type: ignore[no-unty
             state_str = ", ".join(bits) or "ok"
             llm_label = f"{s.llm_provider}:{s.llm_model}"
             typer.echo(
-                f"{s.name:20s}  schedule={s.schedule!r:18s}  "
-                f"llm={llm_label:25s}  {state_str}"
+                f"{s.name:20s}  schedule={s.schedule!r:18s}  llm={llm_label:25s}  {state_str}"
             )
             if s.last_error:
                 typer.echo(f"  last_error: {scrub(s.last_error)[:500]}")

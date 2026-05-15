@@ -1,4 +1,5 @@
 """FastAPI application factory."""
+
 from __future__ import annotations
 
 import os
@@ -146,8 +147,7 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
 
     if auth_disabled():
         logger.warning(
-            "AUTH_DISABLED — all endpoints unauthenticated; "
-            "do not expose port 9090 publicly"
+            "AUTH_DISABLED — all endpoints unauthenticated; do not expose port 9090 publicly"
         )
     _warn_if_data_dir_insecure(db_path.parent)
 

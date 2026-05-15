@@ -1,4 +1,5 @@
 """Minimal mock of Telegram Bot API for E2E testing."""
+
 from __future__ import annotations
 
 import time

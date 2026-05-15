@@ -1,4 +1,5 @@
 """Slack webhook sink."""
+
 from __future__ import annotations
 
 import re
@@ -113,12 +114,7 @@ def _strip_html(text: str) -> str:
 
 
 def _escape_slack_link_url(url: str) -> str:
-    return (
-        url.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace("|", "%7C")
-    )
+    return url.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("|", "%7C")
 
 
 def _chunk(blocks: list[str], max_chars: int) -> list[str]:

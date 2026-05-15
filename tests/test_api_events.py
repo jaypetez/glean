@@ -1,4 +1,5 @@
 """Tests for the SSE event stream + event bus."""
+
 from __future__ import annotations
 
 import asyncio

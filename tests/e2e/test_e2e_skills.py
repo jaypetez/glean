@@ -1,4 +1,5 @@
 """E2E test: glean runs apply_skill with a per-source LLM, ships structured digest."""
+
 from __future__ import annotations
 
 import time

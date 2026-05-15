@@ -63,9 +63,7 @@ def test_effective_sinks_inherits_from_defaults_sinks(write_yaml) -> None:
     )
     cfg = load_config(write_yaml(yaml))
 
-    assert cfg.feeds[0].effective_sinks(cfg.defaults) == [
-        {"type": "telegram", "chat_id": -100999}
-    ]
+    assert cfg.feeds[0].effective_sinks(cfg.defaults) == [{"type": "telegram", "chat_id": -100999}]
 
 
 def test_telegram_defaults_provide_effective_sink(write_yaml) -> None:

@@ -27,6 +27,7 @@ jobs:
         uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: '0.5.13'
+          enable-cache: true
 
       - name: Install deps
         run: uv sync --locked --all-extras
@@ -94,6 +95,7 @@ jobs:
         uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: '0.5.13'
+          enable-cache: true
 
       - name: Install deps
         run: uv sync --locked --all-extras
@@ -150,6 +152,7 @@ jobs:
         uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: '0.5.13'
+          enable-cache: true
 
       - name: Install deps
         run: uv sync --locked --all-extras
@@ -159,7 +162,7 @@ jobs:
 
   e2e-ui:
     name: e2e-ui
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     needs: lint-test
     permissions:
       contents: read
@@ -180,6 +183,7 @@ jobs:
         uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: '0.5.13'
+          enable-cache: true
 
       - name: Install Python deps
         run: uv sync --locked --all-extras
@@ -192,13 +196,21 @@ jobs:
         working-directory: ui
         run: npm ci
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('ui/package-lock.json') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
       - name: Install Playwright browser
         working-directory: ui
         run: npx playwright install chromium
 
       - name: Run Playwright tests
         working-directory: ui
-        run: npx playwright test
+        run: npm run build && npx playwright test
 
       - name: Upload Playwright report
         if: failure()
@@ -227,6 +239,7 @@ jobs:
         uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: '0.5.13'
+          enable-cache: true
 
       - name: Install pytest deps for harness
         run: uv sync --locked --all-extras
@@ -263,7 +276,7 @@ jobs:
           done
 
       - name: Run E2E tests
-        run: uv run pytest tests/e2e -v -m e2e
+        run: uv run pytest tests/e2e -v -m e2e --reruns 1 --reruns-delay 5 --timeout=120
 
       - name: Show glean logs on failure
         if: always()

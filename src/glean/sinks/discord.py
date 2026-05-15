@@ -1,4 +1,5 @@
 """Discord webhook sink."""
+
 from __future__ import annotations
 
 import re
@@ -20,9 +21,7 @@ logger = get_logger(__name__)
 
 DISCORD_MAX_CHARS = 2000
 _TAG_RE = re.compile(r"<[^>]+>")
-_DISCORD_WEBHOOK_RE = re.compile(
-    r"^https://discord\.com/api/webhooks/\d+/[A-Za-z0-9_.-]+$"
-)
+_DISCORD_WEBHOOK_RE = re.compile(r"^https://discord\.com/api/webhooks/\d+/[A-Za-z0-9_.-]+$")
 
 
 def validate_discord_webhook_url(webhook_url: str) -> str:

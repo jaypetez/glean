@@ -6,14 +6,15 @@ export default defineConfig({
   expect: {
     timeout: 10_000,
   },
-  fullyParallel: false,
+  fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
-  workers: 1,
+  workers: process.env.CI ? 2 : undefined,
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
-  snapshotPathTemplate: "{testDir}/__screenshots__/{testFilePath}/{arg}-{platform}{ext}",
+  snapshotPathTemplate: "{testDir}/__screenshots__/{testFilePath}/{arg}{ext}",
   use: {
     baseURL: "http://localhost:8080",
+    deviceScaleFactor: 1,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
@@ -24,10 +25,4 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
-  webServer: {
-    command: "npm run build && uv run python e2e/_server.py",
-    url: "http://localhost:8080/healthz",
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
 });

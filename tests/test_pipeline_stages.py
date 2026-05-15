@@ -1,4 +1,5 @@
 """Pipeline stage error handling tests."""
+
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
@@ -81,9 +82,7 @@ async def test_rank_stage_handles_llm_exception() -> None:
 
     llm = _LLM(score_fn=fail_a)
 
-    kept, dropped = await rank_stage(
-        "feed", items, _resolver(llm), prompt="r", min_relevance=0.5
-    )
+    kept, dropped = await rank_stage("feed", items, _resolver(llm), prompt="r", min_relevance=0.5)
 
     assert len(kept) == 1
     assert kept[0].title == "B"
@@ -93,9 +92,7 @@ async def test_rank_stage_handles_llm_exception() -> None:
 async def test_rank_stage_with_empty_items() -> None:
     llm = _LLM()
 
-    kept, dropped = await rank_stage(
-        "feed", [], _resolver(llm), prompt="r", min_relevance=0.5
-    )
+    kept, dropped = await rank_stage("feed", [], _resolver(llm), prompt="r", min_relevance=0.5)
 
     assert kept == []
     assert dropped == []
@@ -106,9 +103,7 @@ async def test_rank_stage_sorts_by_relevance_desc() -> None:
     scores = {str(i): i / 10 for i in range(5)}
     llm = _LLM(score_fn=lambda item, prompt: scores[item.title])
 
-    kept, _ = await rank_stage(
-        "feed", items, _resolver(llm), prompt="r", min_relevance=0.0
-    )
+    kept, _ = await rank_stage("feed", items, _resolver(llm), prompt="r", min_relevance=0.0)
 
     relevances = [item.relevance for item in kept]
     assert relevances == sorted(relevances, reverse=True)

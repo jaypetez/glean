@@ -1,4 +1,5 @@
 """Per-platform escape helpers + safe URL filter."""
+
 from __future__ import annotations
 
 import re
