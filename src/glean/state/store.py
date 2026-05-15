@@ -91,6 +91,13 @@ class StateStore:
             raise RuntimeError("StateStore is not open")
         return self._db
 
+    async def ping(self) -> None:
+        """Run a trivial query to verify the connection is healthy."""
+        if self._db is None:
+            raise RuntimeError("StateStore is not open")
+        async with self._db.execute("SELECT 1") as cur:
+            await cur.fetchone()
+
     async def filter_new(self, feed: str, items: Iterable[Item]) -> list[Item]:
         items = list(items)
         if not items:
