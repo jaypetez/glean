@@ -2,6 +2,11 @@
 
 Self-hosted, pluggable personal agent that gleans signal from RSS, scraping, search, and APIs — processes it with any LLM, then delivers on a schedule to whatever sink you wire up.
 
+<!-- TODO(PR6): Replace this transparent placeholder with a real 30-second quickstart demo GIF after a manual capture session. -->
+<p align="center">
+  <img src="assets/glean-demo-placeholder.gif" alt="Placeholder for a 30-second glean quickstart demo GIF" width="100%" />
+</p>
+
 ## What is glean?
 
 glean is a small Python daemon that runs as a Docker container. You describe **feeds** in a YAML file — each one is a recipe of `sources → LLM pipeline → sink → schedule`. It deduplicates, ranks, summarizes, and posts a clean digest. One container, many topics, many sinks.
