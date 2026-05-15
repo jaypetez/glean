@@ -1,5 +1,11 @@
 # CLAUDE.md
 
+@docs/plugins/source.md
+@docs/plugins/llm.md
+@docs/plugins/sink.md
+@docs/plugins/search.md
+@docs/security.md
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Commands
@@ -108,3 +114,23 @@ Transient HTTP/LLM 429s and 5xxs are retried *within a tick* with bounded backof
 - **Image** at `ghcr.io/jaypetez/glean` — multi-arch (amd64+arm64), built from `Dockerfile` (`python:3.14-slim` base). Tags: `latest` + `sha-<short>` on each push to main; full semver on `v*.*.*` tag (release.yml).
 - **Dockerfile gotcha**: hatchling reads `readme = "README.md"` from pyproject.toml, so `README.md` MUST stay in the build context (it's COPYed in the builder stage and NOT in `.dockerignore`). If you re-add it to `.dockerignore`, the image build will fail with a confusing `failed to compute cache key` error.
 - **No secrets in code or YAML.** `feeds.yaml` is committable; secrets live in `.env` (gitignored) and are referenced via `${VAR}` in `feeds.yaml`. Push protection is on at the repo level.
+
+## Test mode
+
+`GLEAN_TEST_MODE=1` enables `POST /api/v1/test/reset?fixture=default|empty` — wipes the DB and re-seeds the test fixture. **Only registered when this env is set; never available in production.** Used by `ui/e2e/_server.py` for the Playwright suite.
+
+`GLEAN_DISABLE_AUTH=1` bypasses the API key check entirely. Emits a startup WARNING. Used by the e2e harness; never set in production.
+
+## API key bootstrap
+
+On first boot the API key is auto-generated and logged ONCE to stderr at WARNING level:
+
+```
+GLEAN_INITIAL_API_KEY=<32-char key>
+```
+
+Operators retrieve it via `docker logs glean | grep GLEAN_INITIAL_API_KEY`. Subsequent restarts persist only the verifier hash on disk (`/data/api_key`, mode 0o600); the cleartext key is NOT recoverable. Set `GLEAN_API_KEY=<key>` env to skip auto-generation entirely.
+
+## Linting & autofix
+
+`uv run ruff check --fix src tests` auto-fixes most style issues. Always run `mypy src` BEFORE `ruff --fix` — mypy may surface refactors that ruff then wants to simplify.
