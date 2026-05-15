@@ -1,4 +1,5 @@
 """Mock RSS feed server for E2E testing."""
+
 from __future__ import annotations
 
 import os

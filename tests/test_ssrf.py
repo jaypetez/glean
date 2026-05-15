@@ -293,7 +293,6 @@ def test_config_validation_rejects_malicious_default_sink_url(write_yaml) -> Non
         load_config(write_yaml(yaml))
 
 
-
 def test_config_validation_allows_searxng_private_base_url(write_yaml) -> None:
     yaml = textwrap.dedent(
         """

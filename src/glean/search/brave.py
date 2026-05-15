@@ -1,4 +1,5 @@
 """Brave Search API backend."""
+
 from __future__ import annotations
 
 import os

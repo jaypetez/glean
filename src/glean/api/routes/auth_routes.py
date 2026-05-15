@@ -1,4 +1,5 @@
 """Authentication management routes."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -10,6 +11,7 @@ from glean.api.models import RotateResponse
 
 if TYPE_CHECKING:
     from slowapi import Limiter
+
 
 async def rotate(request: Request) -> RotateResponse:
     """Rotate the single-user API key and return it once."""

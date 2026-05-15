@@ -92,13 +92,16 @@ async def _run_budget_feed(
         if max_llm_calls_per_run is None
         else f"            max_llm_calls_per_run: {max_llm_calls_per_run}\n"
     )
-    pipeline_steps = pipeline or """
+    pipeline_steps = (
+        pipeline
+        or """
     - dedup
     - summarize:
         prompt: "summarize"
     - digest:
         prompt: "write intro"
     """
+    )
     pipeline_yaml = textwrap.indent(textwrap.dedent(pipeline_steps).strip(), "              ")
     yaml = textwrap.dedent(
         f"""

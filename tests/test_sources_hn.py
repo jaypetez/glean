@@ -1,4 +1,5 @@
 """Hacker News source tests."""
+
 from __future__ import annotations
 
 import httpx
@@ -134,9 +135,7 @@ async def test_hn_uses_story_fields_and_skips_missing_title(fetch_context):
 
 @respx.mock
 async def test_hn_raises_on_http_error(fetch_context):
-    respx.get("https://hn.algolia.com/api/v1/search_by_date").mock(
-        return_value=httpx.Response(503)
-    )
+    respx.get("https://hn.algolia.com/api/v1/search_by_date").mock(return_value=httpx.Response(503))
     src = HNSource(query="ai")
 
     with pytest.raises(httpx.HTTPStatusError):

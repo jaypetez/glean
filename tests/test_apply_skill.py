@@ -1,4 +1,5 @@
 """Tests for the apply_skill pipeline stage."""
+
 from __future__ import annotations
 
 import textwrap

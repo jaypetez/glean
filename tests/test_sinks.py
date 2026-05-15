@@ -158,9 +158,7 @@ async def test_optional_sink_failure_is_swallowed() -> None:
 
 
 async def test_sink_cancellation_propagates() -> None:
-    cfg = _config_with_sink_specs(
-        [{"type": "fake_sink", "name": "cancelled", "cancel": True}]
-    )
+    cfg = _config_with_sink_specs([{"type": "fake_sink", "name": "cancelled", "cancel": True}])
     feed, render_cfg = _feed_and_render(cfg)
     runner = Runner(cfg, state=object(), telegram=None)  # type: ignore[arg-type]
 
@@ -215,9 +213,7 @@ async def test_telegram_base_url_env_uses_sink_constructor(monkeypatch) -> None:
 
 
 async def test_optional_injected_telegram_sink_failure_is_swallowed() -> None:
-    cfg = _config_with_sink_specs(
-        [{"type": "telegram", "chat_id": -1, "required": False}]
-    )
+    cfg = _config_with_sink_specs([{"type": "telegram", "chat_id": -1, "required": False}])
     feed, render_cfg = _feed_and_render(cfg)
     fake_tg = FakeTelegram(fail=True)
     runner = Runner(cfg, state=object(), telegram=fake_tg)  # type: ignore[arg-type]

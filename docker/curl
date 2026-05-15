@@ -20,7 +20,7 @@ def main() -> int:
         return 2
 
     try:
-        with urllib.request.urlopen(urls[0], timeout=10) as response:
+        with urllib.request.urlopen(urls[0], timeout=10) as response:  # noqa: S310
             sys.stdout.buffer.write(response.read())
     except (TimeoutError, urllib.error.HTTPError, urllib.error.URLError) as exc:
         if not silent:

@@ -1,4 +1,5 @@
 """E2E test: glean fetches mock SearXNG, calls mock Ollama, sends to mock Telegram."""
+
 from __future__ import annotations
 
 import time

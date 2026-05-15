@@ -21,6 +21,7 @@ class ConfigError(Exception):
 
 def _interpolate(value: Any) -> Any:
     if isinstance(value, str):
+
         def repl(m: re.Match[str]) -> str:
             var = m.group(1)
             return os.environ.get(var, m.group(0))
@@ -97,8 +98,7 @@ def load_config(path: str | Path) -> Config:
 
     if missing:
         raise ConfigError(
-            "unresolved environment variables in config: "
-            + ", ".join(f"${{{v}}}" for v in missing)
+            "unresolved environment variables in config: " + ", ".join(f"${{{v}}}" for v in missing)
         )
 
     return cfg

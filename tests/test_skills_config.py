@@ -1,4 +1,5 @@
 """Tests for SkillConfig parsing and validation."""
+
 from __future__ import annotations
 
 import textwrap
@@ -69,9 +70,7 @@ def test_skill_verbose_field_form() -> None:
         name="x",
         prompt="from {title}",
         output_schema={
-            "summary": SkillOutputField(
-                type="str", description="One liner", required=True
-            ),
+            "summary": SkillOutputField(type="str", description="One liner", required=True),
             "score": SkillOutputField(type="float | None", required=False),
         },
     )

@@ -50,9 +50,7 @@ def test_dockerfile_pins_mutable_base_images_to_sha256_digests() -> None:
         ref = line.removeprefix("FROM ").removeprefix("COPY --from=").split(" ", 1)[0]
         if ":" not in ref:
             continue  # alias to an earlier stage
-        assert SHA256_PIN.search(line), (
-            f"Dockerfile line is not SHA-256-pinned: {line!r}"
-        )
+        assert SHA256_PIN.search(line), f"Dockerfile line is not SHA-256-pinned: {line!r}"
 
 
 def test_runtime_image_provides_curl_probe_without_debian_curl_package() -> None:

@@ -1,4 +1,5 @@
 """Tests for the FastAPI foundation + auth."""
+
 from __future__ import annotations
 
 import json
@@ -16,8 +17,7 @@ from glean.state.store import StateStore
 pytestmark = pytest.mark.asyncio
 
 AUTH_DISABLED_WARNING = (
-    "AUTH_DISABLED — all endpoints unauthenticated; "
-    "do not expose port 9090 publicly"
+    "AUTH_DISABLED — all endpoints unauthenticated; do not expose port 9090 publicly"
 )
 
 
@@ -107,9 +107,7 @@ async def test_authenticated_route_rejects_wrong_key(client: AsyncClient) -> Non
     assert resp.status_code == 401
 
 
-async def test_authenticated_route_accepts_valid_key(
-    client: AsyncClient, api_key: str
-) -> None:
+async def test_authenticated_route_accepts_valid_key(client: AsyncClient, api_key: str) -> None:
     resp = await client.get(
         "/api/v1/health",
         headers={"X-Glean-Api-Key": api_key},
@@ -118,9 +116,7 @@ async def test_authenticated_route_accepts_valid_key(
     assert resp.json() == {"status": "ok"}
 
 
-async def test_auth_disabled_via_env(
-    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_auth_disabled_via_env(client: AsyncClient, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("GLEAN_DISABLE_AUTH", "1")
     resp = await client.get("/api/v1/health")
     assert resp.status_code == 200
@@ -277,9 +273,7 @@ async def test_legacy_plaintext_api_key_file_is_migrated(tmp_path: Path) -> None
     assert health.status_code == 200
 
 
-async def test_api_key_env_override(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_api_key_env_override(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     from glean.api.auth import get_or_create_api_key
 
     monkeypatch.setenv("GLEAN_API_KEY", "env-override-key")

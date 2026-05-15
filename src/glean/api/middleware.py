@@ -1,4 +1,5 @@
 """API middleware for HTTP hardening."""
+
 from __future__ import annotations
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint

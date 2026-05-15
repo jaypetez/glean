@@ -1,4 +1,5 @@
 """Web search source - delegates to a pluggable backend."""
+
 from __future__ import annotations
 
 import os
@@ -61,9 +62,7 @@ class SearchSource:
         ):
             backend_kwargs["base_url"] = legacy_searxng_url
         # Build eagerly so config validation catches unknown engines and kwargs.
-        self._backend: SearchBackend = build_backend(
-            {"engine": engine_name, **backend_kwargs}
-        )
+        self._backend: SearchBackend = build_backend({"engine": engine_name, **backend_kwargs})
 
     async def fetch(self, ctx: FetchContext) -> list[Item]:
         results = await self._backend.search(self.query, http=ctx.http, limit=self.limit)

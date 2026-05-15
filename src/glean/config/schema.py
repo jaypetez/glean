@@ -36,9 +36,7 @@ def _validate_source_urls(spec: dict[str, Any], *, field: str) -> None:
 
     engine = str(spec.get("engine", "")).lower()
     allow_private = engine == "searxng" or "searxng_url" in spec
-    _validate_url_field(
-        spec.get("searxng_url"), field=f"{field}.searxng_url", allow_private=True
-    )
+    _validate_url_field(spec.get("searxng_url"), field=f"{field}.searxng_url", allow_private=True)
     _validate_url_field(
         spec.get("base_url"), field=f"{field}.base_url", allow_private=allow_private
     )
@@ -150,7 +148,7 @@ class StageSpec(BaseModel):
             return cls(name=raw, params={})  # type: ignore[arg-type]
         if not isinstance(raw, dict) or len(raw) != 1:
             raise ValueError(f"stage must be a string or single-key mapping: {raw!r}")
-        (name, params), = raw.items()
+        ((name, params),) = raw.items()
         if not isinstance(params, dict):
             params = {"value": params}
         return cls(name=name, params=params)  # type: ignore[arg-type]
@@ -171,8 +169,7 @@ class FeedConfig(BaseModel):
         default=None,
         ge=1,
         description=(
-            "Hard cap on total LLM calls per run for this feed. "
-            "None = unlimited (back-compat)."
+            "Hard cap on total LLM calls per run for this feed. None = unlimited (back-compat)."
         ),
     )
     bootstrap: Literal["skip-and-mark", "send-last-N", "send-all"] | None = None

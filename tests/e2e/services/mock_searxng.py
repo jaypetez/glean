@@ -1,4 +1,5 @@
 """Minimal mock of SearXNG JSON API for E2E testing."""
+
 from __future__ import annotations
 
 from typing import Any

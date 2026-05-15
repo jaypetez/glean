@@ -99,8 +99,6 @@ def test_overflow_footer() -> None:
 
 def test_plain_style_strips_html() -> None:
     items = [_item("hello")]
-    msgs = render_digest(
-        items, intro="<b>AI</b>", render=RenderConfig(style="plain")
-    )
+    msgs = render_digest(items, intro="<b>AI</b>", render=RenderConfig(style="plain"))
     assert "<b>" not in msgs[0]
     assert "AI" in msgs[0]

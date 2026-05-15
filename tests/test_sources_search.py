@@ -1,4 +1,5 @@
 """Web search source tests."""
+
 from __future__ import annotations
 
 import json
@@ -315,9 +316,7 @@ async def test_searxng_passes_categories_and_time_range(fetch_context):
     respx.get(host="searxng.test").mock(
         return_value=httpx.Response(
             200,
-            json={
-                "results": [{"url": "https://ex.com/1", "title": "T1", "content": "C1"}]
-            },
+            json={"results": [{"url": "https://ex.com/1", "title": "T1", "content": "C1"}]},
         )
     )
     src = SearchSource(
@@ -338,9 +337,7 @@ async def test_searxng_passes_categories_and_time_range(fetch_context):
 @respx.mock
 async def test_searxng_403_raises_helpful_error(fetch_context):
     """SearXNG returns 403 if json format isn't enabled in settings.yml."""
-    respx.get(host="searxng.test").mock(
-        return_value=httpx.Response(403, text="format not enabled")
-    )
+    respx.get(host="searxng.test").mock(return_value=httpx.Response(403, text="format not enabled"))
     src = SearchSource(query="test", engine="searxng", base_url="http://searxng.test")
     with pytest.raises(RuntimeError, match="403 Forbidden"):
         await src.fetch(fetch_context)

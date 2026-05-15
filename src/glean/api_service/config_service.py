@@ -1,4 +1,5 @@
 """Config-related service functions used by CLI + API."""
+
 from __future__ import annotations
 
 import io

@@ -1,4 +1,5 @@
 """REST API routes for config CRUD."""
+
 from __future__ import annotations
 
 import os

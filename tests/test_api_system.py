@@ -1,4 +1,5 @@
 """Tests for system info API."""
+
 from __future__ import annotations
 
 import platform

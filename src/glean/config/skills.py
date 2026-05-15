@@ -1,4 +1,5 @@
 """Reusable structured-extraction skills configured in YAML."""
+
 from __future__ import annotations
 
 import re
@@ -69,9 +70,7 @@ class SkillOutputField(BaseModel):
     @classmethod
     def _valid_type(cls, v: str) -> str:
         if v not in _VALID_FIELD_TYPES:
-            raise ValueError(
-                f"unsupported field type {v!r}. Allowed: {sorted(_VALID_FIELD_TYPES)}"
-            )
+            raise ValueError(f"unsupported field type {v!r}. Allowed: {sorted(_VALID_FIELD_TYPES)}")
         return v
 
 

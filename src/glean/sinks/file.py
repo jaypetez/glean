@@ -1,4 +1,5 @@
 """Append-only file sink for archival/debugging."""
+
 from __future__ import annotations
 
 import asyncio

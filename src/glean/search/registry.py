@@ -1,4 +1,5 @@
 """Registry for search backend plugins."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -25,9 +26,7 @@ def build_backend(spec: dict[str, Any]) -> SearchBackend:
         raise ValueError(f"search spec missing 'engine': {spec!r}")
     factory = _REGISTRY.get(engine)
     if factory is None:
-        raise ValueError(
-            f"unknown search engine: {engine!r}. registered: {sorted(_REGISTRY)}"
-        )
+        raise ValueError(f"unknown search engine: {engine!r}. registered: {sorted(_REGISTRY)}")
     kwargs = {k: v for k, v in spec.items() if k != "engine"}
     return factory(**kwargs)
 

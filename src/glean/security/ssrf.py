@@ -49,9 +49,7 @@ def validate_url(url: str, *, allow_private: bool = False) -> str:
     """
     parsed = urlparse(url)
     if parsed.scheme not in _ALLOWED_SCHEMES:
-        raise SSRFValidationError(
-            f"URL scheme {parsed.scheme!r} not allowed (only http/https)"
-        )
+        raise SSRFValidationError(f"URL scheme {parsed.scheme!r} not allowed (only http/https)")
     host = _normalize_host(parsed.hostname)
     if not host:
         raise SSRFValidationError(f"URL has no host: {url}")

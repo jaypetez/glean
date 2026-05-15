@@ -19,9 +19,7 @@ def test_initial_api_key_logged_once_on_first_creation(
 
     assert material.plaintext is not None
     messages = [
-        record.getMessage()
-        for record in caplog.records
-        if record.name == "glean.initial_api_key"
+        record.getMessage() for record in caplog.records if record.name == "glean.initial_api_key"
     ]
     assert messages == [f"GLEAN_INITIAL_API_KEY={material.plaintext}"]
     assert "initial_key_logged=1" in (tmp_path / "api_key").read_text(encoding="utf-8")
@@ -31,9 +29,7 @@ def test_initial_api_key_logged_once_on_first_creation(
 
     assert restarted.plaintext is None
     assert [
-        record.getMessage()
-        for record in caplog.records
-        if record.name == "glean.initial_api_key"
+        record.getMessage() for record in caplog.records if record.name == "glean.initial_api_key"
     ] == []
 
 
