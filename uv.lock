@@ -778,7 +778,7 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.7" },
     { name = "slowapi", specifier = ">=0.1.9" },
     { name = "sse-starlette", specifier = ">=3.4.4" },
-    { name = "structlog", specifier = ">=24.4" },
+    { name = "structlog", specifier = ">=25.5.0" },
     { name = "trafilatura", specifier = ">=2.0.0" },
     { name = "typer", specifier = ">=0.15" },
     { name = "types-pyyaml", marker = "extra == 'dev'" },
