@@ -13,6 +13,7 @@
   } from "../api";
   import type { Defaults, DensityChoice, SystemInfo, ThemeChoice } from "../types";
   import Dialog from "../components/Dialog.svelte";
+  import Logo from "../components/Logo.svelte";
   import { loadAppearance, saveDensity, saveTheme } from "../theme";
 
   type Tab = "defaults" | "api" | "appearance" | "about";
@@ -83,7 +84,9 @@
 
   function formFromDefaults(value: Defaults): SettingsForm {
     const provider = value.llm.provider;
-    const style = isRenderStyle(value.render.style ?? "html") ? value.render.style ?? "html" : "html";
+    const style = isRenderStyle(value.render.style ?? "html")
+      ? (value.render.style ?? "html")
+      : "html";
     return {
       telegram: {
         bot_token: asText(value.telegram?.bot_token),
@@ -273,10 +276,14 @@
   <header class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
     <div>
       <h1 class="text-2xl font-semibold text-primary">Settings</h1>
-      <p class="text-sm text-tertiary">Manage defaults, authentication, appearance, and runtime info.</p>
+      <p class="text-sm text-tertiary">
+        Manage defaults, authentication, appearance, and runtime info.
+      </p>
     </div>
     {#if toast}
-      <div class="rounded-md border border-status-ok/40 bg-status-ok/10 px-3 py-2 text-sm text-status-ok">
+      <div
+        class="rounded-md border border-status-ok/40 bg-status-ok/10 px-3 py-2 text-sm text-status-ok"
+      >
         {toast}
       </div>
     {/if}
@@ -306,17 +313,28 @@
   {#if loading}
     <p class="text-tertiary">Loading settings</p>
   {:else if error}
-    <div class="rounded-lg border border-status-error/50 bg-status-error/10 p-4 text-sm text-status-error">
+    <div
+      class="rounded-lg border border-status-error/50 bg-status-error/10 p-4 text-sm text-status-error"
+    >
       {error}
     </div>
   {:else if activeTab === "defaults"}
-    <div id={panelId("defaults")} role="tabpanel" aria-labelledby={tabId("defaults")} class="space-y-4">
+    <div
+      id={panelId("defaults")}
+      role="tabpanel"
+      aria-labelledby={tabId("defaults")}
+      class="space-y-4"
+    >
       <div class="density-section rounded-lg border border-border bg-surface p-5">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-tertiary">Telegram defaults</h2>
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-tertiary">
+          Telegram defaults
+        </h2>
         <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
           <label class="block">
             <span class="mb-1 block text-xs text-tertiary">Bot token</span>
-            <span class="flex rounded-md border border-border bg-elevated focus-within:ring-2 focus-within:ring-cyan">
+            <span
+              class="flex rounded-md border border-border bg-elevated focus-within:ring-2 focus-within:ring-cyan"
+            >
               <input
                 type={showTelegramToken ? "text" : "password"}
                 bind:value={form.telegram.bot_token}
@@ -326,10 +344,15 @@
               <button
                 type="button"
                 class="px-3 text-tertiary hover:text-primary"
-                aria-label={showTelegramToken ? "Hide Telegram bot token" : "Show Telegram bot token"}
+                aria-label={showTelegramToken
+                  ? "Hide Telegram bot token"
+                  : "Show Telegram bot token"}
                 onclick={() => (showTelegramToken = !showTelegramToken)}
               >
-                {#if showTelegramToken}<EyeSlash size={16} aria-hidden="true" />{:else}<Eye size={16} aria-hidden="true" />{/if}
+                {#if showTelegramToken}<EyeSlash size={16} aria-hidden="true" />{:else}<Eye
+                    size={16}
+                    aria-hidden="true"
+                  />{/if}
               </button>
             </span>
           </label>
@@ -401,7 +424,9 @@
           {/if}
           <label class="block">
             <span class="mb-1 block text-xs text-tertiary">API key</span>
-            <span class="flex rounded-md border border-border bg-elevated focus-within:ring-2 focus-within:ring-cyan">
+            <span
+              class="flex rounded-md border border-border bg-elevated focus-within:ring-2 focus-within:ring-cyan"
+            >
               <input
                 type={showLlmKey ? "text" : "password"}
                 bind:value={form.llm.api_key}
@@ -414,7 +439,10 @@
                 aria-label={showLlmKey ? "Hide LLM API key" : "Show LLM API key"}
                 onclick={() => (showLlmKey = !showLlmKey)}
               >
-                {#if showLlmKey}<EyeSlash size={16} aria-hidden="true" />{:else}<Eye size={16} aria-hidden="true" />{/if}
+                {#if showLlmKey}<EyeSlash size={16} aria-hidden="true" />{:else}<Eye
+                    size={16}
+                    aria-hidden="true"
+                  />{/if}
               </button>
             </span>
           </label>
@@ -423,7 +451,9 @@
 
       <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div class="density-section rounded-lg border border-border bg-surface p-5">
-          <h2 class="text-sm font-semibold uppercase tracking-wide text-tertiary">Render defaults</h2>
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-tertiary">
+            Render defaults
+          </h2>
           <div class="mt-4 space-y-4">
             <label class="block">
               <span class="mb-1 block text-xs text-tertiary">Style</span>
@@ -436,7 +466,9 @@
                 {/each}
               </select>
             </label>
-            <label class="flex items-center justify-between gap-4 rounded-md border border-border bg-elevated px-3 py-2">
+            <label
+              class="flex items-center justify-between gap-4 rounded-md border border-border bg-elevated px-3 py-2"
+            >
               <span class="text-sm text-secondary">Enable link previews</span>
               <input type="checkbox" bind:checked={form.render.link_preview} class="accent-cyan" />
             </label>
@@ -457,7 +489,9 @@
         </div>
 
         <div class="density-section rounded-lg border border-border bg-surface p-5">
-          <h2 class="text-sm font-semibold uppercase tracking-wide text-tertiary">Failure defaults</h2>
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-tertiary">
+            Failure defaults
+          </h2>
           <label class="mt-4 block">
             <span class="mb-1 block text-xs text-tertiary">Alert after consecutive failures</span>
             <input
@@ -474,7 +508,9 @@
       </div>
 
       {#if saveError}
-        <div class="rounded-lg border border-status-error/50 bg-status-error/10 p-4 text-sm text-status-error">
+        <div
+          class="rounded-lg border border-status-error/50 bg-status-error/10 p-4 text-sm text-status-error"
+        >
           {saveError}
         </div>
       {/if}
@@ -492,7 +528,9 @@
   {:else if activeTab === "api"}
     <div id={panelId("api")} role="tabpanel" aria-labelledby={tabId("api")} class="space-y-4">
       <div class="density-section rounded-lg border border-border bg-surface p-5">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-tertiary">API key management</h2>
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-tertiary">
+          API key management
+        </h2>
         <div class="mt-4 rounded-md border border-border bg-elevated p-4">
           <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
@@ -514,7 +552,10 @@
                 disabled={!currentApiKey}
                 class="density-control inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm text-secondary hover:bg-surface disabled:opacity-50"
               >
-                {#if showCurrentApiKey}<EyeSlash size={16} aria-hidden="true" /> Hide{:else}<Eye size={16} aria-hidden="true" /> Show{/if}
+                {#if showCurrentApiKey}<EyeSlash size={16} aria-hidden="true" /> Hide{:else}<Eye
+                    size={16}
+                    aria-hidden="true"
+                  /> Show{/if}
               </button>
               <button
                 type="button"
@@ -540,8 +581,12 @@
       {#if rotatedKey}
         <div class="rounded-lg border border-status-warn/40 bg-status-warn/10 p-4">
           <h3 class="font-semibold text-status-warn">New API key</h3>
-          <p class="mt-1 text-sm text-secondary">Copy this key now. It will be hidden after you continue.</p>
-          <p class="mt-3 break-all rounded-md border border-border bg-elevated p-3 font-mono text-sm text-primary">
+          <p class="mt-1 text-sm text-secondary">
+            Copy this key now. It will be hidden after you continue.
+          </p>
+          <p
+            class="mt-3 break-all rounded-md border border-border bg-elevated p-3 font-mono text-sm text-primary"
+          >
             {rotatedKey}
           </p>
           <button
@@ -596,12 +641,17 @@
     </div>
   {:else}
     <div id={panelId("about")} role="tabpanel" aria-labelledby={tabId("about")} class="space-y-4">
+      <div class="flex items-center gap-3 border-b border-border pb-4">
+        <Logo variant="horizontal" class="h-12 text-cyan" />
+      </div>
       <div class="density-section rounded-lg border border-border bg-surface p-5">
         <h2 class="text-sm font-semibold uppercase tracking-wide text-tertiary">About glean</h2>
         <dl class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <dt class="text-xs text-tertiary">Version</dt>
-            <dd class="mt-1 font-mono text-sm text-primary">{systemInfo?.version ?? initialize?.version}</dd>
+            <dd class="mt-1 font-mono text-sm text-primary">
+              {systemInfo?.version ?? initialize?.version}
+            </dd>
           </div>
           <div>
             <dt class="text-xs text-tertiary">Hostname</dt>
@@ -617,7 +667,9 @@
           </div>
           <div>
             <dt class="text-xs text-tertiary">Database path</dt>
-            <dd class="mt-1 break-all font-mono text-sm text-primary">{systemInfo?.database_path}</dd>
+            <dd class="mt-1 break-all font-mono text-sm text-primary">
+              {systemInfo?.database_path}
+            </dd>
           </div>
           <div>
             <dt class="text-xs text-tertiary">Config path</dt>
@@ -637,15 +689,21 @@
           </div>
           <div>
             <dt class="text-xs text-tertiary">Started at</dt>
-            <dd class="mt-1 font-mono text-sm text-primary">{formatDateTime(systemInfo?.started_at)}</dd>
+            <dd class="mt-1 font-mono text-sm text-primary">
+              {formatDateTime(systemInfo?.started_at)}
+            </dd>
           </div>
           <div>
             <dt class="text-xs text-tertiary">Uptime</dt>
-            <dd class="mt-1 font-mono text-sm text-primary">{formatUptime(systemInfo?.uptime_seconds)}</dd>
+            <dd class="mt-1 font-mono text-sm text-primary">
+              {formatUptime(systemInfo?.uptime_seconds)}
+            </dd>
           </div>
         </dl>
         <div class="mt-5 flex flex-wrap gap-3 text-sm">
-          <a class="text-cyan hover:underline" href="https://github.com/jaypetez/glean">GitHub repo</a>
+          <a class="text-cyan hover:underline" href="https://github.com/jaypetez/glean"
+            >GitHub repo</a
+          >
           <a class="text-cyan hover:underline" href="https://github.com/jaypetez/glean/issues/64">
             Web UI issue #64
           </a>

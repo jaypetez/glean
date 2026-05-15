@@ -4,6 +4,7 @@
   import { listFeedConfigs, listFeedStatuses, runFeedNow } from "../api";
   import { subscribeEvents, type EventSubscription, type RunEvent } from "../sse";
   import type { FeedListItem, FeedStatus } from "../types";
+  import Logo from "../components/Logo.svelte";
 
   type StatusKind = "running" | "ok" | "warning" | "error";
 
@@ -216,11 +217,17 @@
       {error}
     </div>
   {:else if feeds.length === 0}
-    <div class="rounded-lg border border-border bg-surface p-8 text-center">
-      <p class="text-tertiary">No feeds configured yet.</p>
+    <div class="flex flex-col items-center justify-center gap-6 py-16 text-center">
+      <Logo variant="vertical" class="h-32 w-32 text-cyan" />
+      <div class="max-w-md space-y-2">
+        <h2 class="text-lg font-semibold text-primary">No feeds yet</h2>
+        <p class="text-sm text-tertiary">
+          Configure your first feed to start gleaning signal from RSS, scraping, or web search.
+        </p>
+      </div>
       <Link
         to="/feeds/new"
-        class="mt-4 inline-block rounded-md bg-cyan px-3 py-1.5 text-sm font-medium text-base hover:bg-cyan-light"
+        class="rounded-md bg-cyan px-3 py-1.5 text-sm font-medium text-base hover:bg-cyan-light"
       >
         Create your first feed
       </Link>
@@ -283,8 +290,7 @@
 
   <div class="mt-6 rounded-lg border border-border bg-surface px-4 py-3 text-sm" aria-live="polite">
     <div class="flex items-center gap-2 text-tertiary">
-      <span
-        class={`h-2.5 w-2.5 rounded-full ${sseConnected ? "bg-cyan" : "bg-status-warn"}`}
+      <span class={`h-2.5 w-2.5 rounded-full ${sseConnected ? "bg-cyan" : "bg-status-warn"}`}
       ></span>
       <span>{sseConnected ? "Connected" : "Reconnecting..."}</span>
     </div>

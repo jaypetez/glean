@@ -9,6 +9,7 @@
     type InitializeResponse,
   } from "./lib/api";
   import AppShell from "./lib/components/AppShell.svelte";
+  import Logo from "./lib/components/Logo.svelte";
   import Dashboard from "./lib/routes/Dashboard.svelte";
   import FeedEditor from "./lib/routes/FeedEditor.svelte";
   import Settings from "./lib/routes/Settings.svelte";
@@ -76,32 +77,49 @@
   });
 </script>
 
-<Router {url}>
-  <AppShell>
-    {#if error}
-      <div class="p-8 text-status-error">
-        <h1 class="text-xl font-semibold">Failed to connect to glean</h1>
-        <pre class="mt-4 font-mono text-sm">{error}</pre>
-      </div>
-    {:else if !info}
-      <div class="p-8 text-tertiary">Loading</div>
-    {:else if !authReady}
-      <div class="mx-auto max-w-2xl px-6 py-12 text-tertiary">
-        <h1 class="text-xl font-semibold text-primary">Authentication required</h1>
-        <p class="mt-2 text-sm">Paste your glean API key to continue.</p>
-      </div>
-    {:else}
-      <Route path="/setup"><Setup /></Route>
-      <Route path="/feeds/new"><FeedEditor mode="create" /></Route>
-      <Route path="/feeds/:name" let:params><FeedEditor mode="edit" name={params.name} /></Route>
-      <Route path="/skills"><SkillsList /></Route>
-      <Route path="/skills/new"><SkillEditor mode="create" /></Route>
-      <Route path="/skills/:name" let:params><SkillEditor mode="edit" name={params.name} /></Route>
-      <Route path="/settings"><Settings /></Route>
-      <Route path="/"><Dashboard /></Route>
-    {/if}
-  </AppShell>
-</Router>
+{#if !info && !error}
+  <div class="flex min-h-screen items-center justify-center bg-base">
+    <div class="flex flex-col items-center gap-4 text-cyan motion-safe:animate-pulse">
+      <Logo variant="mark" class="h-16 w-16" />
+      <span class="text-sm text-tertiary">Loading…</span>
+    </div>
+  </div>
+{:else if error}
+  <div class="flex min-h-screen items-center justify-center bg-base p-6">
+    <div class="flex max-w-md flex-col items-center gap-4 text-center">
+      <Logo variant="mark" class="h-16 w-16 text-status-error" />
+      <h1 class="text-xl font-semibold text-primary">Can't reach glean</h1>
+      <p class="text-sm text-secondary">{error}</p>
+      <p class="text-xs text-tertiary">
+        Verify the daemon is running and your API key is valid. To recover the initial key, run
+        <code class="rounded bg-elevated px-2 py-0.5 font-mono text-xs">
+          docker logs glean | grep GLEAN_INITIAL_API_KEY
+        </code>
+      </p>
+    </div>
+  </div>
+{:else}
+  <Router {url}>
+    <AppShell>
+      {#if !authReady}
+        <div class="mx-auto max-w-2xl px-6 py-12 text-tertiary">
+          <h1 class="text-xl font-semibold text-primary">Authentication required</h1>
+          <p class="mt-2 text-sm">Paste your glean API key to continue.</p>
+        </div>
+      {:else}
+        <Route path="/setup"><Setup /></Route>
+        <Route path="/feeds/new"><FeedEditor mode="create" /></Route>
+        <Route path="/feeds/:name" let:params><FeedEditor mode="edit" name={params.name} /></Route>
+        <Route path="/skills"><SkillsList /></Route>
+        <Route path="/skills/new"><SkillEditor mode="create" /></Route>
+        <Route path="/skills/:name" let:params><SkillEditor mode="edit" name={params.name} /></Route
+        >
+        <Route path="/settings"><Settings /></Route>
+        <Route path="/"><Dashboard /></Route>
+      {/if}
+    </AppShell>
+  </Router>
+{/if}
 
 {#if showApiKeyModal}
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-base/80 p-4">
@@ -118,9 +136,16 @@
         <code class="rounded bg-elevated px-1 py-0.5 font-mono text-xs text-secondary">
           docker logs glean | grep GLEAN_INITIAL_API_KEY
         </code>
-        or set <code class="rounded bg-elevated px-1 py-0.5 font-mono text-xs text-secondary">GLEAN_API_KEY</code>.
-        See the
-        <a class="text-cyan hover:underline" href="https://github.com/jaypetez/glean#web-ui" target="_blank" rel="noreferrer">docs</a>.
+        or set
+        <code class="rounded bg-elevated px-1 py-0.5 font-mono text-xs text-secondary"
+          >GLEAN_API_KEY</code
+        >. See the
+        <a
+          class="text-cyan hover:underline"
+          href="https://github.com/jaypetez/glean#web-ui"
+          target="_blank"
+          rel="noreferrer">docs</a
+        >.
       </p>
       <label class="mt-5 block">
         <span class="mb-1 block text-xs text-tertiary">API key</span>
