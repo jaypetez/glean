@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
+import { DYNAMIC_MASKS } from "./_masks";
 import { resetState } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
@@ -12,7 +13,7 @@ test("dashboard visual snapshot", async ({ page }) => {
   await expect(page).toHaveScreenshot("dashboard.png", {
     fullPage: true,
     maxDiffPixelRatio: 0.05,
-    mask: [page.locator('[aria-live="polite"]')],
+    mask: DYNAMIC_MASKS(page),
   });
 });
 

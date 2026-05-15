@@ -9,6 +9,7 @@ from fastapi import FastAPI, HTTPException
 app = FastAPI(title="mock-searxng")
 
 _queries: list[dict[str, Any]] = []
+_generation = {"n": 0}
 
 _MOCK_RESULTS = [
     {
@@ -54,10 +55,14 @@ def search(q: str, format: str = "html") -> dict[str, Any]:
     if format != "json":
         # Match real SearXNG behavior: 403 if json format not enabled
         raise HTTPException(status_code=403, detail="format not enabled")
+    results = [
+        {**result, "url": f"{result['url']}?generation={_generation['n']}"}
+        for result in _MOCK_RESULTS
+    ]
     return {
         "query": q,
-        "number_of_results": len(_MOCK_RESULTS),
-        "results": _MOCK_RESULTS,
+        "number_of_results": len(results),
+        "results": results,
         "answers": [],
         "corrections": [],
         "infoboxes": [],
@@ -74,4 +79,5 @@ def get_queries() -> list[dict[str, Any]]:
 @app.post("/__reset")
 def reset() -> dict[str, str]:
     _queries.clear()
+    _generation["n"] += 1
     return {"status": "reset"}

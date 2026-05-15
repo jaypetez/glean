@@ -16,7 +16,7 @@ from glean.state.store import StateStore
 
 async def main() -> None:
     ui_dir = Path(__file__).resolve().parents[1]  # noqa: ASYNC240
-    tmp_dir = ui_dir / "e2e" / ".tmp"
+    tmp_dir = Path(os.environ.get("GLEAN_E2E_STATE_DIR", ui_dir / "e2e" / ".tmp"))
     if tmp_dir.exists():
         shutil.rmtree(tmp_dir, ignore_errors=True)
     tmp_dir.mkdir(parents=True, exist_ok=True)
@@ -34,7 +34,8 @@ async def main() -> None:
     os.environ.setdefault("GLEAN_CONFIG", str(active_config))
     os.environ.setdefault("GLEAN_DB", str(db_path))
     os.environ.setdefault("GLEAN_DB_ROOT", str(tmp_dir))
-    os.environ.setdefault("GLEAN_FILE_SINK_ROOTS", str(tmp_dir))
+    file_sink_root = tmp_dir.parent if os.environ.get("GLEAN_E2E_STATE_DIR") else tmp_dir
+    os.environ.setdefault("GLEAN_FILE_SINK_ROOTS", str(file_sink_root))
     os.environ.setdefault("GLEAN_TEST_CONFIG_FIXTURE", str(default_fixture))
     os.environ.setdefault("GLEAN_TEST_EMPTY_CONFIG_FIXTURE", str(empty_fixture))
     os.environ.setdefault("GLEAN_UI_DIST", str(ui_dir / "dist"))
