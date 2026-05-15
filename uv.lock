@@ -774,7 +774,7 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0" },
     { name = "python-telegram-bot", specifier = ">=22.0" },
     { name = "respx", marker = "extra == 'dev'", specifier = ">=0.23.1" },
-    { name = "ruamel-yaml", specifier = ">=0.18" },
+    { name = "ruamel-yaml", specifier = ">=0.19.1" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.7" },
     { name = "slowapi", specifier = ">=0.1.9" },
     { name = "sse-starlette", specifier = ">=2.0" },
