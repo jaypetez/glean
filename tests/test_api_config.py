@@ -1,4 +1,5 @@
 """Tests for /api/v1/config/* CRUD routes."""
+
 from __future__ import annotations
 
 import textwrap
@@ -73,9 +74,7 @@ async def test_get_defaults_returns_current(client: AsyncClient, auth_headers) -
     assert body["llm"]["provider"] == "ollama"
 
 
-async def test_put_defaults_writes_yaml(
-    client: AsyncClient, auth_headers, configured_app
-) -> None:
+async def test_put_defaults_writes_yaml(client: AsyncClient, auth_headers, configured_app) -> None:
     _, cfg_path, _ = configured_app
     new_defaults = {"llm": {"provider": "openai", "model": "gpt-4o-mini"}}
     resp = await client.put(
@@ -284,9 +283,7 @@ async def test_get_feed_404(client: AsyncClient, auth_headers) -> None:
     assert resp.status_code == 404
 
 
-async def test_create_feed_writes_yaml(
-    client: AsyncClient, auth_headers, configured_app
-) -> None:
+async def test_create_feed_writes_yaml(client: AsyncClient, auth_headers, configured_app) -> None:
     _, cfg_path, _ = configured_app
     new_feed = {
         "name": "beta",
@@ -295,17 +292,13 @@ async def test_create_feed_writes_yaml(
         "sources": [{"type": "rss", "url": "https://example.com/b.xml"}],
         "pipeline": [{"dedup": {}}],
     }
-    resp = await client.post(
-        "/api/v1/config/feeds", headers=auth_headers, json=new_feed
-    )
+    resp = await client.post("/api/v1/config/feeds", headers=auth_headers, json=new_feed)
     assert resp.status_code == 201
     cfg = load_config(cfg_path)
     assert any(f.name == "beta" for f in cfg.feeds)
 
 
-async def test_create_feed_409_on_duplicate(
-    client: AsyncClient, auth_headers
-) -> None:
+async def test_create_feed_409_on_duplicate(client: AsyncClient, auth_headers) -> None:
     dup = {
         "name": "alpha",
         "schedule": "every 1h",
@@ -326,17 +319,13 @@ async def test_update_feed(client: AsyncClient, auth_headers, configured_app) ->
         "sources": [{"type": "rss", "url": "https://example.com/a.xml"}],
         "pipeline": [{"dedup": {}}],
     }
-    resp = await client.put(
-        "/api/v1/config/feeds/alpha", headers=auth_headers, json=updated
-    )
+    resp = await client.put("/api/v1/config/feeds/alpha", headers=auth_headers, json=updated)
     assert resp.status_code == 200
     cfg = load_config(cfg_path)
     assert cfg.feed("alpha").schedule == "every 30m"
 
 
-async def test_update_feed_400_on_name_mismatch(
-    client: AsyncClient, auth_headers
-) -> None:
+async def test_update_feed_400_on_name_mismatch(client: AsyncClient, auth_headers) -> None:
     body = {
         "name": "different",
         "schedule": "every 1h",
@@ -344,9 +333,7 @@ async def test_update_feed_400_on_name_mismatch(
         "sources": [{"type": "rss", "url": "https://example.com/a.xml"}],
         "pipeline": [{"dedup": {}}],
     }
-    resp = await client.put(
-        "/api/v1/config/feeds/alpha", headers=auth_headers, json=body
-    )
+    resp = await client.put("/api/v1/config/feeds/alpha", headers=auth_headers, json=body)
     assert resp.status_code == 400
 
 
@@ -358,9 +345,7 @@ async def test_update_feed_404(client: AsyncClient, auth_headers) -> None:
         "sources": [{"type": "rss", "url": "https://example.com/g.xml"}],
         "pipeline": [{"dedup": {}}],
     }
-    resp = await client.put(
-        "/api/v1/config/feeds/ghost", headers=auth_headers, json=body
-    )
+    resp = await client.put("/api/v1/config/feeds/ghost", headers=auth_headers, json=body)
     assert resp.status_code == 404
 
 
@@ -473,26 +458,20 @@ async def test_list_skills(client: AsyncClient, auth_headers) -> None:
     assert skills[0]["name"] == "example-skill"
 
 
-async def test_create_skill(
-    client: AsyncClient, auth_headers, configured_app
-) -> None:
+async def test_create_skill(client: AsyncClient, auth_headers, configured_app) -> None:
     _, cfg_path, _ = configured_app
     new_skill = {
         "name": "deal-finder",
         "prompt": "Extract deal from {title}",
         "output_schema": {"summary": "str", "price": "str | None"},
     }
-    resp = await client.post(
-        "/api/v1/config/skills", headers=auth_headers, json=new_skill
-    )
+    resp = await client.post("/api/v1/config/skills", headers=auth_headers, json=new_skill)
     assert resp.status_code == 201
     cfg = load_config(cfg_path)
     assert any(s.name == "deal-finder" for s in cfg.skills)
 
 
-async def test_update_skill(
-    client: AsyncClient, auth_headers, configured_app
-) -> None:
+async def test_update_skill(client: AsyncClient, auth_headers, configured_app) -> None:
     _, cfg_path, _ = configured_app
     updated = {
         "name": "example-skill",
@@ -507,13 +486,9 @@ async def test_update_skill(
     assert cfg.skill("example-skill").prompt == "Updated prompt for {title}"
 
 
-async def test_delete_skill(
-    client: AsyncClient, auth_headers, configured_app
-) -> None:
+async def test_delete_skill(client: AsyncClient, auth_headers, configured_app) -> None:
     _, cfg_path, _ = configured_app
-    resp = await client.delete(
-        "/api/v1/config/skills/example-skill", headers=auth_headers
-    )
+    resp = await client.delete("/api/v1/config/skills/example-skill", headers=auth_headers)
     assert resp.status_code == 200
     cfg = load_config(cfg_path)
     assert all(s.name != "example-skill" for s in cfg.skills)
@@ -522,9 +497,7 @@ async def test_delete_skill(
 # === Validate ===
 
 
-async def test_validate_no_body_validates_disk(
-    client: AsyncClient, auth_headers
-) -> None:
+async def test_validate_no_body_validates_disk(client: AsyncClient, auth_headers) -> None:
     resp = await client.post("/api/v1/config/validate", headers=auth_headers)
     assert resp.status_code == 200
     body = resp.json()
@@ -557,9 +530,7 @@ async def test_yaml_round_trip_preserves_data(
             "api_key": "sk-test",
         }
     }
-    resp = await client.put(
-        "/api/v1/config/defaults", headers=auth_headers, json=new_defaults
-    )
+    resp = await client.put("/api/v1/config/defaults", headers=auth_headers, json=new_defaults)
     assert resp.status_code == 200
     cfg = load_config(cfg_path)
     assert cfg.defaults.llm.provider == "anthropic"

@@ -8,6 +8,7 @@ it as X-Glean-Api-Key on subsequent requests.
 Override via GLEAN_API_KEY env var. Disable auth entirely (loopback-only
 deployments behind reverse proxies) via GLEAN_DISABLE_AUTH=1.
 """
+
 from __future__ import annotations
 
 import contextlib

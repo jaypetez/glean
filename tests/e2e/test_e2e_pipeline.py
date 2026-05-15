@@ -1,4 +1,5 @@
 """End-to-end smoke test: glean fetches mock RSS, calls mock Ollama, posts to mock Telegram."""
+
 from __future__ import annotations
 
 import time

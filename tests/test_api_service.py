@@ -1,4 +1,5 @@
 """Tests for the shared api_service layer (used by both CLI and API)."""
+
 from __future__ import annotations
 
 import asyncio
@@ -127,9 +128,7 @@ async def test_list_feeds_with_status_no_runs(tmp_path: Path, write_yaml) -> Non
         assert s.bootstrapped is False
 
 
-async def test_list_feeds_with_status_after_record_success(
-    tmp_path: Path, write_yaml
-) -> None:
+async def test_list_feeds_with_status_after_record_success(tmp_path: Path, write_yaml) -> None:
     cfg = load_config(write_yaml(_basic_cfg_yaml()))
     state = StateStore(tmp_path / "s.db")
     await state.open()

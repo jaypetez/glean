@@ -1,4 +1,5 @@
 """Tests for per-source LLM model dispatch."""
+
 from __future__ import annotations
 
 import textwrap

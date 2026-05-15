@@ -1,4 +1,5 @@
 """MWMBL community-crawled search engine (free, no API key)."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar

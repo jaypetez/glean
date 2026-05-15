@@ -1,4 +1,5 @@
 """E2E test fixtures: spin up docker-compose stack."""
+
 from __future__ import annotations
 
 import subprocess
@@ -57,9 +58,7 @@ def e2e_stack() -> Generator[None, None, None]:
 
     up = _compose("up", "-d")
     if up.returncode != 0:
-        pytest.fail(
-            f"docker compose up failed:\n{up.stdout.decode()}\n{up.stderr.decode()}"
-        )
+        pytest.fail(f"docker compose up failed:\n{up.stdout.decode()}\n{up.stderr.decode()}")
 
     try:
         # Wait for mocks to be healthy

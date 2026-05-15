@@ -1,4 +1,5 @@
 """RSS source plugin tests."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -13,7 +14,7 @@ from glean.sources.rss import RSSSource, _strip_html
 pytestmark = pytest.mark.asyncio
 
 
-_ATOM_FEED = '''<?xml version="1.0" encoding="utf-8"?>
+_ATOM_FEED = """<?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title>Test Feed</title>
   <link href="https://example.com"/>
@@ -34,10 +35,10 @@ _ATOM_FEED = '''<?xml version="1.0" encoding="utf-8"?>
     <updated>2024-01-15T13:00:00Z</updated>
     <summary>Second post.</summary>
   </entry>
-</feed>'''
+</feed>"""
 
 
-_RSS_FEED = '''<?xml version="1.0" encoding="utf-8"?>
+_RSS_FEED = """<?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0">
   <channel>
     <title>RSS Test</title>
@@ -49,7 +50,7 @@ _RSS_FEED = '''<?xml version="1.0" encoding="utf-8"?>
       <pubDate>Mon, 15 Jan 2024 12:00:00 GMT</pubDate>
     </item>
   </channel>
-</rss>'''
+</rss>"""
 
 
 async def test_rss_defaults_to_ten_mib_response_cap() -> None:
@@ -163,12 +164,12 @@ async def test_rss_raises_on_http_error(fetch_context):
 
 @respx.mock
 async def test_rss_skips_entries_without_url_or_title(fetch_context):
-    feed = '''<?xml version="1.0"?>
+    feed = """<?xml version="1.0"?>
     <feed xmlns="http://www.w3.org/2005/Atom">
       <title>Fallback Feed</title>
       <entry><title>OK</title><link href="https://example.com/x"/></entry>
       <entry></entry>
-    </feed>'''
+    </feed>"""
     respx.get("https://example.com/feed").mock(return_value=httpx.Response(200, content=feed))
     src = RSSSource(url="https://example.com/feed")
 
@@ -181,10 +182,10 @@ async def test_rss_skips_entries_without_url_or_title(fetch_context):
 
 @respx.mock
 async def test_rss_uses_configured_name_when_feed_has_no_title(fetch_context):
-    feed = '''<?xml version="1.0"?>
+    feed = """<?xml version="1.0"?>
     <feed xmlns="http://www.w3.org/2005/Atom">
       <entry><title>OK</title><link href="https://example.com/x"/></entry>
-    </feed>'''
+    </feed>"""
     respx.get("https://example.com/feed").mock(return_value=httpx.Response(200, content=feed))
     src = RSSSource(url="https://example.com/feed", name="Configured")
 

@@ -82,9 +82,7 @@ async def follow_with_validation(
             break
         current_url = validate_url(urljoin(str(resp.url), location), allow_private=allow_private)
 
-    raise httpx.TooManyRedirects(
-        f"Exceeded maximum redirects ({max_hops})", request=resp.request
-    )
+    raise httpx.TooManyRedirects(f"Exceeded maximum redirects ({max_hops})", request=resp.request)
 
 
 def _parse_content_length(value: str | None) -> int | None:

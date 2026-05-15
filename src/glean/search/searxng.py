@@ -1,4 +1,5 @@
 """SearXNG self-hosted metasearch backend."""
+
 from __future__ import annotations
 
 import os

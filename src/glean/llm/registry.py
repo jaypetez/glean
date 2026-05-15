@@ -25,9 +25,7 @@ def build_provider(spec: dict[str, Any]) -> LLMProvider:
         raise ValueError(f"llm spec missing 'provider': {spec!r}")
     factory = _REGISTRY.get(name)
     if factory is None:
-        raise ValueError(
-            f"unknown llm provider: {name!r}. registered: {sorted(_REGISTRY)}"
-        )
+        raise ValueError(f"unknown llm provider: {name!r}. registered: {sorted(_REGISTRY)}")
     kwargs = {k: v for k, v in spec.items() if k != "provider"}
     return factory(**kwargs)
 

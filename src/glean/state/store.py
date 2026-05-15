@@ -112,14 +112,9 @@ class StateStore:
             seen = {row[0] async for row in cur}
         return [i for h, i in hashes.items() if h not in seen]
 
-    async def mark_seen(
-        self, feed: str, items: Iterable[Item], *, sent: bool
-    ) -> None:
+    async def mark_seen(self, feed: str, items: Iterable[Item], *, sent: bool) -> None:
         now = int(time.time())
-        rows = [
-            (feed, item_hash(i), i.canonical_url, now, 1 if sent else 0)
-            for i in items
-        ]
+        rows = [(feed, item_hash(i), i.canonical_url, now, 1 if sent else 0) for i in items]
         if not rows:
             return
         await self.db.executemany(
@@ -164,9 +159,7 @@ class StateStore:
         await self.db.commit()
         return was_alerting
 
-    async def record_failure(
-        self, feed: str, error: str, alert_after: int
-    ) -> tuple[int, bool]:
+    async def record_failure(self, feed: str, error: str, alert_after: int) -> tuple[int, bool]:
         """Return (consecutive_failures, should_alert_now)."""
         now = int(time.time())
         await self.db.execute(
@@ -188,9 +181,7 @@ class StateStore:
             return 1, False
         count, active = int(row[0]), bool(row[1])
         if count >= alert_after and not active:
-            await self.db.execute(
-                "UPDATE feed_runs SET alert_active = 1 WHERE feed = ?", (feed,)
-            )
+            await self.db.execute("UPDATE feed_runs SET alert_active = 1 WHERE feed = ?", (feed,))
             await self.db.commit()
             return count, True
         return count, False
@@ -216,8 +207,6 @@ class StateStore:
 
     async def prune_seen(self, older_than_days: int = 60) -> int:
         cutoff = int(time.time()) - older_than_days * 86400
-        cur = await self.db.execute(
-            "DELETE FROM seen_items WHERE seen_at < ?", (cutoff,)
-        )
+        cur = await self.db.execute("DELETE FROM seen_items WHERE seen_at < ?", (cutoff,))
         await self.db.commit()
         return cur.rowcount or 0

@@ -1,4 +1,5 @@
 """Playwright e2e server launcher."""
+
 from __future__ import annotations
 
 import asyncio
@@ -14,7 +15,7 @@ from glean.state.store import StateStore
 
 
 async def main() -> None:
-    ui_dir = Path(__file__).resolve().parents[1]
+    ui_dir = Path(__file__).resolve().parents[1]  # noqa: ASYNC240
     tmp_dir = ui_dir / "e2e" / ".tmp"
     if tmp_dir.exists():
         shutil.rmtree(tmp_dir, ignore_errors=True)

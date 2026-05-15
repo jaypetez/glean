@@ -42,6 +42,20 @@ docker exec -it glean glean test-feed <feed-name>
 `pyproject.toml` is the single source of truth for ruff, mypy, and pytest config.
 `mypy` is **strict** (`disallow_untyped_defs`, `warn_return_any`, `warn_unused_ignores`); CI fails on any new error.
 
+## Standardized dev loop
+
+```bash
+make dev      # one-time setup (Python + UI deps)
+make check    # ruff + mypy + pytest — run before every commit
+make test     # unit tests only
+make e2e      # docker compose e2e
+make ui-test  # playwright UI e2e
+```
+
+Pre-commit hooks: `uv run pre-commit install` once, then ruff + mypy + a few hygiene checks run on `git commit`.
+
+On Windows, install `make` via Chocolatey (`choco install make`), use WSL, or run the underlying commands directly.
+
 ## Architecture
 
 The daemon is **one container, many feeds**. A feed is `sources → LLM pipeline → Telegram chat → schedule`, all declared in YAML. The same process runs N independent feeds with N independent schedules.

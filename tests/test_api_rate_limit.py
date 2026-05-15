@@ -17,10 +17,7 @@ async def test_initialize_is_rate_limited_after_ten_requests(tmp_path: Path) -> 
     try:
         app = make_app(state, tmp_path / "state.db")
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-            statuses = [
-                (await client.get("/api/v1/initialize")).status_code
-                for _ in range(11)
-            ]
+            statuses = [(await client.get("/api/v1/initialize")).status_code for _ in range(11)]
     finally:
         await state.close()
 

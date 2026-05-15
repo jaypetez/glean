@@ -4,6 +4,7 @@ The health endpoint is now served by FastAPI from glean.api.app.
 This module re-exports the original helpers for any test/code that still
 imports them, but new code should use glean.api.app.make_app directly.
 """
+
 from __future__ import annotations
 
 import warnings

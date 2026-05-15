@@ -1,4 +1,5 @@
 """Ollama LLM provider tests."""
+
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -167,9 +168,7 @@ async def test_ollama_ignores_api_key_param() -> None:
 async def test_extract_returns_parsed_json() -> None:
     provider = OllamaProvider(model="qwen2.5:7b")
     provider._client = AsyncMock()
-    provider._client.chat.return_value = {
-        "message": {"content": '{"summary": "S", "score": 0.7}'}
-    }
+    provider._client.chat.return_value = {"message": {"content": '{"summary": "S", "score": 0.7}'}}
 
     result = await provider.extract(
         _item(),

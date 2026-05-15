@@ -22,9 +22,7 @@ def build_sink(spec: dict[str, Any]) -> Sink:
         raise ValueError(f"sink spec missing 'type': {spec!r}")
     factory = _REGISTRY.get(type_name)
     if factory is None:
-        raise ValueError(
-            f"unknown sink type: {type_name!r}. registered: {sorted(_REGISTRY)}"
-        )
+        raise ValueError(f"unknown sink type: {type_name!r}. registered: {sorted(_REGISTRY)}")
     kwargs = {k: v for k, v in spec.items() if k != "type"}
     return factory(**kwargs)
 

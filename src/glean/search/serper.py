@@ -1,4 +1,5 @@
 """Serper.dev (Google SERP via managed scraping) backend."""
+
 from __future__ import annotations
 
 import os

@@ -1,4 +1,5 @@
 """SSE endpoint for live feed run events."""
+
 from __future__ import annotations
 
 import asyncio
@@ -120,9 +121,7 @@ async def events_stream(request: Request) -> EventSourceResponse:
                 if await request.is_disconnected():
                     break
                 try:
-                    event: RunEvent = await asyncio.wait_for(
-                        queue.get(), timeout=_KEEPALIVE_SECS
-                    )
+                    event: RunEvent = await asyncio.wait_for(queue.get(), timeout=_KEEPALIVE_SECS)
                     yield {
                         "event": event.type,
                         "data": json.dumps(event.to_json()),
