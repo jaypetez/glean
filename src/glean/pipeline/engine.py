@@ -5,12 +5,14 @@ import contextlib
 import dataclasses
 import html
 import os
+import secrets
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import httpx
+from structlog.contextvars import bind_contextvars, reset_contextvars
 
 from glean.config.llm import LLMConfig
 from glean.config.schema import Config, FeedConfig, RenderConfig, StageSpec
@@ -108,6 +110,7 @@ class Runner:
         self._owns_http = http is None
         self._close_telegram = close_telegram
         self._event_bus = event_bus
+        self._logger = get_logger(__name__)
         self._llm_cache: dict[str, LLMProvider] = {}
         self._sinks_cache: dict[str, list[Sink]] = {}
 
@@ -281,114 +284,131 @@ class Runner:
         return result
 
     async def run_feed(self, name: str, *, dry_run: bool = False) -> RunResult:
+        trace_id = secrets.token_hex(4)
+        context_tokens = bind_contextvars(feed=name, trace_id=trace_id)
+        log = self._logger.bind(feed=name, trace_id=trace_id)
         started = time.monotonic()
         feed = self.config.feed(name)
         result = RunResult(feed=name)
 
+        async def finalize() -> RunResult:
+            finalized = await self._finalize_run_result(result, started, dry_run=dry_run)
+            if finalized.error is None:
+                log.info(
+                    "run_feed.complete",
+                    duration_ms=finalized.duration_ms,
+                    sent=finalized.sent,
+                )
+            return finalized
+
         try:
-            await self._emit(type="run_started", feed=name)
-            items = await self._fetch_all(feed)
-            result.fetched = len(items)
+            log.info("run_feed.start", dry_run=dry_run)
+            try:
+                await self._emit(type="run_started", feed=name)
+                items = await self._fetch_all(feed)
+                result.fetched = len(items)
 
-            bootstrap_mode = feed.effective_bootstrap(self.config.defaults)
-            bootstrapped = await self.state.is_bootstrapped(name)
+                bootstrap_mode = feed.effective_bootstrap(self.config.defaults)
+                bootstrapped = await self.state.is_bootstrapped(name)
 
-            if not bootstrapped and bootstrap_mode == "skip-and-mark":
-                if not dry_run:
-                    await self.state.mark_seen(name, items, sent=True)
-                    await self.state.set_bootstrapped(name)
-                    await self.state.record_success(name)
-                result.skipped_reason = "bootstrap"
-                result.after_dedup = 0
-                logger.info("bootstrap_skip", feed=name, indexed=len(items), dry_run=dry_run)
-                return await self._finalize_run_result(result, started, dry_run=dry_run)
+                if not bootstrapped and bootstrap_mode == "skip-and-mark":
+                    if not dry_run:
+                        await self.state.mark_seen(name, items, sent=True)
+                        await self.state.set_bootstrapped(name)
+                        await self.state.record_success(name)
+                    result.skipped_reason = "bootstrap"
+                    result.after_dedup = 0
+                    log.info("bootstrap_skip", indexed=len(items), dry_run=dry_run)
+                    return await finalize()
 
-            # Run pipeline stages
-            new_items = await dedup_stage(name, items, self.state)
-            result.after_dedup = len(new_items)
-            if not new_items:
-                if not dry_run:
-                    await self.state.record_success(name)
-                logger.info("no_new_items", feed=name)
-                return await self._finalize_run_result(result, started, dry_run=dry_run)
-
-            default_llm = self._get_llm(feed)
-            llm_for = self._llm_resolver(feed)
-            llm_counter = LLMCallCounter(feed.effective_max_llm_calls_per_run(self.config.defaults))
-            intro: str = ""
-
-            for stage in feed.pipeline:
-                new_items, intro = await self._run_stage(
-                    feed,
-                    stage,
-                    new_items,
-                    llm_for,
-                    default_llm,
-                    llm_counter,
-                    intro,
-                    result,
-                )
+                # Run pipeline stages
+                new_items = await dedup_stage(name, items, self.state)
+                result.after_dedup = len(new_items)
                 if not new_items:
-                    break
+                    if not dry_run:
+                        await self.state.record_success(name)
+                    log.info("no_new_items")
+                    return await finalize()
 
-            render_cfg = feed.effective_render(self.config.defaults)
-            ranked_count = len(new_items)
-            if ranked_count > render_cfg.max_items:
-                result.overflow = ranked_count - render_cfg.max_items
-                new_items = new_items[: render_cfg.max_items]
-
-            if not new_items:
-                if not dry_run:
-                    await self.state.record_success(name)
-                logger.info("nothing_to_send", feed=name)
-                return await self._finalize_run_result(result, started, dry_run=dry_run)
-
-            messages = render_digest(
-                new_items,
-                intro=intro,
-                render=render_cfg,
-                overflow_count=result.overflow,
-            )
-            result.messages = messages
-
-            if dry_run:
-                logger.info("dry_run", feed=name, would_send=len(messages), items=ranked_count)
-            else:
-                await self._dispatch_sinks(feed, new_items, messages, intro, render_cfg)
-                await self.state.mark_seen(name, new_items, sent=True)
-                await self.state.set_bootstrapped(name)
-                recovery = await self.state.record_success(name)
-                if recovery:
-                    fc = feed.effective_failure(self.config.defaults)
-                    if fc.ops_chat_id and self.telegram is not None:
-                        await self.telegram.send_text(
-                            fc.ops_chat_id, f"✅ <b>{name}</b> recovered."
-                        )
-                    elif fc.ops_chat_id:
-                        logger.warning(
-                            "recovery_alert_skipped", feed=name, reason="telegram_missing"
-                        )
-                result.sent = len(new_items)
-
-        except Exception as exc:
-            result.error = f"{type(exc).__name__}: {scrub(str(exc))[:500]}"
-            logger.error("feed_failed", feed=name, err=result.error)
-            if not dry_run:
-                fc = feed.effective_failure(self.config.defaults)
-                _, should_alert = await self.state.record_failure(
-                    name, result.error, fc.alert_after
+                default_llm = self._get_llm(feed)
+                llm_for = self._llm_resolver(feed)
+                llm_counter = LLMCallCounter(
+                    feed.effective_max_llm_calls_per_run(self.config.defaults)
                 )
-                if should_alert and fc.ops_chat_id and self.telegram is not None:
-                    try:
-                        alert_error = html.escape(result.error)
-                        await self.telegram.send_text(
-                            fc.ops_chat_id,
-                            f"🚨 <b>{html.escape(name)}</b> failing: {alert_error}",
-                        )
-                    except Exception:  # noqa: BLE001
-                        logger.exception("ops_alert_send_failed", feed=name)
+                intro: str = ""
 
-        return await self._finalize_run_result(result, started, dry_run=dry_run)
+                for stage in feed.pipeline:
+                    new_items, intro = await self._run_stage(
+                        feed,
+                        stage,
+                        new_items,
+                        llm_for,
+                        default_llm,
+                        llm_counter,
+                        intro,
+                        result,
+                    )
+                    if not new_items:
+                        break
+
+                render_cfg = feed.effective_render(self.config.defaults)
+                ranked_count = len(new_items)
+                if ranked_count > render_cfg.max_items:
+                    result.overflow = ranked_count - render_cfg.max_items
+                    new_items = new_items[: render_cfg.max_items]
+
+                if not new_items:
+                    if not dry_run:
+                        await self.state.record_success(name)
+                    log.info("nothing_to_send")
+                    return await finalize()
+
+                messages = render_digest(
+                    new_items,
+                    intro=intro,
+                    render=render_cfg,
+                    overflow_count=result.overflow,
+                )
+                result.messages = messages
+
+                if dry_run:
+                    log.info("dry_run", would_send=len(messages), items=ranked_count)
+                else:
+                    await self._dispatch_sinks(feed, new_items, messages, intro, render_cfg)
+                    await self.state.mark_seen(name, new_items, sent=True)
+                    await self.state.set_bootstrapped(name)
+                    recovery = await self.state.record_success(name)
+                    if recovery:
+                        fc = feed.effective_failure(self.config.defaults)
+                        if fc.ops_chat_id and self.telegram is not None:
+                            await self.telegram.send_text(
+                                fc.ops_chat_id, f"✅ <b>{name}</b> recovered."
+                            )
+                        elif fc.ops_chat_id:
+                            log.warning("recovery_alert_skipped", reason="telegram_missing")
+                    result.sent = len(new_items)
+
+            except Exception as exc:
+                result.error = f"{type(exc).__name__}: {scrub(str(exc))[:500]}"
+                log.exception("run_feed.failed", error=str(exc), err=result.error)
+                if not dry_run:
+                    fc = feed.effective_failure(self.config.defaults)
+                    _, should_alert = await self.state.record_failure(
+                        name, result.error, fc.alert_after
+                    )
+                    if should_alert and fc.ops_chat_id and self.telegram is not None:
+                        try:
+                            alert_error = html.escape(result.error)
+                            await self.telegram.send_text(
+                                fc.ops_chat_id,
+                                f"🚨 <b>{html.escape(name)}</b> failing: {alert_error}",
+                            )
+                        except Exception:  # noqa: BLE001
+                            log.exception("ops_alert_send_failed")
+
+            return await finalize()
+        finally:
+            reset_contextvars(**context_tokens)
 
     async def _fetch_all(self, feed: FeedConfig) -> list[Item]:
         ctx = FetchContext(feed_name=feed.name, http=self.http, state=self.state)

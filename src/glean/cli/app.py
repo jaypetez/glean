@@ -260,6 +260,7 @@ async def _run_async(cfg, db_path: Path, health_port: int) -> None:  # type: ign
 
     try:
         async with AsyncScheduler() as scheduler:
+            api_app.state.glean_scheduler = scheduler
             await schedule_feeds(scheduler, runner)
             await scheduler.start_in_background()
             logger.info("daemon_started", feeds=len(cfg.feeds))

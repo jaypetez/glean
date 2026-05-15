@@ -9,6 +9,7 @@ from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
+from apscheduler import RunState
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, Response, status
 from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -175,16 +176,35 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
     health_router = APIRouter(tags=["health"])
 
     @health_router.get("/healthz")
-    async def healthz() -> dict[str, str]:
+    async def healthz(request: Request) -> dict[str, int | str]:
         try:
-            async with state.db.execute("SELECT 1") as cur:
-                await cur.fetchone()
-            return {"status": "ok"}
-        except Exception as exc:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="db error",
-            ) from exc
+            await state.ping()
+            db_ok = True
+        except Exception:
+            db_ok = False
+
+        scheduler = getattr(request.app.state, "glean_scheduler", None)
+        sched_ok: bool | None
+        if scheduler is None:
+            # API-only/test apps do not always host the scheduler; that is healthy.
+            sched_ok = None
+        else:
+            running = getattr(scheduler, "running", None)
+            if running is None:
+                scheduler_state = getattr(scheduler, "state", None)
+                sched_ok = None if scheduler_state is None else scheduler_state == RunState.started
+            else:
+                sched_ok = bool(running)
+
+        started_at = float(request.app.state.glean_started_at)
+        uptime_s = int(time.time() - started_at)
+        return {
+            "status": "ok" if db_ok and (sched_ok is True or sched_ok is None) else "degraded",
+            "db": "ok" if db_ok else "error",
+            "scheduler": "running" if sched_ok else ("stopped" if sched_ok is False else "n/a"),
+            "version": __version__,
+            "uptime_s": uptime_s,
+        }
 
     @health_router.get("/api/v1/initialize", response_model=InitializeResponse)
     @limiter.limit("10/minute")

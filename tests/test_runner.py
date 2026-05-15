@@ -5,6 +5,7 @@ import textwrap
 from pathlib import Path
 
 import pytest
+import structlog.testing
 
 from glean.api.events import EventBus
 from glean.config import load_config
@@ -276,6 +277,34 @@ async def test_per_source_llm_dispatched_in_full_pipeline(
     assert "https://exp/1" in calls["expensive"]
     assert "https://cheap/1" not in calls["expensive"]
     assert "https://exp/1" not in calls["cheap"]
+
+
+async def test_run_feed_emits_stable_trace_id_in_logs(tmp_path: Path, write_yaml) -> None:
+    cfg = load_config(write_yaml(_cfg_yaml()))
+    state = StateStore(tmp_path / "s.db")
+    await state.open()
+    await state.set_bootstrapped("t1")
+    fake_tg = FakeTelegram()
+    runner = Runner(cfg, state, telegram=fake_tg)  # type: ignore[arg-type]
+    try:
+        with structlog.testing.capture_logs() as captured_logs:
+            result = await runner.run_feed("t1")
+    finally:
+        await runner.aclose()
+        await state.close()
+
+    assert result.error is None
+    trace_ids = {log.get("trace_id") for log in captured_logs if log.get("trace_id")}
+    assert len(trace_ids) >= 1, f"expected at least one log with trace_id, got: {captured_logs}"
+    assert len(trace_ids) == 1, "trace_id should be stable across a single run"
+    trace_id = trace_ids.pop()
+    assert isinstance(trace_id, str)
+    assert len(trace_id) == 8
+    events = {log.get("event") for log in captured_logs if log.get("trace_id") == trace_id}
+    assert {"run_feed.start", "run_feed.complete"} <= events
+    complete = next(log for log in captured_logs if log.get("event") == "run_feed.complete")
+    assert isinstance(complete["duration_ms"], int)
+    assert complete["sent"] == result.sent
 
 
 async def test_run_feed_emits_start_and_completion_events(tmp_path: Path, write_yaml) -> None:

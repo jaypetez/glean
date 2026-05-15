@@ -66,22 +66,45 @@ async def test_healthz_unauthenticated(client: AsyncClient) -> None:
     """/healthz must work without auth (Docker HEALTHCHECK depends on this)."""
     resp = await client.get("/healthz")
     assert resp.status_code == 200
-    assert resp.json() == {"status": "ok"}
+    body = resp.json()
+    assert body["status"] in ("ok", "degraded")
+    assert body["db"] in ("ok", "error")
+    assert body["scheduler"] in ("running", "stopped", "n/a")
+    assert "version" in body
+    assert isinstance(body["uptime_s"], int)
 
 
 async def test_healthz_reports_generic_db_error(tmp_path: Path) -> None:
     """/healthz must not expose exception details to callers."""
 
-    class BrokenDb:
-        def execute(self, _query: str):
+    class BrokenState:
+        async def ping(self) -> None:
             raise RuntimeError("sensitive database path")
 
-    app = make_app(SimpleNamespace(db=BrokenDb()), tmp_path / "state.db")
+    app = make_app(BrokenState(), tmp_path / "state.db")
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         resp = await ac.get("/healthz")
 
-    assert resp.status_code == 503
-    assert resp.json() == {"detail": "db error"}
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "degraded"
+    assert body["db"] == "error"
+    assert body["scheduler"] == "n/a"
+    assert "sensitive database path" not in resp.text
+
+
+async def test_healthz_reports_stopped_scheduler(client: AsyncClient, app_and_state) -> None:
+    app, _ = app_and_state
+    app.state.glean_scheduler = SimpleNamespace(running=False)
+    try:
+        resp = await client.get("/healthz")
+    finally:
+        delattr(app.state, "glean_scheduler")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "degraded"
+    assert body["scheduler"] == "stopped"
 
 
 async def test_initialize_does_not_return_api_key(client: AsyncClient) -> None:
