@@ -1,0 +1,37 @@
+<!--
+  glean — single-color horizontal logo (currentColor)
+  ===================================================
+  Both the mark and wordmark inherit from currentColor. Use when embedding
+  inline in HTML/Svelte and you want the whole logo to follow theme color.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 64" role="img" aria-label="glean">
+  <title>glean</title>
+
+  <g>
+    <path
+      d="M 32 10 A 22 22 0 1 0 54 32"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="6"
+      stroke-linecap="round"
+    />
+    <path
+      d="M 54 32 L 40 32"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="6"
+      stroke-linecap="round"
+    />
+    <circle cx="28" cy="28" r="4" fill="currentColor" />
+  </g>
+
+  <text
+    x="76"
+    y="44"
+    font-family="Inter, 'Inter Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif"
+    font-size="36"
+    font-weight="600"
+    letter-spacing="-0.02em"
+    fill="currentColor"
+  >glean</text>
+</svg>

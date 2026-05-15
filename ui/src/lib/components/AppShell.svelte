@@ -11,10 +11,22 @@
   <header class="border-b border-border bg-surface">
     <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
       <a href="/" class="flex items-center gap-2">
-        <svg viewBox="0 0 64 64" class="h-7 w-7" aria-hidden="true">
-          <rect width="64" height="64" rx="12" fill="#0e1730" />
-          <circle cx="32" cy="32" r="14" fill="none" stroke="#22d3ee" stroke-width="2" />
-          <circle cx="32" cy="32" r="6" fill="#22d3ee" />
+        <svg viewBox="0 0 64 64" class="h-7 w-7 text-cyan" aria-hidden="true">
+          <path
+            d="M 32 10 A 22 22 0 1 0 54 32"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="6"
+            stroke-linecap="round"
+          />
+          <path
+            d="M 54 32 L 40 32"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="6"
+            stroke-linecap="round"
+          />
+          <circle cx="28" cy="28" r="4" fill="currentColor" />
         </svg>
         <span class="text-lg font-semibold text-primary tracking-tight">glean</span>
       </a>

@@ -1,4 +1,6 @@
-<h1 align="center">glean</h1>
+<p align="center">
+  <img src="./assets/glean-logo.svg" alt="glean" width="220" />
+</p>
 
 <p align="center">
   <em>Self-hosted, pluggable personal agent that gleans signal from RSS, scraping, search, and APIs — processes it with any LLM, then fans out scheduled digests to whichever sinks you wire up.</em>
