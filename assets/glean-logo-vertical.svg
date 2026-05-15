@@ -1,0 +1,42 @@
+<!--
+  glean — vertical logo lockup
+  ============================
+  Mark above wordmark, centered. For square thumbnails, social cards
+  (1200x630 source), and any place where horizontal width is constrained.
+
+  viewBox: 200x200 (square)
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="glean">
+  <title>glean</title>
+
+  <!-- Mark, scaled to ~96px and centered horizontally -->
+  <g transform="translate(52 28) scale(1.5)">
+    <path
+      d="M 32 10 A 22 22 0 1 0 54 32"
+      fill="none"
+      stroke="#22d3ee"
+      stroke-width="6"
+      stroke-linecap="round"
+    />
+    <path
+      d="M 54 32 L 40 32"
+      fill="none"
+      stroke="#22d3ee"
+      stroke-width="6"
+      stroke-linecap="round"
+    />
+    <circle cx="28" cy="28" r="4" fill="#22d3ee" />
+  </g>
+
+  <!-- Wordmark, centered below the mark -->
+  <text
+    x="100"
+    y="178"
+    text-anchor="middle"
+    font-family="Inter, 'Inter Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif"
+    font-size="32"
+    font-weight="600"
+    letter-spacing="-0.02em"
+    fill="#f1f5f9"
+  >glean</text>
+</svg>

@@ -1,0 +1,36 @@
+<!--
+  glean — primary mark
+  ====================
+  A bold open "G" with a single solid dot inside the bowl, representing the
+  act of gleaning: capturing one piece of valuable signal from scattered noise.
+
+  Design notes:
+  - Single accent color (cyan #22d3ee), works on any background
+  - 6px stroke at 64px viewBox = readable down to 16x16 (favicon scale)
+  - The "tongue" extending into the bowl reads as a G even at small sizes
+  - The dot is offset to the upper-right of the bowl, suggesting motion
+    (signal being drawn in, not just sitting there)
+  - viewBox is 64x64 (square, app-icon friendly)
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="glean">
+  <title>glean</title>
+  <!-- Open G arc: starts at 12 o'clock, sweeps clockwise through 6 o'clock to ~3 o'clock -->
+  <path
+    d="M 32 10
+       A 22 22 0 1 0 54 32"
+    fill="none"
+    stroke="#22d3ee"
+    stroke-width="6"
+    stroke-linecap="round"
+  />
+  <!-- G "tongue": short horizontal bar at center-right, the distinguishing G feature -->
+  <path
+    d="M 54 32 L 40 32"
+    fill="none"
+    stroke="#22d3ee"
+    stroke-width="6"
+    stroke-linecap="round"
+  />
+  <!-- The gleaned signal: solid dot centered in the bowl -->
+  <circle cx="28" cy="28" r="4" fill="#22d3ee" />
+</svg>
