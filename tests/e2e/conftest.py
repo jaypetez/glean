@@ -90,7 +90,7 @@ def _compose_available() -> bool:
         return False
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def reset_mocks(e2e_stack: None) -> None:
     """Reset mock service state before a test."""
     httpx.post(f"{TELEGRAM_URL}/__reset", timeout=5)
