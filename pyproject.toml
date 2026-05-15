@@ -33,6 +33,7 @@ dependencies = [
     "pydantic-settings>=2.6",
     "ruamel.yaml>=0.19.1",
     "aiosqlite>=0.20",
+    "yoyo-migrations>=8.2",
     "structlog>=25.5.0",
     "typer>=0.15",
     "aiohttp>=3.10",
@@ -102,7 +103,7 @@ disallow_untyped_defs = true
 disallow_any_generics = true
 
 [[tool.mypy.overrides]]
-module = ["feedparser", "trafilatura", "ollama"]
+module = ["feedparser", "trafilatura", "ollama", "yoyo"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

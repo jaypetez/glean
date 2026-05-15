@@ -12,6 +12,12 @@ docker compose down           # stop
 
 State lives at `/data/state.db` (SQLite). Mount a volume to persist across container restarts.
 
+Schema migrations live in `src/glean/state/migrations/*.sql` and are applied automatically whenever `StateStore.open()` runs. To apply them manually, run:
+
+```bash
+glean migrate --db /data/state.db
+```
+
 ## Security model
 
 Glean is a single-user service: the API key is the sole gate for the Web UI and REST API, and anyone with the key can manage feeds. Do not set `GLEAN_DISABLE_AUTH` on a public port, shared host, or untrusted network; reserve it for loopback-only tests or a trusted reverse proxy that enforces its own auth.

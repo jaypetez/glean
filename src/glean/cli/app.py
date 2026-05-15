@@ -72,6 +72,22 @@ def version() -> None:
     typer.echo(f"glean {__version__}")
 
 
+@app.command()
+def migrate(
+    db: DbOpt = Path(_DEFAULT_DB),
+) -> None:
+    """Apply any pending state schema migrations."""
+    asyncio.run(_migrate_async(db))
+
+
+async def _migrate_async(db_path: Path) -> None:
+    from glean.state.store import StateStore
+
+    store = StateStore(db_path)
+    await store._apply_migrations()
+    typer.echo(f"✓ migrations applied to {db_path}")
+
+
 @app.command("validate-config")
 def validate_config(
     config: ConfigOpt = Path(_DEFAULT_CONFIG),
