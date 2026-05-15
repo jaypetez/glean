@@ -21,7 +21,8 @@ pages. Set a lower per-source cap when fetching from untrusted endpoints.
 
 Any source spec accepts an optional `llm:` field. This overrides the feed/default
 LLM for items fetched from that source, so one feed can mix local and premium
-models by source. See [Per-source LLM models](./per-source-llm.md).
+models by source. See the [per-source dispatch how-to](../how-to/llm/per-source.md)
+or the [per-source LLM reference](./per-source-llm.md).
 
 ### Search backends
 
@@ -98,6 +99,43 @@ feeds:
       - summarize: { prompt: "One-sentence summary." }
       - digest: { intro: "🧠 AI research" }
 ```
+
+## LLM providers
+
+Configure the default provider under `defaults.llm`, override it per feed with
+`feeds[].llm`, or override it per source with `sources[].llm`.
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `provider` | no | `ollama` by default. Built-ins: `ollama`, `openai`, `anthropic`. |
+| `model` | no | Provider model name. Defaults to `qwen2.5:7b`. |
+| `base_url` | no | Provider API base URL override. Most users only set this for non-bundled Ollama or compatible gateways. |
+| `api_key` | no | Inline API key. Prefer environment variables for secrets. |
+| `timeout_s` | no | LLM request timeout in seconds. Defaults to `60`. |
+
+### Built-in providers
+
+| Provider | Default model | API key |
+|----------|---------------|---------|
+| `ollama` | `qwen2.5:7b` | None. Uses bundled `http://ollama:11434` unless `base_url` is set. |
+| `openai` | `gpt-4o-mini` | `OPENAI_API_KEY` env var, unless `api_key` is set. |
+| `anthropic` | `claude-haiku-4-5` | `ANTHROPIC_API_KEY` env var, unless `api_key` is set. |
+
+```yaml
+defaults:
+  llm:
+    provider: ollama
+    model: qwen2.5:7b
+
+feeds:
+  - name: paid-summary
+    llm:
+      provider: openai
+      model: gpt-4o-mini
+```
+
+See [Ollama](../how-to/llm/ollama.md), [OpenAI](../how-to/llm/openai.md),
+and [Anthropic](../how-to/llm/anthropic.md) for setup steps.
 
 ## Pipeline stages
 
