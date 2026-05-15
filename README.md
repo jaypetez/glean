@@ -10,6 +10,11 @@
   <img src="./assets/glean-hero.svg" alt="glean: pluggable sources flow into a central LLM pipeline (dedup, rank, summarize, digest) which fans out scheduled digests to Telegram, Discord, Slack, ntfy, Webhook, and File sinks" width="100%">
 </p>
 
+<!-- TODO(PR6): Replace this transparent placeholder with a real 30-second quickstart demo GIF after a manual capture session. -->
+<p align="center">
+  <img src="./docs/assets/glean-demo-placeholder.gif" alt="Placeholder for a 30-second glean quickstart demo GIF" width="100%">
+</p>
+
 <p align="center">
   <a href="https://github.com/jaypetez/glean/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/jaypetez/glean/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/jaypetez/glean/actions/workflows/codeql.yml"><img alt="CodeQL" src="https://github.com/jaypetez/glean/actions/workflows/codeql.yml/badge.svg"></a>

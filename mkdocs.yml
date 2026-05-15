@@ -61,12 +61,16 @@ nav:
       - reference/index.md
       - CLI: reference/cli.md
       - REST API: reference/api.md
+      - Plugin Protocols: reference/protocols.md
+      - Item dataclass: reference/item.md
   - Plugins:
       - plugins/index.md
       - Writing a Source: plugins/source.md
       - Writing a Sink: plugins/sink.md
       - Writing an LLM Provider: plugins/llm.md
       - Writing a Search Backend: plugins/search.md
+      - Testing Plugins: plugins/testing.md
+      - Publishing Plugins: plugins/publishing.md
   - Operations:
       - Docker: operations/docker.md
       - Security: operations/security.md
@@ -82,7 +86,9 @@ nav:
       - Skills: config/skills.md
   - FAQ: faq.md
   - Changelog: changelog.md
-  - Contributing: contributing.md
+  - Contributing:
+      - Overview: contributing.md
+      - Documentation style guide: contributing/style-guide.md
 
 plugins:
   - search
