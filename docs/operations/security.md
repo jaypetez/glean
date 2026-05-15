@@ -3,6 +3,15 @@
 This page describes the security model for `glean` v1.1.x and the minimum safe
 settings for self-hosted deployments.
 
+!!! success "Security checklist"
+    - [ ] Port 9090 is on loopback or behind a reverse proxy
+    - [ ] API key is in `.env`, not hardcoded
+    - [ ] `/data` is `chmod 700`
+    - [ ] `/data/api_key` is `chmod 600`
+    - [ ] TLS is terminated at the proxy
+    - [ ] `GLEAN_DISABLE_AUTH` is NOT set
+    - [ ] Latest patch version (run `glean migrate` after upgrade)
+
 ## Threat model
 
 `glean` is a single-user service. The Web UI and REST API share one trust
@@ -46,55 +55,14 @@ For remote access, keep port 9090 private and put `glean` behind a reverse proxy
 that terminates TLS and adds your organization's access controls. Never expose
 port 9090 publicly without authentication and TLS.
 
-### nginx example
+<a id="nginx-example"></a>
+For nginx, use the dedicated [nginx reverse proxy how-to](../how-to/ops/nginx.md).
 
-```nginx
-server {
-    listen 443 ssl http2;
-    server_name glean.example.com;
+<a id="caddy-example"></a>
+For Caddy, use the dedicated [Caddy reverse proxy how-to](../how-to/ops/caddy.md).
 
-    ssl_certificate /etc/letsencrypt/live/glean.example.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/glean.example.com/privkey.pem;
-
-    auth_basic "glean";
-    auth_basic_user_file /etc/nginx/htpasswd;
-
-    location / {
-        proxy_pass http://127.0.0.1:9090;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Proto https;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-}
-```
-
-### Caddy example
-
-Generate the password hash with `caddy hash-password`.
-
-```caddyfile
-glean.example.com {
-    basicauth {
-        operator $2a$14$replace-with-caddy-hash
-    }
-    reverse_proxy 127.0.0.1:9090
-}
-```
-
-### Traefik example
-
-```yaml
-services:
-  glean:
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.glean.rule=Host(`glean.example.com`)
-      - traefik.http.routers.glean.entrypoints=websecure
-      - traefik.http.routers.glean.tls.certresolver=letsencrypt
-      - traefik.http.routers.glean.middlewares=glean-auth
-      - traefik.http.middlewares.glean-auth.basicauth.users=operator:hashed-password
-      - traefik.http.services.glean.loadbalancer.server.port=9090
-```
+<a id="traefik-example"></a>
+For Traefik v3, use the dedicated [Traefik reverse proxy how-to](../how-to/ops/traefik.md).
 
 ## API key bootstrap and rotation
 
@@ -114,9 +82,7 @@ For production, set a fixed key in `.env` and restart the container:
 GLEAN_API_KEY=<your-32-char-key>
 ```
 
-If `GLEAN_API_KEY` is not set, rotate from **Settings -> API Key -> Rotate** in
-the Web UI. If `GLEAN_API_KEY` is set, rotation is externally managed: update the
-environment variable and restart.
+For rotation steps, use the dedicated [API key rotation how-to](../how-to/ops/rotate-key.md).
 
 You can disable API authentication entirely with:
 
