@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@phosphor-icons/svelte": "npm:phosphor-svelte@^3.0.0",
-    "svelte": "^5.0.0",
+    "svelte": "^5.55.7",
     "svelte-routing": "^2.13.0",
     "yaml": "^2.6.0"
   },
@@ -24,7 +24,7 @@
     "@sveltejs/vite-plugin-svelte": "^5.0.0",
     "@tailwindcss/vite": "^4.0.0",
     "@tsconfig/svelte": "^5.0.0",
-    "@types/node": "^22.0.0",
+    "@types/node": "^25.8.0",
     "axe-core": "^4.11.4",
     "prettier": "^3.4.0",
     "prettier-plugin-svelte": "^3.3.0",
