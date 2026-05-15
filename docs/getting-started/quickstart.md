@@ -1,4 +1,7 @@
-docker pull ghcr.io/jaypetez/glean:1.3.0
+---
+title: "Quickstart — glean Getting Started"
+description: Get a first glean feed running with Docker, Ollama, and Telegram.
+---
 
 # Quickstart
 

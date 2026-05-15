@@ -1,3 +1,8 @@
+---
+title: "Environment Variables — glean Configuration"
+description: Environment variables for auth, state paths, Telegram, LLM providers, and search backends.
+---
+
 # Environment Variables
 
 Glean reads configuration from `feeds.yaml` first, then from environment variables where noted. Keep secrets in `.env` and reference them from YAML with `${VAR}` interpolation.

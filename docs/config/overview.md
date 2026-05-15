@@ -1,3 +1,8 @@
+---
+title: "Configuration Overview — glean Configuration"
+description: Understand how glean loads defaults, feeds, environment variables, and schedules.
+---
+
 # Configuration Overview
 
 glean uses two files:

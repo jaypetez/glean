@@ -1,3 +1,8 @@
+---
+title: "Skills — glean Configuration"
+description: Define reusable structured extraction skills for the apply_skill pipeline stage.
+---
+
 # Skills
 
 A **skill** is a reusable, named LLM extraction template. Each skill defines a

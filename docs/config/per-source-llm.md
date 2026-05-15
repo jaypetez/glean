@@ -1,3 +1,8 @@
+---
+title: "Per-source LLM — glean Configuration"
+description: Configure different LLM providers or models for individual sources in one feed.
+---
+
 # Per-source LLM models
 
 Reference for the `sources[].llm` override. For setup steps, see [How to set up per-source LLM dispatch](../how-to/llm/per-source.md).

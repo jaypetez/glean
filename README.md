@@ -17,6 +17,7 @@
 
 <p align="center">
   <a href="https://github.com/jaypetez/glean/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/jaypetez/glean/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://jaypetez.github.io/glean"><img alt="Docs" src="https://img.shields.io/badge/docs-mkdocs-22d3ee.svg"></a>
   <a href="https://github.com/jaypetez/glean/actions/workflows/codeql.yml"><img alt="CodeQL" src="https://github.com/jaypetez/glean/actions/workflows/codeql.yml/badge.svg"></a>
   <a href="https://codecov.io/gh/jaypetez/glean"><img alt="Coverage" src="https://codecov.io/gh/jaypetez/glean/branch/main/graph/badge.svg"></a>
   <a href="./LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
@@ -95,6 +96,20 @@ docker exec -it glean glean test-feed ai-news-daily
 ```
 
 Want self-hosted web search too? See [Web search setup](./docs/getting-started/search.md) — uncomment SearXNG in `docker-compose.yml` and you're done in two more commands.
+
+## Documentation
+
+Full docs at [jaypetez.github.io/glean](https://jaypetez.github.io/glean).
+
+| | |
+|---|---|
+| 📚 [Tutorials](https://jaypetez.github.io/glean/tutorials/) | Step-by-step walkthroughs for new users |
+| 🧠 [Concepts](https://jaypetez.github.io/glean/concepts/feed/) | The mental model of feeds, pipelines, and plugins |
+| 🔧 [How-to guides](https://jaypetez.github.io/glean/how-to/) | Task-focused recipes per integration |
+| 📖 [Reference](https://jaypetez.github.io/glean/reference/cli/) | CLI, REST API, config schema |
+| 🔌 [Plugin authoring](https://jaypetez.github.io/glean/plugins/) | Add your own source, sink, LLM, or search backend |
+| 🔒 [Security](https://jaypetez.github.io/glean/operations/security/) | Threat model, hardening, key rotation |
+| 📋 [Changelog](https://github.com/jaypetez/glean/releases) | Release notes |
 
 ## Web UI
 
@@ -407,18 +422,6 @@ npx playwright test
 
 CI runs lint + type-check + the full unit suite, the Playwright UI suite, and the Docker E2E stack on every PR.
 
-## Documentation
-
-Full docs are at [jaypetez.github.io/glean](https://jaypetez.github.io/glean) (built with MkDocs Material). Quick links:
-
-- [Installation](./docs/getting-started/install.md)
-- [Quickstart](./docs/getting-started/quickstart.md)
-- [Security model and deployment guide](./docs/operations/security.md)
-- [Web search setup](./docs/getting-started/search.md) — including SearXNG self-host
-- [feeds.yaml reference](./docs/config/feeds.md)
-- [Per-source LLM models](./docs/config/per-source-llm.md)
-- [Skills (structured extraction)](./docs/config/skills.md)
-- [Plugin authoring guides](./docs/plugins/)
 
 ## Contributing
 

@@ -1,3 +1,8 @@
+---
+title: "feeds.yaml Reference — glean Configuration"
+description: Complete reference for source types, pipeline stages, sinks, schedules, and feed options.
+---
+
 # feeds.yaml Reference
 
 !!! info

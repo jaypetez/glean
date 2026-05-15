@@ -1,3 +1,8 @@
+---
+title: "LLM Setup — glean How-to"
+description: How to choose and configure local or hosted LLM providers for glean.
+---
+
 # LLM How-to Guides
 
 Task-focused guides for choosing and wiring LLM providers in glean feeds.

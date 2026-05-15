@@ -1,3 +1,8 @@
+---
+title: "Writing a Source — glean Plugins"
+description: Implement and register a custom source plugin for glean.
+---
+
 # Writing a Source
 
 A Source produces `Item`s for a single feed tick.

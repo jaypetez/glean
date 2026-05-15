@@ -1,5 +1,5 @@
 ---
-title: Plugin Authoring — glean
+title: "Plugin Authoring — glean Plugins"
 description: Add your own source, sink, LLM provider, or search backend in a single file.
 ---
 

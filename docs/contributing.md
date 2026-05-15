@@ -1,3 +1,8 @@
+---
+title: "Contributing to the Docs — glean Contributing"
+description: Contribute tutorials, how-to guides, reference pages, and copy to the glean documentation site.
+---
+
 # Contributing to the Docs
 
 This page is for contributors who want to improve tutorials, how-to guides, reference pages, or copy in the documentation site. For code changes, plugin implementation, dev setup, and PR rules, read the root [CONTRIBUTING.md](https://github.com/jaypetez/glean/blob/main/CONTRIBUTING.md).

@@ -1,3 +1,8 @@
+---
+title: "Architecture — glean Concepts"
+description: Detailed architecture of the async daemon, plugin layers, state, config, and delivery flow.
+---
+
 # Architecture
 
 > Topic-agnostic content aggregator that periodically pulls from multiple sources, runs items through a pluggable LLM pipeline, and posts digests to configured sinks. One daemon, many feeds, many destinations.

@@ -57,6 +57,7 @@ coverage: test-cov
 docs-cli:
 	uv run typer glean.cli.app utils docs --name glean --output docs/reference/cli.md
 	uv run python scripts/normalize_utf8.py docs/reference/cli.md
+	uv run python scripts/prepend_frontmatter.py docs/reference/cli.md "CLI \u2014 glean Reference" "All glean command-line subcommands and options."
 
 docs-api:
 	uv run python scripts/dump_openapi.py docs/openapi.json
