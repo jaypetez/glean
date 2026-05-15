@@ -1,3 +1,8 @@
+---
+title: "Installation — glean Getting Started"
+description: Install glean with Docker, pip, pipx, or a source checkout.
+---
+
 # Installation
 
 ## Docker (recommended)

@@ -1,3 +1,8 @@
+---
+title: "Writing a Search Backend — glean Plugins"
+description: Implement and register a custom web search backend for glean.
+---
+
 # Authoring Search Backends
 
 A **Search Backend** is a pluggable web search provider used by the `search`

@@ -1,29 +1,47 @@
-# glean
+---
+title: glean
+description: Self-hosted, pluggable agent that gleans signal from RSS, scraping, and search.
+---
 
-Self-hosted, pluggable personal agent that gleans signal from RSS, scraping, search, and APIs — processes it with any LLM, then delivers on a schedule to whatever sink you wire up.
+<p align="center">
+  <img src="assets/glean-logo.svg" alt="glean" width="220" />
+</p>
+
+<p align="center">
+  <em>Self-hosted, pluggable agent that gleans signal from RSS, scraping, search, and APIs — processes it with any LLM, fans out to Telegram, Discord, Slack, ntfy, Webhook, and File sinks.</em>
+</p>
 
 <!-- TODO(PR6): Replace this transparent placeholder with a real 30-second quickstart demo GIF after a manual capture session. -->
 <p align="center">
   <img src="assets/glean-demo-placeholder.gif" alt="Placeholder for a 30-second glean quickstart demo GIF" width="100%" />
 </p>
 
-## What is glean?
+## Where to start
 
-glean is a small Python daemon that runs as a Docker container. You describe **feeds** in a YAML file — each one is a recipe of `sources → LLM pipeline → sink → schedule`. It deduplicates, ranks, summarizes, and posts a clean digest. One container, many topics, many sinks.
+<div class="grid cards" markdown>
 
-## Features
+-   :material-clock-fast: **5-minute Quickstart**
 
-- **Pluggable sources** — RSS/Atom, web scraping, Hacker News, Reddit, web search (Brave / Tavily / SearXNG / Serper / Exa / MWMBL)
-- **Pluggable LLM** — Ollama (default), Anthropic, OpenAI. Per-feed provider/model
-- **Per-feed pipeline** — declare stages in YAML: `dedup → rank → summarize → digest`
-- **Smart dedup** — SQLite-backed, persists across restarts
-- **Friendly schedules** — `every 1h`, `every 15m`, `daily 09:00`, or raw cron
-- **Failure-aware** — exponential backoff, ops-chat alerts after N consecutive failures
-- **One container** — `docker compose up`
+    Get a feed running in under 5 minutes.
 
-## Quick links
+    [:octicons-arrow-right-24: Quickstart](getting-started/quickstart.md)
 
-- [Installation](getting-started/install.md)
-- [Quickstart](getting-started/quickstart.md)
-- [Configuration Reference](config/feeds.md)
-- [Writing Plugins](plugins/source.md)
+-   :material-school: **20-minute Tutorial**
+
+    End-to-end walkthrough: AI news + Ollama + Telegram.
+
+    [:octicons-arrow-right-24: Build a Tutorial](tutorials/ai-news-ollama.md)
+
+-   :material-lightbulb: **Concepts**
+
+    Understand feeds, pipelines, sinks, and skills.
+
+    [:octicons-arrow-right-24: Mental model](concepts/feed.md)
+
+-   :material-puzzle: **Plugin Authoring**
+
+    Add your own source, sink, LLM, or search backend.
+
+    [:octicons-arrow-right-24: Plugin guide](plugins/index.md)
+
+</div>

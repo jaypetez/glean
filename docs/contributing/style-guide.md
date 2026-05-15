@@ -1,3 +1,8 @@
+---
+title: "Documentation Style Guide  glean Contributing"
+description: Writing standards for clear, task-focused, and consistent glean documentation.
+---
+
 # Documentation Style Guide
 
 This guide is for contributors writing or reviewing glean documentation. Use it to make pages consistent, task-focused, and respectful of readers who may be blocked.

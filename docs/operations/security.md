@@ -1,3 +1,8 @@
+---
+title: "Security Model — glean Operations"
+description: Threat model, safe deployment settings, hardening, and vulnerability reporting for glean.
+---
+
 # Security Model and Deployment Guide
 
 This page describes the security model for `glean` v1.1.x and the minimum safe

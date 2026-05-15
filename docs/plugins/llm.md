@@ -1,3 +1,8 @@
+---
+title: "Writing an LLM Provider — glean Plugins"
+description: Implement and register a custom LLM provider for ranking, summarization, and extraction.
+---
+
 # Writing an LLM Provider
 
 ```python

@@ -1,3 +1,8 @@
+---
+title: "Operations — glean How-to"
+description: Operational recipes for backup, upgrades, monitoring, and troubleshooting.
+---
+
 # Operations How-to Guides
 
 Task-focused guides for running `glean` in production.

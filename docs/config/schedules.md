@@ -1,3 +1,8 @@
+---
+title: "Schedule Syntax — glean Configuration"
+description: Supported interval, daily, preset, and cron schedule formats.
+---
+
 # Schedule Syntax
 
 glean supports friendly schedule strings:

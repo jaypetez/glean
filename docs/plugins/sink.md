@@ -1,3 +1,8 @@
+---
+title: "Writing a Sink — glean Plugins"
+description: Implement and register a custom sink plugin for digest delivery.
+---
+
 # Authoring Sinks
 
 A **Sink** is a destination for digest output — Telegram, Discord, a webhook, a

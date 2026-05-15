@@ -80,6 +80,9 @@ jobs:
           version: '0.5.13'
           enable-cache: true
 
+      - name: Install social card system deps
+        run: sudo apt-get update && sudo apt-get install -y libcairo2 libpango-1.0-0 libpangoft2-1.0-0 pngquant
+
       - name: Install deps
         run: uv sync --locked --all-extras
 

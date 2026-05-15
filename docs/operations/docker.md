@@ -1,3 +1,8 @@
+---
+title: "Docker — glean Operations"
+description: Run, migrate, secure, and monitor glean with Docker Compose.
+---
+
 # Docker
 
 ## docker compose

@@ -1,3 +1,8 @@
+---
+title: "Web Search — glean Getting Started"
+description: Set up optional self-hosted or API-backed web search sources for glean.
+---
+
 # Web search setup
 
 glean supports several web search backends as data sources. This page walks

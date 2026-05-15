@@ -1,3 +1,8 @@
+---
+title: "Troubleshooting — glean Operations"
+description: Symptoms, causes, and fixes for common glean runtime problems.
+---
+
 # Troubleshooting
 
 ## "TELEGRAM_BOT_TOKEN is not set"

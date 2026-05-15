@@ -59,11 +59,15 @@ dev = [
     "types-PyYAML",
     "mkdocs-material[imaging]>=9.5",
     "mkdocs-swagger-ui-tag>=0.6",
+    "mkdocs-git-revision-date-localized-plugin>=1.2",
+    "mkdocs-minify-plugin>=0.8",
     "typer-cli>=0.12",
 ]
 docs = [
     "mkdocs-material[imaging]>=9.5",
     "mkdocs-swagger-ui-tag>=0.6",
+    "mkdocs-git-revision-date-localized-plugin>=1.2",
+    "mkdocs-minify-plugin>=0.8",
     "mkdocstrings[python]>=0.27",
 ]
 

@@ -1,0 +1,22 @@
+# glean
+
+> Self-hosted, pluggable personal agent that gleans signal from RSS, scraping, and search — processes via any LLM, fans out to Telegram/Discord/Slack/ntfy/Webhook/File.
+
+## Essential reading
+
+- [Concepts: What is a feed](https://jaypetez.github.io/glean/concepts/feed/): The core mental model
+- [Quickstart](https://jaypetez.github.io/glean/getting-started/quickstart/): 5-minute first-run
+- [Tutorial: AI news with Ollama](https://jaypetez.github.io/glean/tutorials/ai-news-ollama/): 20-minute end-to-end walkthrough
+- [feeds.yaml reference](https://jaypetez.github.io/glean/config/feeds/): Complete config schema
+
+## Reference
+
+- [CLI](https://jaypetez.github.io/glean/reference/cli/): All glean subcommands
+- [REST API](https://jaypetez.github.io/glean/reference/api/): Live Swagger UI
+- [JSON Schema](https://jaypetez.github.io/glean/reference/feeds-schema.json): For IDE/agent validation
+- [Plugin protocols](https://jaypetez.github.io/glean/plugins/): Source / Sink / LLM / Search
+
+## Operations
+
+- [Security model](https://jaypetez.github.io/glean/operations/security/): Threat model + hardening
+- [Troubleshooting](https://jaypetez.github.io/glean/operations/troubleshooting/): Symptom-cause-resolution

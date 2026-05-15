@@ -1,3 +1,8 @@
+---
+title: "Sinks — glean How-to"
+description: How to deliver glean digests to Telegram, Discord, Slack, ntfy, webhooks, and files.
+---
+
 # Sink How-to Guides
 
 Task-focused guides for sending glean digests to built-in sink destinations.

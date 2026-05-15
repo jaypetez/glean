@@ -27,12 +27,11 @@ jobs:
         with:
           version: '0.5.13'
 
+      - name: Install social card system deps
+        run: sudo apt-get update && sudo apt-get install -y libcairo2 libpango-1.0-0 libpangoft2-1.0-0 pngquant
+
       - name: Install docs deps
-        run: |
-          uv venv .venv
-          uv pip install mkdocs-material mkdocstrings[python]
+        run: uv sync --locked --extra docs
 
       - name: Build and deploy
-        run: |
-          . .venv/bin/activate
-          mkdocs gh-deploy --force
+        run: uv run mkdocs gh-deploy --force

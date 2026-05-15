@@ -1,3 +1,8 @@
+---
+title: "CLI — glean Reference"
+description: All glean command-line subcommands and options.
+---
+
 # `glean`
 
 glean — pluggable feed digester for Telegram.
