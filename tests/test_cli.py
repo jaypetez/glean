@@ -88,6 +88,21 @@ def test_validate_config_command_exits_for_missing_file(tmp_path: Path) -> None:
     assert f"config file not found: {missing}" in result.output
 
 
+def test_migrate_command_passes_db_to_async_runner(monkeypatch, tmp_path: Path) -> None:
+    db_path = tmp_path / "state.db"
+    captured: dict[str, object] = {}
+
+    async def fake_migrate(db: Path) -> None:
+        captured["db"] = db
+
+    monkeypatch.setattr(cli_module, "_migrate_async", fake_migrate, raising=False)
+
+    result = CliRunner().invoke(cli_module.app, ["migrate", "--db", str(db_path)])
+
+    assert result.exit_code == 0
+    assert captured["db"] == db_path
+
+
 def test_list_feeds_command_passes_loaded_config_to_async_runner(
     monkeypatch,
     write_yaml,

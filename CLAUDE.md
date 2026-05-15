@@ -98,9 +98,19 @@ See `docs/plugins.md` for examples. Smallest reference implementations: `sources
 
 ### State
 
-SQLite via `aiosqlite`, schema in `state/store.py::_SCHEMA`. Three tables: `seen_items` (dedup + sent tracking), `feed_runs` (per-feed success/failure counters + bootstrap flag), `etag_cache` (HTTP cache for sources like RSS that honor ETag/Last-Modified).
+SQLite via `aiosqlite`, schema migrations in `state/migrations/*.sql`. Three app tables: `seen_items` (dedup + sent tracking), `feed_runs` (per-feed success/failure counters + bootstrap flag), `etag_cache` (HTTP cache for sources like RSS that honor ETag/Last-Modified). `StateStore.open()` applies pending yoyo migrations before opening the async connection and setting PRAGMAs.
 
 `StateStore.record_success` returns a `recovery` boolean — true means `alert_active` was set and just got cleared, which triggers a "recovered" ops message.
+
+## State migrations
+
+Schema lives in `src/glean/state/migrations/*.sql`. To add a column or table:
+
+1. Create `src/glean/state/migrations/NNNN_describe_change.sql` (next sequential number)
+2. Add the `-- depends: NNNN_previous` header
+3. Tests will pick it up automatically; production picks it up on next `StateStore.open()`
+
+Manual migration: `glean migrate --db /data/state.db`
 
 ### Config
 

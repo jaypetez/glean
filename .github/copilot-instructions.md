@@ -68,7 +68,7 @@ All four use the same `@register_*` decorator pattern + module-level `_import_bu
 
 ### State (`state/store.py`)
 
-aiosqlite, three tables: `seen_items` (dedup + sent tracking), `feed_runs` (per-feed counters + bootstrap flag + alert_active), `etag_cache` (HTTP cache for ETag/Last-Modified honoring sources). On open, sets `PRAGMA journal_mode=WAL`, `secure_delete=ON`, `foreign_keys=ON`, `trusted_schema=OFF`. `record_success` returns a `recovery` boolean — true means an alert just got cleared, triggers a "recovered" ops message.
+aiosqlite plus yoyo SQL migrations in `src/glean/state/migrations/*.sql`. App tables: `seen_items` (dedup + sent tracking), `feed_runs` (per-feed counters + bootstrap flag + alert_active), `etag_cache` (HTTP cache for ETag/Last-Modified honoring sources). On open, applies pending migrations before opening the async connection, then sets `PRAGMA journal_mode=WAL`, `secure_delete=ON`, `foreign_keys=ON`, `trusted_schema=OFF`. `record_success` returns a `recovery` boolean — true means an alert just got cleared, triggers a "recovered" ops message.
 
 ### Config (`config/`)
 

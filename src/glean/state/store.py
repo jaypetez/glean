@@ -1,44 +1,17 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import os
 import time
+import warnings
 from collections.abc import Iterable
 from pathlib import Path
 
 import aiosqlite
+from yoyo import get_backend, read_migrations
 
 from glean.sources.base import Item
-
-_SCHEMA = """
-CREATE TABLE IF NOT EXISTS seen_items (
-  feed         TEXT NOT NULL,
-  item_hash    TEXT NOT NULL,
-  url          TEXT,
-  seen_at      INTEGER NOT NULL,
-  sent         INTEGER NOT NULL DEFAULT 0,
-  PRIMARY KEY (feed, item_hash)
-);
-
-CREATE INDEX IF NOT EXISTS idx_seen_items_feed_seen_at ON seen_items(feed, seen_at);
-
-CREATE TABLE IF NOT EXISTS feed_runs (
-  feed                  TEXT PRIMARY KEY,
-  last_success_at       INTEGER,
-  last_attempt_at       INTEGER,
-  last_error            TEXT,
-  consecutive_failures  INTEGER NOT NULL DEFAULT 0,
-  alert_active          INTEGER NOT NULL DEFAULT 0,
-  bootstrapped          INTEGER NOT NULL DEFAULT 0
-);
-
-CREATE TABLE IF NOT EXISTS etag_cache (
-  url           TEXT PRIMARY KEY,
-  etag          TEXT,
-  last_modified TEXT,
-  cached_at     INTEGER
-);
-"""
 
 
 def item_hash(item: Item) -> str:
@@ -75,6 +48,7 @@ class StateStore:
         self._db: aiosqlite.Connection | None = None
 
     async def open(self) -> None:
+        await self._apply_migrations()
         self._db = await aiosqlite.connect(self.path)
         async with self._db.execute("PRAGMA journal_mode=WAL") as cur:
             journal_mode = await cur.fetchone()
@@ -86,8 +60,25 @@ class StateStore:
         await self._db.execute("PRAGMA secure_delete = ON")
         await self._db.execute("PRAGMA trusted_schema = OFF")
         await self._db.execute("PRAGMA synchronous=NORMAL")
-        await self._db.executescript(_SCHEMA)
         await self._db.commit()
+
+    async def _apply_migrations(self) -> None:
+        """Run any pending schema migrations using yoyo."""
+
+        def run_sync() -> None:
+            backend = get_backend(f"sqlite:///{self.path.as_posix()}")
+            migrations_dir = Path(__file__).parent / "migrations"
+            migrations = read_migrations(str(migrations_dir))
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore",
+                    message="The default datetime adapter is deprecated.*",
+                    category=DeprecationWarning,
+                )
+                with backend.lock():
+                    backend.apply_migrations(backend.to_apply(migrations))
+
+        await asyncio.to_thread(run_sync)
 
     async def close(self) -> None:
         if self._db is not None:

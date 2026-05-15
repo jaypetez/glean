@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+import aiosqlite
 import pytest
 
 from glean.sources.base import Item
@@ -78,6 +79,77 @@ async def test_bootstrap_flag(tmp_db: Path) -> None:
         assert await s.is_bootstrapped("ai") is False
         await s.set_bootstrapped("ai")
         assert await s.is_bootstrapped("ai") is True
+    finally:
+        await s.close()
+
+
+async def test_migrations_create_expected_tables(tmp_db: Path) -> None:
+    s = StateStore(tmp_db)
+    try:
+        await s.open()
+        async with s.db.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name"
+        ) as cur:
+            rows = await cur.fetchall()
+        table_names = {row[0] for row in rows}
+        assert "seen_items" in table_names
+        assert "feed_runs" in table_names
+        assert "etag_cache" in table_names
+        assert "_yoyo_migration" in table_names or "_yoyo_log" in table_names
+    finally:
+        await s.close()
+
+
+async def test_migrations_idempotent(tmp_db: Path) -> None:
+    store1 = StateStore(tmp_db)
+    await store1.open()
+    await store1.close()
+
+    store2 = StateStore(tmp_db)
+    await store2.open()
+    await store2.close()
+
+
+async def test_existing_pre_migration_db_still_works(tmp_path: Path) -> None:
+    db_path = tmp_path / "legacy.db"
+    legacy_schema = """
+    CREATE TABLE seen_items (
+      feed         TEXT NOT NULL,
+      item_hash    TEXT NOT NULL,
+      url          TEXT,
+      seen_at      INTEGER NOT NULL,
+      sent         INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (feed, item_hash)
+    );
+
+    CREATE INDEX idx_seen_items_feed_seen_at ON seen_items(feed, seen_at);
+
+    CREATE TABLE feed_runs (
+      feed                  TEXT PRIMARY KEY,
+      last_success_at       INTEGER,
+      last_attempt_at       INTEGER,
+      last_error            TEXT,
+      consecutive_failures  INTEGER NOT NULL DEFAULT 0,
+      alert_active          INTEGER NOT NULL DEFAULT 0,
+      bootstrapped          INTEGER NOT NULL DEFAULT 0
+    );
+
+    CREATE TABLE etag_cache (
+      url           TEXT PRIMARY KEY,
+      etag          TEXT,
+      last_modified TEXT,
+      cached_at     INTEGER
+    );
+    """
+    async with aiosqlite.connect(db_path) as conn:
+        await conn.executescript(legacy_schema)
+        await conn.commit()
+
+    s = StateStore(db_path)
+    try:
+        await s.open()
+        await s.mark_seen("ai", [_item("a")], sent=True)
+        assert await s.filter_new("ai", [_item("a"), _item("b")]) == [_item("b")]
     finally:
         await s.close()
 
@@ -181,9 +253,6 @@ async def test_open_raises_when_wal_mode_cannot_be_enabled(
         def execute(self, sql: str) -> FakeCursor:
             assert sql == "PRAGMA journal_mode=WAL"
             return FakeCursor(("delete",))
-
-        async def executescript(self, script: str) -> None:
-            raise AssertionError("schema should not be applied when WAL cannot be enabled")
 
         async def commit(self) -> None:
             raise AssertionError("commit should not run when WAL cannot be enabled")
