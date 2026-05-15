@@ -1,0 +1,32 @@
+#!/usr/local/bin/python3
+from __future__ import annotations
+
+import sys
+import urllib.error
+import urllib.request
+
+
+def main() -> int:
+    silent = False
+    urls: list[str] = []
+    for arg in sys.argv[1:]:
+        if arg.startswith("-"):
+            silent = "s" in arg
+            continue
+        urls.append(arg)
+
+    if len(urls) != 1:
+        print("curl shim supports exactly one URL", file=sys.stderr)
+        return 2
+
+    try:
+        with urllib.request.urlopen(urls[0], timeout=10) as response:
+            sys.stdout.buffer.write(response.read())
+    except (TimeoutError, urllib.error.HTTPError, urllib.error.URLError) as exc:
+        if not silent:
+            print(exc, file=sys.stderr)
+        return 22
+    return 0
+
+
+raise SystemExit(main())

@@ -53,10 +53,13 @@ def test_dockerfile_pins_mutable_base_images_to_sha256_digests() -> None:
     )
 
 
-def test_runtime_image_keeps_curl_for_local_health_probe() -> None:
+def test_runtime_image_provides_curl_probe_without_debian_curl_package() -> None:
     dockerfile = ROOT.joinpath("Dockerfile").read_text(encoding="utf-8")
+    curl_shim = ROOT.joinpath("docker", "curl")
 
-    assert "tzdata ca-certificates curl" in dockerfile
+    assert "tzdata ca-certificates curl" not in dockerfile
+    assert "COPY docker/curl /usr/local/bin/curl" in dockerfile
+    assert curl_shim.exists()
 
 
 def test_production_compose_hardens_glean_and_support_services() -> None:

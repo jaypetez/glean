@@ -257,12 +257,16 @@ def make_verify_api_key(
             Header(alias="X-Glean-Api-Key"),
         ] = None,
         api_key: Annotated[str | None, Query(alias="api_key")] = None,
+        token: Annotated[str | None, Query(alias="token")] = None,
     ) -> None:
         if auth_disabled():
             return
         supplied_key = x_glean_api_key
-        if supplied_key is None and request.scope.get("path") == "/api/v1/events":
-            supplied_key = api_key
+        if request.scope.get("path") == "/api/v1/events":
+            if token is not None:
+                return
+            if supplied_key is None:
+                supplied_key = api_key
         verified = _check_api_key(expected, supplied_key)
         if verified is not None and on_verified is not None:
             on_verified(verified)

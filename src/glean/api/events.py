@@ -8,9 +8,14 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import datetime as dt
+import os
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import Literal
+
+from fastapi import HTTPException, status
+
+from glean.security.scrub import scrub
 
 EventType = Literal["run_started", "run_completed", "run_failed"]
 
@@ -35,17 +40,31 @@ class RunEvent:
             "after_dedup": self.after_dedup,
             "sent": self.sent,
             "duration_ms": self.duration_ms,
-            "error": self.error,
+            "error": scrub(self.error) if self.error is not None else None,
         }
 
 
 class EventBus:
     """Simple async pub/sub. Each subscriber gets a bounded queue."""
 
-    def __init__(self, queue_max: int = 100) -> None:
+    MAX_SUBSCRIBERS = 20
+
+    def __init__(self, queue_max: int = 100, max_subscribers: int | None = None) -> None:
         self._subscribers: set[asyncio.Queue[RunEvent]] = set()
         self._queue_max = queue_max
+        self.max_subscribers = self._resolve_max_subscribers(max_subscribers)
         self._lock = asyncio.Lock()
+
+    @classmethod
+    def _resolve_max_subscribers(cls, override: int | None) -> int:
+        if override is not None:
+            return override
+        raw = os.environ.get("GLEAN_MAX_SSE_SUBSCRIBERS")
+        if raw is None:
+            return cls.MAX_SUBSCRIBERS
+        with contextlib.suppress(ValueError):
+            return int(raw)
+        return cls.MAX_SUBSCRIBERS
 
     async def publish(self, event: RunEvent) -> None:
         async with self._lock:
@@ -62,6 +81,11 @@ class EventBus:
     async def subscribe(self) -> asyncio.Queue[RunEvent]:
         queue: asyncio.Queue[RunEvent] = asyncio.Queue(maxsize=self._queue_max)
         async with self._lock:
+            if len(self._subscribers) >= self.max_subscribers:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="SSE subscriber limit reached",
+                )
             self._subscribers.add(queue)
         return queue
 
