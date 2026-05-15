@@ -39,3 +39,21 @@ The wordmark uses **Inter** (semibold, tracking `-0.02em`). Falls back gracefull
 
 - `glean-hero.svg` — architecture diagram (pipeline flow), used as the README banner. This is not a logo.
 - `screenshots/` — UI screenshots used in the README and docs.
+
+## Regenerating PNG variants
+
+Some places (PWA manifest icons, Open Graph cards, Apple touch icons) need raster PNGs. They're generated from the SVG sources via:
+
+```bash
+cd ui
+node scripts/generate-brand-png.mjs
+```
+
+Generated artifacts (committed to `ui/public/`):
+- `favicon-16.png`, `favicon-32.png` — old-browser fallbacks
+- `icon-192.png`, `icon-512.png` — PWA manifest icons (any purpose)
+- `icon-maskable-192.png`, `icon-maskable-512.png` — PWA maskable icons (with safe-area padding)
+- `apple-touch-icon.png` (180×180, opaque)
+- `og-card.png` (1200×630) — Open Graph / Twitter social preview
+
+Re-run after editing any SVG in this directory.
