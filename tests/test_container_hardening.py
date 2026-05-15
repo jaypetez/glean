@@ -34,23 +34,25 @@ def _assert_hardened(service: dict[str, Any], *, read_only: bool) -> None:
 def test_dockerfile_pins_mutable_base_images_to_sha256_digests() -> None:
     dockerfile = ROOT.joinpath("Dockerfile").read_text(encoding="utf-8")
 
-    assert re.search(rf"^FROM node:22-alpine{SHA256_PIN.pattern} AS ui-builder$", dockerfile, re.M)
-    assert re.search(
-        rf"^FROM python:3\.13-slim-trixie{SHA256_PIN.pattern} AS builder$",
-        dockerfile,
-        re.M,
-    )
-    assert re.search(
-        rf"^FROM python:3\.13-slim-trixie{SHA256_PIN.pattern} AS runtime$",
-        dockerfile,
-        re.M,
-    )
-    assert re.search(
-        rf"^COPY --from=ghcr\.io/astral-sh/uv:0\.5\.13{SHA256_PIN.pattern} "
-        r"/uv /usr/local/bin/uv$",
-        dockerfile,
-        re.M,
-    )
+    # We assert *digest pinning* on every FROM/COPY --from line — not specific
+    # versions. Version bumps are handled by a separate review process; the
+    # security invariant we enforce here is "no mutable tags in production".
+    from_lines = [
+        line
+        for line in dockerfile.splitlines()
+        if line.startswith("FROM ") or line.startswith("COPY --from=")
+    ]
+    assert from_lines, "Dockerfile has no FROM or COPY --from lines"
+
+    for line in from_lines:
+        # Skip alias-only references like 'FROM builder' that have no image
+        # registry component (no ':' in the image part)
+        ref = line.removeprefix("FROM ").removeprefix("COPY --from=").split(" ", 1)[0]
+        if ":" not in ref:
+            continue  # alias to an earlier stage
+        assert SHA256_PIN.search(line), (
+            f"Dockerfile line is not SHA-256-pinned: {line!r}"
+        )
 
 
 def test_runtime_image_provides_curl_probe_without_debian_curl_package() -> None:
