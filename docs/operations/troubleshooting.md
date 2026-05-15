@@ -14,14 +14,8 @@ Your `.env` either isn't being loaded or doesn't have the var. With docker-compo
 
 Likely the feed's source isn't returning anything fresh, or every item is already in `seen_items`. Run `glean test-feed <name>` — it shows fetched count without sending.
 
-To start over for one feed:
-
-```sh
-docker exec -it glean sqlite3 /data/state.db \
-  "DELETE FROM seen_items WHERE feed='<name>'; DELETE FROM feed_runs WHERE feed='<name>';"
-```
-
-Then the next tick will bootstrap silently again. To send the first batch instead, set `bootstrap: send-last-N` and `bootstrap_count: 5` for that feed and restart.
+<a id="reset-a-stuck-feed"></a>
+To start over for one feed, use the dedicated [reset one feed how-to](../how-to/ops/reset-feed.md).
 
 ## Ollama: "model not found"
 
