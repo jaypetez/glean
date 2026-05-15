@@ -1,0 +1,11 @@
+title = "glean gitleaks config"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "api key logged marker is a non-secret sentinel"
+condition = "AND"
+regexTarget = "match"
+paths = ['''src/glean/api/auth\.py''']
+regexes = ['''_INITIAL_KEY_LOGGED_MARKER = "initial_key_logged=1"''']

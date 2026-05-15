@@ -8,6 +8,13 @@ services:
     init: true
     stop_grace_period: 30s
     restart: unless-stopped
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
     depends_on:
       - ollama
     env_file:
@@ -27,6 +34,14 @@ services:
     image: ollama/ollama:latest
     container_name: glean-ollama
     restart: unless-stopped
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /root/.cache:size=256m,mode=0700
     volumes:
       - ollama-models:/root/.ollama
     networks:
@@ -45,6 +60,9 @@ services:
 
   # ────────────────────────────────────────────────────────────────────────────
   # Optional: Self-hosted SearXNG metasearch — no API key needed.
+  #
+  # SECURITY REQUIREMENT: SEARXNG_SECRET must be 32+ hex characters. The wrapper
+  # below refuses to start SearXNG when the secret is missing or weak.
   #
   # 1. Uncomment this service block.
   # 2. Generate a secret: echo "SEARXNG_SECRET=$(openssl rand -hex 32)" >> .env
@@ -65,11 +83,29 @@ services:
   #   image: ghcr.io/searxng/searxng:latest
   #   container_name: glean-searxng
   #   restart: unless-stopped
+  #   cap_drop:
+  #     - ALL
+  #   security_opt:
+  #     - no-new-privileges:true
+  #   read_only: true
+  #   tmpfs:
+  #     - /tmp:size=64m,mode=1777
   #   environment:
   #     SEARXNG_BASE_URL: http://searxng:8080/
   #     SEARXNG_SECRET: ${SEARXNG_SECRET}
+  #     FORCE_OWNERSHIP: "false"  # keep ./searxng-config mounted read-only
+  #   entrypoint:
+  #     - /bin/sh
+  #     - -ec
+  #     - |
+  #       if ! printf '%s' "$${SEARXNG_SECRET}" | grep -Eq '^[0-9a-fA-F]{32,}$$'; then
+  #         echo >&2 "ERROR: SEARXNG_SECRET must be set to 32+ hex characters."
+  #         echo >&2 "Generate one with: openssl rand -hex 32"
+  #         exit 1
+  #       fi
+  #       exec /usr/local/searxng/entrypoint.sh
   #   volumes:
-  #     - ./searxng-config:/etc/searxng:rw
+  #     - ./searxng-config:/etc/searxng:ro
   #   networks:
   #     - glean
   #   # Internal network only — do NOT expose to host

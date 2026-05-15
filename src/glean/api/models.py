@@ -89,6 +89,15 @@ class RotateResponse(BaseModel):
     api_key: str
 
 
+class EventTokenResponse(BaseModel):
+    """Short-lived token for opening an authenticated EventSource stream."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    token: str
+    expires_in: int
+
+
 class SystemInfoResponse(BaseModel):
     """Runtime system information for the About settings tab."""
 

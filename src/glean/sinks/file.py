@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-_DEFAULT_ROOTS = ["/data", "/tmp/glean"]  # noqa: S108
+_DEFAULT_ROOTS = ["/data", "/tmp/glean"]  # noqa: S108 # nosec
 _MAX_PATH_SEGMENTS = 10
 
 
