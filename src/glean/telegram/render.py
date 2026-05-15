@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from html import escape
+from html import escape, unescape
 
 from glean.config.schema import RenderConfig
 from glean.sinks.escape import safe_url
@@ -20,6 +20,10 @@ SOURCE_EMOJI: dict[str, str] = {
 }
 
 
+def _html_escape(s: str) -> str:
+    return escape(unescape(s), quote=True)
+
+
 def render_digest(
     items: list[Item],
     *,
@@ -36,7 +40,7 @@ def render_digest(
         intro_line = intro
     else:
         formatter = _format_item_html
-        intro_line = escape(intro)
+        intro_line = _html_escape(intro)
 
     blocks: list[str] = [intro_line] if intro_line else []
     for item in items:
@@ -50,10 +54,10 @@ def render_digest(
 
 def _format_item_html(item: Item) -> str:
     emoji = SOURCE_EMOJI.get(item.source_type, "•")
-    title = escape(item.title or "(untitled)")
-    summary = escape(item.llm_summary or item.summary or "")
-    source_name = escape(item.source_name or item.source_type or "")
-    url = escape(safe_url(item.canonical_url))
+    title = _html_escape(item.title or "(untitled)")
+    summary = _html_escape(item.llm_summary or item.summary or "")
+    source_name = _html_escape(item.source_name or item.source_type or "")
+    url = _html_escape(safe_url(item.canonical_url))
 
     lines = [f"<b>{title}</b>"]
     if summary:
@@ -101,7 +105,7 @@ def _format_item_plain(item: Item) -> str:
 def _overflow_line(n: int, style: str) -> str:
     text = f"…and {n} more (lowest-ranked items hidden)."
     if style == "html":
-        return f"<i>{escape(text)}</i>"
+        return f"<i>{_html_escape(text)}</i>"
     if style == "markdown_v2":
         return f"_{_md_escape(text)}_"
     return text

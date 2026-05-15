@@ -53,6 +53,8 @@ dev = [
     "pre-commit>=4.0",
     "bandit>=1.8",
     "pip-audit>=2.9",
+    "hypothesis>=6.115",
+    "schemathesis>=3.40",
     "types-PyYAML",
 ]
 docs = [
