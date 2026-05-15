@@ -48,9 +48,17 @@ nav:
       - Web search: getting-started/search.md
   - Tutorials:
       - tutorials/index.md
+      - AI News with Ollama: tutorials/ai-news-ollama.md
   - Concepts:
       - concepts/index.md
       - Architecture: concepts/architecture.md
+      - What is a feed?: concepts/feed.md
+      - Pipeline: concepts/pipeline.md
+      - Plugin layers: concepts/plugins.md
+      - Skills: concepts/skills.md
+      - Dedup and bootstrap: concepts/dedup-bootstrap.md
+      - LLM dispatch: concepts/llm-dispatch.md
+      - Failure model: concepts/failure-model.md
   - How-to:
       - how-to/index.md
       - Sinks: how-to/sinks/index.md
