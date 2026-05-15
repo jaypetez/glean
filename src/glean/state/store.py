@@ -107,7 +107,7 @@ class StateStore:
         hashes = {item_hash(i): i for i in items}
         placeholders = ",".join("?" * len(hashes))
         # `placeholders` is built from a count of items, never from user input.
-        query = f"SELECT item_hash FROM seen_items WHERE feed = ? AND item_hash IN ({placeholders})"  # noqa: S608
+        query = f"SELECT item_hash FROM seen_items WHERE feed = ? AND item_hash IN ({placeholders})"  # noqa: S608 # nosec
         async with self.db.execute(query, (feed, *hashes.keys())) as cur:
             seen = {row[0] async for row in cur}
         return [i for h, i in hashes.items() if h not in seen]
