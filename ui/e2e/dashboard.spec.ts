@@ -30,3 +30,15 @@ test("dashboard renders feed cards, run-now state, and SSE connection", async ({
   expect((await runResponse).ok()).toBe(true);
   await expect(card.getByRole("button", { name: "Run now" })).toBeEnabled();
 });
+
+test("dashboard shows branded empty state", async ({ page }) => {
+  await resetState(page, "empty");
+  await page.evaluate(() => localStorage.setItem("glean.skipped_setup", "1"));
+
+  await page.goto("/");
+
+  await expect(page.getByRole("heading", { name: "Feeds", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No feeds yet" })).toBeVisible();
+  await expect(page.getByRole("img", { name: "glean" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Create your first feed" })).toBeVisible();
+});

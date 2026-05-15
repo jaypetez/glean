@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Sparkle } from "@phosphor-icons/svelte";
+  import Logo from "../Logo.svelte";
   import WizardStep from "./WizardStep.svelte";
 
   interface Props {
@@ -9,7 +10,14 @@
   let { ready = $bindable(false) }: Props = $props();
 </script>
 
-<WizardStep title="Welcome to glean" description="Set up your first automated digest in a few guided steps.">
+<WizardStep
+  title="Welcome to glean"
+  description="Set up your first automated digest in a few guided steps."
+>
+  <div class="flex flex-col items-center gap-4 pb-2">
+    <Logo variant="vertical" class="h-24 w-24 text-cyan" />
+  </div>
+
   <div class="flex gap-4 rounded-lg border border-border bg-elevated p-4">
     <Sparkle class="mt-1 h-6 w-6 shrink-0 text-cyan" weight="duotone" aria-hidden="true" />
     <p class="text-sm leading-6 text-secondary">

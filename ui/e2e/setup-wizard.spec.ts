@@ -7,6 +7,8 @@ test("redirects to setup and installs a starter template", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveURL(/\/setup$/);
   await expect(page.getByRole("heading", { name: "Create your first glean feed" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Welcome to glean" })).toBeVisible();
+  await expect(page.getByRole("img", { name: "glean" })).toBeVisible();
 
   await page.getByLabel("I’m ready to start").check();
   await page.getByRole("button", { name: "Next" }).click();

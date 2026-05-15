@@ -27,6 +27,11 @@ test("persists defaults, toggles theme, and cancels API key rotation", async ({ 
     .toBe("system");
   await expect(page.locator("html")).toHaveClass(/theme-(dark|light)/);
 
+  await page.getByRole("tab", { name: "About" }).click();
+  const aboutPanel = page.getByRole("tabpanel", { name: "About" });
+  await expect(aboutPanel.getByRole("img", { name: "glean" })).toBeVisible();
+  await expect(aboutPanel.getByRole("heading", { name: "About glean" })).toBeVisible();
+
   let rotateRequests = 0;
   await page.route("**/api/v1/auth/rotate", async (route) => {
     rotateRequests += 1;
