@@ -173,9 +173,9 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
         on_verified=cache_verified_api_key,
     )
 
-    health_router = APIRouter(tags=["health"])
+    health_router = APIRouter()
 
-    @health_router.get("/healthz")
+    @health_router.get("/healthz", tags=["health"])
     async def healthz(request: Request) -> dict[str, int | str]:
         try:
             await state.ping()
@@ -206,7 +206,7 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
             "uptime_s": uptime_s,
         }
 
-    @health_router.get("/api/v1/initialize", response_model=InitializeResponse)
+    @health_router.get("/api/v1/initialize", response_model=InitializeResponse, tags=["auth"])
     @limiter.limit("10/minute")
     async def initialize(request: Request) -> InitializeResponse:
         """Return bootstrap data for first-load UI initialization."""
@@ -217,15 +217,15 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
 
     app.include_router(health_router)
 
-    api_router = APIRouter(prefix="/api/v1", dependencies=[Depends(verify)], tags=["api"])
+    api_router = APIRouter(prefix="/api/v1", dependencies=[Depends(verify)])
 
-    @api_router.get("/health")
+    @api_router.get("/health", tags=["health"])
     async def api_health() -> dict[str, str]:
         return {"status": "ok"}
 
     if _test_mode_enabled():
 
-        @api_router.post("/test/reset")
+        @api_router.post("/test/reset", tags=["system"])
         async def test_reset(request: Request, fixture: str = "default") -> dict[str, object]:
             if not _test_mode_enabled():
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not found")
@@ -234,7 +234,7 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
             _restore_test_config(fixture)
             return {"ok": True, "message": "test state reset"}
 
-        @api_router.get("/test/rss")
+        @api_router.get("/test/rss", tags=["system"])
         async def test_rss() -> Response:
             if not _test_mode_enabled():
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not found")
@@ -264,7 +264,6 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
     events_api_router = APIRouter(
         prefix="/api/v1",
         dependencies=[Depends(verify_events)],
-        tags=["api"],
     )
     events_api_router.include_router(events_router)
     app.include_router(events_api_router)

@@ -326,7 +326,7 @@ All commands accept `--config <path>` (default `/etc/glean/feeds.yaml`) and `--d
 
 ### Security model
 
-See the full [security model and deployment guide](./docs/security.md) for the threat model, reverse proxy examples,
+See the full [security model and deployment guide](./docs/operations/security.md) for the threat model, reverse proxy examples,
 file-permission requirements, and post-audit protections.
 
 - **Single-user trust boundary:** the Web UI and REST API are designed for one trusted operator. The API key is the sole gate for API access; anyone with it can manage feeds and rotate the key.
@@ -408,7 +408,7 @@ Full docs are at [jaypetez.github.io/glean](https://jaypetez.github.io/glean) (b
 
 - [Installation](./docs/getting-started/install.md)
 - [Quickstart](./docs/getting-started/quickstart.md)
-- [Security model and deployment guide](./docs/security.md)
+- [Security model and deployment guide](./docs/operations/security.md)
 - [Web search setup](./docs/getting-started/search.md) — including SearXNG self-host
 - [feeds.yaml reference](./docs/config/feeds.md)
 - [Per-source LLM models](./docs/config/per-source-llm.md)

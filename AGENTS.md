@@ -31,7 +31,7 @@ One container, one process, one asyncio event loop hosting: APScheduler (per-fee
    - `docs/plugins/llm.md`  adding an LLM provider
    - `docs/plugins/sink.md`  adding a Sink
    - `docs/plugins/search.md`  adding a Search backend
-   - `docs/security.md`  security model + threat model
+   - `docs/operations/security.md`  security model + threat model
 
 ## Things that will block your PR
 

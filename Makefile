@@ -1,4 +1,4 @@
-.PHONY: help dev check test test-cov e2e ui-test ui-build lint format coverage clean
+.PHONY: help dev check test test-cov e2e ui-test ui-build lint format coverage docs-cli docs-api docs-schema docs docs-serve clean
 
 help:
 	@echo "Glean — common targets"
@@ -53,6 +53,22 @@ format:
 
 coverage: test-cov
 	@echo "Open htmlcov/index.html in your browser"
+
+docs-cli:
+	uv run typer glean.cli.app utils docs --name glean --output docs/reference/cli.md
+	uv run python scripts/normalize_utf8.py docs/reference/cli.md
+
+docs-api:
+	uv run python scripts/dump_openapi.py docs/openapi.json
+
+docs-schema:
+	uv run python scripts/dump_schema.py docs/reference/feeds-schema.json
+
+docs: docs-cli docs-api docs-schema
+	uv run mkdocs build --strict
+
+docs-serve:
+	uv run mkdocs serve
 
 clean:
 	rm -rf .pytest_cache .mypy_cache .ruff_cache htmlcov .coverage coverage.xml
