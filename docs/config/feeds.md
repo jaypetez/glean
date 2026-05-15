@@ -1,5 +1,8 @@
 # feeds.yaml Reference
 
+!!! info
+    [Download the JSON Schema](../reference/feeds-schema.json) for IDE validation and AI agent consumption.
+
 ## Source types
 
 | Type      | Args                                                            |

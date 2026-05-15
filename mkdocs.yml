@@ -7,24 +7,35 @@ edit_uri: edit/main/docs/
 
 theme:
   name: material
+  language: en
+  logo: assets/glean-mark-mono.svg
+  favicon: assets/glean-favicon.svg
+  font:
+    text: Inter
+    code: JetBrains Mono
   features:
     - navigation.tabs
     - navigation.sections
+    - navigation.indexes
+    - navigation.instant
+    - navigation.instant.prefetch
     - navigation.top
+    - toc.follow
     - content.code.copy
     - content.code.annotate
     - search.highlight
     - search.share
+    - search.suggest
   palette:
     - scheme: default
-      primary: deep purple
-      accent: amber
+      primary: cyan
+      accent: cyan
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - scheme: slate
-      primary: deep purple
-      accent: amber
+      primary: cyan
+      accent: cyan
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
@@ -35,32 +46,56 @@ nav:
       - Installation: getting-started/install.md
       - Quickstart: getting-started/quickstart.md
       - Web search: getting-started/search.md
-  - Configuration:
-      - Overview: config/overview.md
-      - feeds.yaml Reference: config/feeds.md
-      - Schedule Syntax: config/schedules.md
-      - Environment Variables: config/env.md
-      - Per-source LLM: config/per-source-llm.md
-      - Skills: config/skills.md
+  - Tutorials:
+      - tutorials/index.md
+  - Concepts:
+      - concepts/index.md
+      - Architecture: concepts/architecture.md
+  - How-to:
+      - how-to/index.md
+      - Sinks: how-to/sinks/index.md
+      - LLM: how-to/llm/index.md
+      - Ops: how-to/ops/index.md
+      - Plugins: how-to/plugins/index.md
+  - Reference:
+      - reference/index.md
+      - CLI: reference/cli.md
+      - REST API: reference/api.md
   - Plugins:
+      - plugins/index.md
       - Writing a Source: plugins/source.md
-      - Writing an LLM Provider: plugins/llm.md
       - Writing a Sink: plugins/sink.md
+      - Writing an LLM Provider: plugins/llm.md
       - Writing a Search Backend: plugins/search.md
   - Operations:
-      - Docker: ops/docker.md
-      - Security: security.md
-      - Troubleshooting: ops/troubleshooting.md
-  - Contributing: contributing.md
+      - Docker: operations/docker.md
+      - Security: operations/security.md
+      - Troubleshooting: operations/troubleshooting.md
+  - About:
+      - about/index.md
+  - Configuration:
+      - Overview: config/overview.md
+      - Environment Variables: config/env.md
+      - feeds.yaml Reference: config/feeds.md
+      - Schedule Syntax: config/schedules.md
+      - Per-source LLM: config/per-source-llm.md
+      - Skills: config/skills.md
+  - FAQ: faq.md
   - Changelog: changelog.md
+  - Contributing: contributing.md
 
 plugins:
   - search
+  - swagger-ui-tag
 
 markdown_extensions:
   - admonition
   - pymdownx.details
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite

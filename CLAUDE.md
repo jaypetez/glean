@@ -4,7 +4,7 @@
 @docs/plugins/llm.md
 @docs/plugins/sink.md
 @docs/plugins/search.md
-@docs/security.md
+@docs/operations/security.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 

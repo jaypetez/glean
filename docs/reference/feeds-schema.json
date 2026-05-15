@@ -1,0 +1,510 @@
+{
+  "$defs": {
+    "Defaults": {
+      "additionalProperties": false,
+      "properties": {
+        "bootstrap": {
+          "default": "skip-and-mark",
+          "enum": [
+            "skip-and-mark",
+            "send-last-N",
+            "send-all"
+          ],
+          "title": "Bootstrap",
+          "type": "string"
+        },
+        "bootstrap_count": {
+          "default": 5,
+          "minimum": 1,
+          "title": "Bootstrap Count",
+          "type": "integer"
+        },
+        "failure": {
+          "$ref": "#/$defs/FailureConfig"
+        },
+        "llm": {
+          "$ref": "#/$defs/LLMConfig"
+        },
+        "max_llm_calls_per_run": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Default hard cap on total LLM calls per run. None = unlimited.",
+          "title": "Max Llm Calls Per Run"
+        },
+        "render": {
+          "$ref": "#/$defs/RenderConfig"
+        },
+        "sinks": {
+          "anyOf": [
+            {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sinks"
+        },
+        "telegram": {
+          "$ref": "#/$defs/TelegramDefaults"
+        }
+      },
+      "title": "Defaults",
+      "type": "object"
+    },
+    "FailureConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "alert_after": {
+          "default": 3,
+          "minimum": 1,
+          "title": "Alert After",
+          "type": "integer"
+        },
+        "ops_chat_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ops Chat Id"
+        }
+      },
+      "title": "FailureConfig",
+      "type": "object"
+    },
+    "FeedConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "bootstrap": {
+          "anyOf": [
+            {
+              "enum": [
+                "skip-and-mark",
+                "send-last-N",
+                "send-all"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bootstrap"
+        },
+        "bootstrap_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bootstrap Count"
+        },
+        "chat_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Chat Id"
+        },
+        "failure": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FailureConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "llm": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LLMConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "max_llm_calls_per_run": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Hard cap on total LLM calls per run for this feed. None = unlimited (back-compat).",
+          "title": "Max Llm Calls Per Run"
+        },
+        "name": {
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$",
+          "title": "Name",
+          "type": "string"
+        },
+        "pipeline": {
+          "items": {
+            "$ref": "#/$defs/StageSpec"
+          },
+          "minItems": 1,
+          "title": "Pipeline",
+          "type": "array"
+        },
+        "render": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RenderConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "schedule": {
+          "title": "Schedule",
+          "type": "string"
+        },
+        "sinks": {
+          "anyOf": [
+            {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sinks"
+        },
+        "sources": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "minItems": 1,
+          "title": "Sources",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "schedule",
+        "sources",
+        "pipeline"
+      ],
+      "title": "FeedConfig",
+      "type": "object"
+    },
+    "LLMConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "api_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Api Key"
+        },
+        "base_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Base Url"
+        },
+        "model": {
+          "default": "qwen2.5:7b",
+          "title": "Model",
+          "type": "string"
+        },
+        "provider": {
+          "default": "ollama",
+          "title": "Provider",
+          "type": "string"
+        },
+        "timeout_s": {
+          "default": 60.0,
+          "title": "Timeout S",
+          "type": "number"
+        }
+      },
+      "title": "LLMConfig",
+      "type": "object"
+    },
+    "RenderConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "link_preview": {
+          "default": false,
+          "title": "Link Preview",
+          "type": "boolean"
+        },
+        "max_items": {
+          "default": 10,
+          "maximum": 50,
+          "minimum": 1,
+          "title": "Max Items",
+          "type": "integer"
+        },
+        "style": {
+          "default": "html",
+          "enum": [
+            "html",
+            "markdown_v2",
+            "plain"
+          ],
+          "title": "Style",
+          "type": "string"
+        }
+      },
+      "title": "RenderConfig",
+      "type": "object"
+    },
+    "SkillConfig": {
+      "additionalProperties": false,
+      "description": "A named, reusable LLM extraction skill defined in YAML.",
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "llm": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LLMConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "name": {
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$",
+          "title": "Name",
+          "type": "string"
+        },
+        "output_schema": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/$defs/SkillOutputField"
+              }
+            ]
+          },
+          "title": "Output Schema",
+          "type": "object"
+        },
+        "prompt": {
+          "title": "Prompt",
+          "type": "string"
+        },
+        "system_prompt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "System Prompt"
+        },
+        "version": {
+          "default": "1",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "prompt",
+        "output_schema"
+      ],
+      "title": "SkillConfig",
+      "type": "object"
+    },
+    "SkillOutputField": {
+      "additionalProperties": false,
+      "description": "Verbose form for a skill output field (alternative to bare type string).",
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "required": {
+          "default": true,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "type": {
+          "default": "str",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "title": "SkillOutputField",
+      "type": "object"
+    },
+    "StageSpec": {
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "enum": [
+            "dedup",
+            "rank",
+            "summarize",
+            "digest",
+            "apply_skill"
+          ],
+          "title": "Name",
+          "type": "string"
+        },
+        "params": {
+          "additionalProperties": true,
+          "title": "Params",
+          "type": "object"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "StageSpec",
+      "type": "object"
+    },
+    "TelegramDefaults": {
+      "additionalProperties": false,
+      "properties": {
+        "bot_token": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bot Token"
+        },
+        "chat_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Chat Id"
+        }
+      },
+      "title": "TelegramDefaults",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "defaults": {
+      "$ref": "#/$defs/Defaults"
+    },
+    "feeds": {
+      "items": {
+        "$ref": "#/$defs/FeedConfig"
+      },
+      "title": "Feeds",
+      "type": "array"
+    },
+    "skills": {
+      "items": {
+        "$ref": "#/$defs/SkillConfig"
+      },
+      "title": "Skills",
+      "type": "array"
+    }
+  },
+  "title": "Config",
+  "type": "object"
+}
