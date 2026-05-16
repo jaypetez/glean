@@ -251,10 +251,11 @@ def test_get_logs_reports_when_no_matching_container_is_running(
         text: bool,
         timeout: int,
         check: bool,
-    ):
+    ) -> subprocess.CompletedProcess[str]:
         if cmd[:3] == ["docker", "ps", "--format"]:
             return _completed(stdout="postgres\nredis\n")
         pytest.fail(f"unexpected command: {cmd}")
+        raise AssertionError("unreachable")  # pragma: no cover
 
     monkeypatch.setattr(mcp_server.subprocess, "run", fake_run)
 
