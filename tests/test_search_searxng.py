@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import pytest
 
+from glean.exceptions import SecurityError
 from glean.search.searxng import SearXNGBackend
-from glean.security.ssrf import SSRFValidationError
 
 
 def test_searxng_backend_rejects_bad_base_url_scheme() -> None:
-    with pytest.raises(SSRFValidationError, match="scheme"):
+    with pytest.raises(SecurityError, match="scheme"):
         SearXNGBackend(base_url="file:///etc/passwd")
 
 

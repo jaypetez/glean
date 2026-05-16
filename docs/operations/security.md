@@ -140,6 +140,27 @@ fails if `/data/api_key` is not mode `0o600` (`chmod 600`).
 - **Telegram link safety:** rendered Telegram links are limited to `http://` and
   `https://` URLs before they are emitted in `<a href>` tags.
 
+## Typed exception hierarchy
+
+All glean-raised exceptions inherit from `glean.GleanError`. Catch by base class
+to handle the whole family, or by subclass to handle a specific failure mode.
+
+| Class | Raised when |
+|-------|-------------|
+| `GleanError` | Base for all |
+| `ConfigError` | Invalid config |
+| `FeedConfigError` | Per-feed config invalid |
+| `SourceError` | Source plugin failed |
+| `SourceTimeoutError` | Source timed out |
+| `SourceFetchError` | Source HTTP error or parse failure |
+| `SinkError` | Sink plugin failed |
+| `SinkRateLimitError` | Sink 429 |
+| `LLMError` | LLM provider call failed |
+| `LLMRateLimitError` | LLM 429 |
+| `LLMOutputInvalidError` | LLM output didn't match expected schema |
+| `StateError` | SQLite store failure |
+| `SecurityError` | SSRF block, prompt injection detected |
+
 ## Secret management
 
 Use `.env` for all runtime secrets, including `TELEGRAM_BOT_TOKEN`,

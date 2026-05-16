@@ -4,7 +4,8 @@ from typing import Any
 
 import httpx
 
-from glean.security.ssrf import SSRFValidationError, validate_url
+from glean.exceptions import SecurityError
+from glean.security.ssrf import validate_url
 
 # Privilege elevation for tightly-scoped internal backends such as SearXNG only.
 # Do not use this for arbitrary user-provided URLs.
@@ -22,7 +23,7 @@ class SSRFGuardedTransport(httpx.AsyncHTTPTransport):
         )
         try:
             validate_url(str(request.url), allow_private=allow_private)
-        except SSRFValidationError as exc:
+        except SecurityError as exc:
             raise httpx.RequestError(f"SSRF blocked: {exc}", request=request) from exc
         return await super().handle_async_request(request)
 
