@@ -21,7 +21,7 @@ def _wait_for_skills_messages(timeout: float = 60.0) -> list[dict]:
             skills_msgs = [m for m in msgs if str(m.get("chat", {}).get("id")) == "9999"]
             if skills_msgs:
                 return skills_msgs
-        except Exception:  # noqa: BLE001
+        except Exception:  # service may not be ready yet
             pass
         time.sleep(2)
     return []

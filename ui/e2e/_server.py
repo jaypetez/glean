@@ -14,8 +14,8 @@ from glean.logging import configure_logging
 from glean.state.store import StateStore
 
 
-async def main() -> None:
-    ui_dir = Path(__file__).resolve().parents[1]  # noqa: ASYNC240
+def _prepare_runtime_paths() -> tuple[Path, Path, Path, Path, Path]:
+    ui_dir = Path(__file__).resolve().parents[1]
     tmp_dir = Path(os.environ.get("GLEAN_E2E_STATE_DIR", ui_dir / "e2e" / ".tmp"))
     if tmp_dir.exists():
         shutil.rmtree(tmp_dir, ignore_errors=True)
@@ -24,9 +24,13 @@ async def main() -> None:
     default_fixture = ui_dir / "e2e" / "fixtures" / "test-feeds.yaml"
     empty_fixture = ui_dir / "e2e" / "fixtures" / "empty-feeds.yaml"
     active_config = tmp_dir / "feeds.yaml"
-    db_path = tmp_dir / "state.db"
-
     shutil.copyfile(default_fixture, active_config)
+    return ui_dir, tmp_dir, default_fixture, empty_fixture, active_config
+
+
+async def main() -> None:
+    ui_dir, tmp_dir, default_fixture, empty_fixture, active_config = _prepare_runtime_paths()
+    db_path = tmp_dir / "state.db"
 
     os.environ.setdefault("GLEAN_DISABLE_AUTH", "1")
     os.environ.setdefault("GLEAN_TEST_MODE", "1")

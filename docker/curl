@@ -16,7 +16,7 @@ def main() -> int:
         urls.append(arg)
 
     if len(urls) != 1:
-        print("curl shim supports exactly one URL", file=sys.stderr)
+        sys.stderr.write("curl shim supports exactly one URL\n")
         return 2
 
     try:
@@ -24,7 +24,7 @@ def main() -> int:
             sys.stdout.buffer.write(response.read())
     except (TimeoutError, urllib.error.HTTPError, urllib.error.URLError) as exc:
         if not silent:
-            print(exc, file=sys.stderr)
+            sys.stderr.write(f"{exc}\n")
         return 22
     return 0
 

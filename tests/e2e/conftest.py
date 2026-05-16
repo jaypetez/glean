@@ -34,7 +34,7 @@ def _wait_for(url: str, timeout: float = 60.0) -> None:
             r = httpx.get(url, timeout=2.0)
             if r.status_code == 200:
                 return
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             last_exc = exc
         time.sleep(1)
     raise TimeoutError(f"timed out waiting for {url}: {last_exc}")

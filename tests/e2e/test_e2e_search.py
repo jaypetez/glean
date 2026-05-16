@@ -22,7 +22,7 @@ def _wait_for_search_messages(timeout: float = 60.0) -> list[dict]:
             search_msgs = [m for m in msgs if str(m.get("chat", {}).get("id")) == "5678"]
             if search_msgs:
                 return search_msgs
-        except Exception:  # noqa: BLE001
+        except Exception:  # service may not be ready yet
             pass
         time.sleep(2)
     return []
