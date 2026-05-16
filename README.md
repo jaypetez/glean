@@ -13,6 +13,7 @@
 <p align="center">
   <a href="https://github.com/jaypetez/glean/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/jaypetez/glean/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://jaypetez.github.io/glean"><img alt="Docs" src="https://img.shields.io/badge/docs-mkdocs-22d3ee.svg"></a>
+  <a href="https://codespaces.new/jaypetez/glean"><img alt="Open in GitHub Codespaces" src="https://github.com/codespaces/badge.svg"></a>
   <a href="https://github.com/jaypetez/glean/actions/workflows/codeql.yml"><img alt="CodeQL" src="https://github.com/jaypetez/glean/actions/workflows/codeql.yml/badge.svg"></a>
   <a href="https://codecov.io/gh/jaypetez/glean"><img alt="Coverage" src="https://codecov.io/gh/jaypetez/glean/branch/main/graph/badge.svg"></a>
   <a href="./LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
