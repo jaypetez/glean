@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import sys
+import time
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -40,6 +41,22 @@ def _structured_events(
     return events
 
 
+def _structured_records(
+    records: list[logging.LogRecord], *, logger_name: str
+) -> list[dict[str, object]]:
+    decoded_records: list[dict[str, object]] = []
+    for record in records:
+        if record.name != logger_name:
+            continue
+        try:
+            decoded = json.loads(record.getMessage())
+        except json.JSONDecodeError:
+            continue
+        if isinstance(decoded, dict):
+            decoded_records.append(decoded)
+    return decoded_records
+
+
 @pytest.fixture
 async def app_and_state(tmp_path: Path):
     state = StateStore(tmp_path / "state.db")
@@ -72,6 +89,10 @@ async def test_healthz_unauthenticated(client: AsyncClient) -> None:
     assert body["scheduler"] in ("running", "stopped", "n/a")
     assert "version" in body
     assert isinstance(body["uptime_s"], int)
+    assert isinstance(body["uptime_seconds"], int)
+    assert body["feed_count"] == 0
+    assert body["last_run_age_seconds"] == {}
+    assert body["alert_active_feeds"] == []
 
 
 async def test_healthz_reports_generic_db_error(tmp_path: Path) -> None:
@@ -105,6 +126,177 @@ async def test_healthz_reports_stopped_scheduler(client: AsyncClient, app_and_st
     body = resp.json()
     assert body["status"] == "degraded"
     assert body["scheduler"] == "stopped"
+
+
+async def test_healthz_reports_feed_runtime_snapshot(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cfg_path = tmp_path / "feeds.yaml"
+    cfg_path.write_text(
+        """
+defaults:
+  llm:
+    provider: ollama
+    model: qwen2.5:7b
+feeds:
+  - name: alpha
+    schedule: every 1h
+    chat_id: "12345"
+    sources:
+      - type: rss
+        url: https://example.com/a.xml
+    pipeline:
+      - dedup
+  - name: beta
+    schedule: every 2h
+    chat_id: "67890"
+    sources:
+      - type: rss
+        url: https://example.com/b.xml
+    pipeline:
+      - dedup
+skills: []
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("GLEAN_CONFIG", str(cfg_path))
+
+    state = StateStore(tmp_path / "state.db")
+    await state.open()
+    now = int(time.time())
+    await state.db.executemany(
+        "INSERT INTO feed_runs(feed, last_attempt_at, alert_active, bootstrapped) "
+        "VALUES (?, ?, ?, 1)",
+        [("alpha", now - 30, 0), ("beta", now - 120, 1)],
+    )
+    await state.db.commit()
+    try:
+        app = make_app(state, tmp_path / "state.db")
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            resp = await ac.get("/healthz")
+    finally:
+        await state.close()
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "degraded"
+    assert body["feed_count"] == 2
+    assert set(body["last_run_age_seconds"]) == {"alpha", "beta"}
+    assert 25 <= body["last_run_age_seconds"]["alpha"] <= 35
+    assert 115 <= body["last_run_age_seconds"]["beta"] <= 125
+    assert body["alert_active_feeds"] == ["beta"]
+
+
+async def test_request_without_trace_id_gets_generated_header_and_logs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    import glean.logging as logging_module
+    from glean.api import app as app_module
+
+    logging_module.structlog.reset_defaults()
+    try:
+        logging_module.configure_logging("INFO", json_logs=True)
+        monkeypatch.setattr(app_module, "logger", logging_module.get_logger("glean.api.app"))
+        caplog.set_level(logging.INFO, logger="glean.api.app")
+
+        state = StateStore(tmp_path / "state.db")
+        await state.open()
+        try:
+            app = make_app(state, tmp_path / "state.db")
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+                resp = await ac.get("/api/v1/initialize")
+        finally:
+            await state.close()
+
+        trace_id = resp.headers["X-Glean-Trace-Id"]
+        assert len(trace_id) == 8
+        int(trace_id, 16)
+
+        request_logs = [
+            record
+            for record in _structured_records(caplog.records, logger_name="glean.api.app")
+            if record.get("event") == "api_request_completed"
+        ]
+        assert request_logs
+        assert request_logs[-1]["trace_id"] == trace_id
+        assert request_logs[-1]["path"] == "/api/v1/initialize"
+    finally:
+        logging_module.structlog.reset_defaults()
+
+
+async def test_request_with_trace_id_echoes_header(client: AsyncClient) -> None:
+    resp = await client.get("/healthz", headers={"X-Glean-Trace-Id": "abc12345"})
+
+    assert resp.status_code == 200
+    assert resp.headers["X-Glean-Trace-Id"] == "abc12345"
+
+
+async def test_request_with_invalid_trace_id_gets_safe_generated_header(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    import glean.logging as logging_module
+    from glean.api import app as app_module
+
+    logging_module.structlog.reset_defaults()
+    try:
+        logging_module.configure_logging("INFO", json_logs=True)
+        monkeypatch.setattr(app_module, "logger", logging_module.get_logger("glean.api.app"))
+        caplog.set_level(logging.INFO, logger="glean.api.app")
+
+        state = StateStore(tmp_path / "state.db")
+        await state.open()
+        try:
+            app = make_app(state, tmp_path / "state.db")
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+                resp = await ac.get("/healthz", headers={"X-Glean-Trace-Id": "bad trace!"})
+        finally:
+            await state.close()
+
+        trace_id = resp.headers["X-Glean-Trace-Id"]
+        assert len(trace_id) == 8
+        int(trace_id, 16)
+        assert trace_id != "bad trace!"
+
+        request_logs = [
+            record
+            for record in _structured_records(caplog.records, logger_name="glean.api.app")
+            if record.get("event") == "api_request_completed"
+        ]
+        assert request_logs
+        assert request_logs[-1]["trace_id"] == trace_id
+    finally:
+        logging_module.structlog.reset_defaults()
+
+
+async def test_healthz_degrades_when_config_is_invalid(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cfg_path = tmp_path / "feeds.yaml"
+    cfg_path.write_text("defaults:\n  llm: [\n", encoding="utf-8")
+    monkeypatch.setenv("GLEAN_CONFIG", str(cfg_path))
+
+    state = StateStore(tmp_path / "state.db")
+    await state.open()
+    try:
+        app = make_app(state, tmp_path / "state.db")
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            resp = await ac.get("/healthz")
+    finally:
+        await state.close()
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "degraded"
+    assert body["feed_count"] == 0
+    assert body["last_run_age_seconds"] == {}
+    assert body["alert_active_feeds"] == []
 
 
 async def test_initialize_does_not_return_api_key(client: AsyncClient) -> None:

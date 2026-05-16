@@ -2246,16 +2246,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": {
-                    "anyOf": [
-                      {
-                        "type": "integer"
-                      },
-                      {
-                        "type": "string"
-                      }
-                    ]
-                  },
+                  "additionalProperties": true,
                   "title": "Response Healthz Healthz Get",
                   "type": "object"
                 }
