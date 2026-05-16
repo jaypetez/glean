@@ -37,7 +37,7 @@ class ScraperSource:
                     max_bytes=self.max_response_bytes,
                 )
                 resp.raise_for_status()
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 logger.warning("scraper_fetch_failed", url=url, err=scrub(str(exc))[:500])
                 continue
 

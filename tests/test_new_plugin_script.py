@@ -147,7 +147,6 @@ def test_generate_llm_scaffold_rejects_duplicates(tmp_path: Path) -> None:
         module.generate_plugin("llm", "demo", repo_root=tmp_path)
 
 
-
 def test_generate_llm_scaffold_wraps_long_registry_import_line(tmp_path: Path) -> None:
     module = _load_new_plugin_module()
     _make_repo(tmp_path)

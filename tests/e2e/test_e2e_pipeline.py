@@ -27,7 +27,7 @@ def _wait_for_messages(
                 msgs = [m for m in msgs if str(m.get("chat", {}).get("id")) == chat_id]
             if len(msgs) >= min_count:
                 return msgs
-        except Exception:  # noqa: BLE001
+        except Exception:  # service may not be ready yet
             pass
         time.sleep(2)
     return []
