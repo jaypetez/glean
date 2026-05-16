@@ -32,6 +32,8 @@ def build_backend(spec: dict[str, Any]) -> SearchBackend:
 
 
 def _import_builtins() -> None:
+    # AGENT: To add a new search backend, run `make new-plugin LAYER=search NAME=<name>`
+    # which appends the import below automatically. See docs/plugins/search.md.
     # Eager import so decorators register on first use.
     from glean.search import brave, exa, mwmbl, searxng, serper, tavily  # noqa: F401
 

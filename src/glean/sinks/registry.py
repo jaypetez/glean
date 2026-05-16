@@ -28,6 +28,8 @@ def build_sink(spec: dict[str, Any]) -> Sink:
 
 
 def _import_builtins() -> None:
+    # AGENT: To add a new sink plugin, run `make new-plugin LAYER=sink NAME=<name>`
+    # which appends the import below automatically. See docs/plugins/sink.md.
     # Eager import so decorators register on first use.
     from glean.sinks import discord, file, ntfy, slack, telegram, webhook  # noqa: F401
 

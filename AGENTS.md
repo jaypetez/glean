@@ -18,6 +18,16 @@ uv run pytest -q              # unit tests (e2e excluded by default)
 
 `make check` wraps the fast local gate above.
 
+## Anchor comments
+
+Look for `# AGENT:` comments in source code. They mark high-leverage anchor points where you'll most often need to add code: registries, the pipeline runner, security boundaries, state migrations.
+
+```bash
+grep -rn "# AGENT:" src/
+```
+
+Each anchor includes a one-line tip + a doc link.
+
 ## Key files
 
 Start with [`docs/agents/key-files.md`](docs/agents/key-files.md) when you need the shortest path to the pipeline, config, state, security, and test harness files.
