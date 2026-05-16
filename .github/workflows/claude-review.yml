@@ -13,7 +13,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
   pull-requests: write
 
 concurrency:
@@ -31,6 +30,7 @@ jobs:
       - uses: anthropics/claude-code-action@51ea8ea73a139f2a74ff649e3092c25a904aed7e # v1.0.123
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
             Review PR #${{ github.event.pull_request.number }} for the glean repo.
 
