@@ -27,5 +27,8 @@ def test_subclass_specificity() -> None:
 def test_can_be_raised_and_caught() -> None:
     with pytest.raises(GleanError):
         raise SecurityError("test")
+
+
+def test_llm_rate_limit_caught_as_llm_error() -> None:
     with pytest.raises(LLMError):
         raise LLMRateLimitError("test")
