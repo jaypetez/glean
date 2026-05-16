@@ -1,4 +1,4 @@
-# Example 01 — Web search → local LLM → file sink.
+# Example 01 — Web search → local LLM → file + dashboard sinks.
 #
 # Edit the `query:` field under `sources:` to change what glean searches for.
 # Edit `defaults.llm.model` to switch to a different Ollama model.
@@ -24,6 +24,8 @@ feeds:
       - type: file
         path: /data/digests/web-search.md
         format: markdown
+      - type: dashboard
+        keep_last_n: 50
 
     sources:
       - type: search

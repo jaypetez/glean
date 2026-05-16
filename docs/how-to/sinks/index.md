@@ -1,12 +1,13 @@
 ---
 title: "Sinks — glean How-to"
-description: How to deliver glean digests to Telegram, Discord, Slack, ntfy, webhooks, and files.
+description: How to browse or deliver glean digests with the dashboard, Telegram, Discord, Slack, ntfy, webhooks, and files.
 ---
 
 # Sink How-to Guides
 
-Task-focused guides for sending glean digests to built-in sink destinations.
+Task-focused guides for browsing or delivering glean digests with built-in sink destinations.
 
+- [Dashboard](dashboard.md) — Browse recent rendered digests in the built-in web UI.
 - [Telegram](telegram.md) — Send digests to a Telegram DM, group, or channel.
 - [Discord](discord.md) — Post digests to a Discord channel with a webhook.
 - [Slack](slack.md) — Post digests to Slack with an incoming webhook.

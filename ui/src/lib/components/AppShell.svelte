@@ -39,6 +39,12 @@
         </a>
         <a
           class="rounded-md px-3 py-1.5 text-tertiary hover:bg-elevated hover:text-primary"
+          href="/digests"
+        >
+          Digests
+        </a>
+        <a
+          class="rounded-md px-3 py-1.5 text-tertiary hover:bg-elevated hover:text-primary"
           href="/feeds"
         >
           Feeds

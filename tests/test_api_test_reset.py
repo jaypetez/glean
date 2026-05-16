@@ -149,6 +149,115 @@ async def test_test_reset_can_restore_empty_fixture(
     assert active_config.read_text(encoding="utf-8") == empty_config.read_text(encoding="utf-8")
 
 
+async def test_test_seed_digest_route_is_not_registered_outside_test_mode(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("GLEAN_ENABLE_DOCS", "1")
+    state = StateStore(tmp_path / "state.db")
+    await state.open()
+    try:
+        app = make_app(state, tmp_path / "state.db")
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.post(
+                "/api/v1/test/seed-digest",
+                headers={"X-Glean-Api-Key": app.state.glean_api_key},
+                json={"feed_name": "alpha", "body": "hello"},
+            )
+            openapi = await client.get("/api/openapi.json")
+    finally:
+        await state.close()
+
+    assert resp.status_code == 404
+    assert "/api/v1/test/seed-digest" not in openapi.json()["paths"]
+
+
+async def test_test_seed_digest_inserts_digest_row(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GLEAN_TEST_MODE", "1")
+    state = StateStore(tmp_path / "state.db")
+    await state.open()
+    try:
+        app = make_app(state, tmp_path / "state.db")
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.post(
+                "/api/v1/test/seed-digest",
+                headers={"X-Glean-Api-Key": app.state.glean_api_key},
+                json={
+                    "feed_name": "alpha",
+                    "style": "html",
+                    "intro": "Digest intro",
+                    "body": "<p>hello</p>",
+                    "item_count": 2,
+                    "trace_id": "trace-123",
+                },
+            )
+            rows = await state.db.execute_fetchall(
+                "SELECT feed_name, style, intro, body, item_count, trace_id FROM digests"
+            )
+    finally:
+        await state.close()
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert rows == [("alpha", "html", "Digest intro", "<p>hello</p>", 2, "trace-123")]
+
+
+async def test_test_reset_clears_seeded_digests(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GLEAN_TEST_MODE", "1")
+    state = StateStore(tmp_path / "state.db")
+    await state.open()
+    try:
+        app = make_app(state, tmp_path / "state.db")
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            seed = await client.post(
+                "/api/v1/test/seed-digest",
+                headers={"X-Glean-Api-Key": app.state.glean_api_key},
+                json={"feed_name": "alpha", "body": "hello"},
+            )
+            before_reset = await state.db.execute_fetchall("SELECT id FROM digests")
+            reset = await client.post(
+                "/api/v1/test/reset",
+                headers={"X-Glean-Api-Key": app.state.glean_api_key},
+            )
+            after_reset = await state.db.execute_fetchall("SELECT id FROM digests")
+    finally:
+        await state.close()
+
+    assert seed.status_code == 200
+    assert before_reset != []
+    assert reset.status_code == 200
+    assert after_reset == []
+
+
+async def test_test_seed_digest_route_is_exempt_from_rate_limit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GLEAN_TEST_MODE", "1")
+    state = StateStore(tmp_path / "state.db")
+    await state.open()
+    try:
+        app = make_app(state, tmp_path / "state.db")
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            statuses = []
+            for index in range(65):
+                response = await client.post(
+                    "/api/v1/test/seed-digest",
+                    headers={"X-Glean-Api-Key": app.state.glean_api_key},
+                    json={"feed_name": "alpha", "body": f"hello {index}"},
+                )
+                statuses.append(response.status_code)
+    finally:
+        await state.close()
+
+    assert statuses == [200] * 65
+
+
 async def test_test_rss_route_serves_fixture_feed_in_test_mode(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

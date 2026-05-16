@@ -99,6 +99,29 @@ async def test_run_event_to_json_serializes_timestamp() -> None:
     assert payload["feed"] == "alpha"
     assert isinstance(payload["timestamp"], str)
     assert payload["error"] == "boom"
+    assert "feed_name" not in payload
+    assert "digest_ids" not in payload
+
+
+async def test_digest_persisted_event_to_json_has_dashboard_fields_only() -> None:
+    event = RunEvent(
+        type="digest.persisted",
+        feed="alpha",
+        digest_ids=[1, 2],
+        sent_at="2026-05-16T09:00:00+00:00",
+        trace_id="beadfeed",
+        item_count=3,
+    )
+    payload = event.to_json()
+    assert payload == {
+        "type": "digest.persisted",
+        "feed_name": "alpha",
+        "timestamp": payload["timestamp"],
+        "digest_ids": [1, 2],
+        "sent_at": "2026-05-16T09:00:00+00:00",
+        "trace_id": "beadfeed",
+        "item_count": 3,
+    }
 
 
 async def test_run_event_to_json_scrubs_sensitive_error_text() -> None:

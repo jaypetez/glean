@@ -53,7 +53,11 @@ with _patched_env(
 ):
     _STATE = StateStore(_DB_PATH)
     _APP = make_app(_STATE, _DB_PATH)
-    schema = openapi.from_asgi("/api/openapi.json", _APP).exclude(path="/api/v1/events")
+    schema = (
+        openapi.from_asgi("/api/openapi.json", _APP)
+        .exclude(path="/api/v1/events")
+        .exclude(path_regex=r"^/api/v1/(feeds/[^/]+/)?digests$")
+    )
 
 
 @pytest.fixture(scope="module", autouse=True)

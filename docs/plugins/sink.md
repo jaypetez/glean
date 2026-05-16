@@ -6,8 +6,8 @@ description: Implement and register a custom sink plugin for digest delivery.
 # Authoring Sinks
 
 A **Sink** is a destination for digest output — Telegram, Discord, a webhook, a
-file. The sink layer is pluggable, mirroring the [Source](source.md) and
-[LLM Provider](llm.md) layers.
+file, or the built-in dashboard history. The sink layer is pluggable, mirroring
+the [Source](source.md) and [LLM Provider](llm.md) layers.
 
 ## The protocol
 
@@ -128,6 +128,7 @@ sinks:
 
 | Type | Description |
 |------|-------------|
+| `dashboard` | Persist rendered digest fragments in SQLite for the built-in web UI and digest APIs. |
 | `telegram` | POST to Telegram Bot API. Requires `chat_id` and `TELEGRAM_BOT_TOKEN` env. |
 | `discord` | POST to a Discord webhook URL. 2000-char chunks, markdown formatting. |
 | `slack` | POST to a Slack incoming webhook. 3000-char chunks, mrkdwn formatting. |

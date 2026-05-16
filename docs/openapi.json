@@ -65,6 +65,81 @@
         "title": "Defaults",
         "type": "object"
       },
+      "DigestResponse": {
+        "additionalProperties": false,
+        "description": "Stored digest fragment returned by API routes.",
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "feed_name": {
+            "title": "Feed Name",
+            "type": "string"
+          },
+          "fragment_index": {
+            "title": "Fragment Index",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "intro": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intro"
+          },
+          "item_count": {
+            "title": "Item Count",
+            "type": "integer"
+          },
+          "sent_at": {
+            "format": "date-time",
+            "title": "Sent At",
+            "type": "string"
+          },
+          "style": {
+            "enum": [
+              "html",
+              "markdown_v2",
+              "plain"
+            ],
+            "title": "Style",
+            "type": "string"
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Id"
+          }
+        },
+        "required": [
+          "id",
+          "feed_name",
+          "sent_at",
+          "style",
+          "intro",
+          "body",
+          "fragment_index",
+          "item_count",
+          "trace_id"
+        ],
+        "title": "DigestResponse",
+        "type": "object"
+      },
       "EventTokenResponse": {
         "additionalProperties": false,
         "description": "Short-lived token for opening an authenticated EventSource stream.",
@@ -1723,6 +1798,88 @@
         ]
       }
     },
+    "/api/v1/digests": {
+      "get": {
+        "operationId": "list_digests_api_v1_digests_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DigestResponse"
+                  },
+                  "title": "Response List Digests Api V1 Digests Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Digests",
+        "tags": [
+          "digests"
+        ]
+      }
+    },
     "/api/v1/events": {
       "get": {
         "description": "Stream RunEvent records as SSE.\n\nThe connection is kept alive with a ': keepalive' comment every 30s\nso reverse proxies don't time out idle streams.",
@@ -1934,6 +2091,97 @@
         "summary": "List Feeds",
         "tags": [
           "feeds"
+        ]
+      }
+    },
+    "/api/v1/feeds/{name}/digests": {
+      "get": {
+        "operationId": "list_feed_digests_api_v1_feeds__name__digests_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DigestResponse"
+                  },
+                  "title": "Response List Feed Digests Api V1 Feeds  Name  Digests Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Feed Digests",
+        "tags": [
+          "digests"
         ]
       }
     },
