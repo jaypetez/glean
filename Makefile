@@ -1,10 +1,11 @@
-.PHONY: help dev check check-fast test test-cov e2e ui-test ui-build lint format coverage docs-cli docs-api docs-schema docs docs-serve new-plugin clean
+.PHONY: help dev check check-fast watch-check test test-cov e2e ui-test ui-build lint format coverage docs-cli docs-api docs-schema docs docs-serve new-plugin clean
 
 help:
 	@echo "Glean — common targets"
 	@echo "  dev         Install all deps (Python + UI)"
 	@echo "  check       Lint + type-check + unit tests (fast pre-push gate)"
 	@echo "  check-fast  Lint + type-check (no tests)"
+	@echo "  watch-check Re-run make check when src/ or tests/ change"
 	@echo "  test        Unit tests only (parallel)"
 	@echo "  test-cov    Unit tests with coverage report"
 	@echo "  e2e         Docker e2e suite (mock services)"
@@ -29,6 +30,9 @@ check:
 check-fast:
 	uv run ruff check src tests
 	uv run mypy src
+
+watch-check:
+	uv run watchfiles 'make check-fast' src tests
 
 test:
 	uv run pytest -q -n auto

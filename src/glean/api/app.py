@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import os
+import re
+import secrets
 import shutil
 import time
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from apscheduler import RunState
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, Response, status
@@ -18,6 +21,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.types import Scope
+from structlog.contextvars import bind_contextvars, clear_contextvars
 
 from glean import __version__
 from glean.api.auth import ApiKeyMaterial, auth_disabled, get_or_create_api_key, make_verify_api_key
@@ -29,6 +33,8 @@ from glean.api.routes.config import router as config_router
 from glean.api.routes.events import router as events_router
 from glean.api.routes.feeds import router as feeds_router
 from glean.api.routes.system import router as system_router
+from glean.config import load_config
+from glean.config.loader import ConfigError
 from glean.logging import get_logger
 
 if TYPE_CHECKING:
@@ -38,6 +44,17 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 ExceptionHandler = Callable[[Request, Exception], Response | Awaitable[Response]]
+_TRACE_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+
+@dataclass(frozen=True, slots=True)
+class HealthConfigSnapshot:
+    """Cached feed-name snapshot for /healthz responses."""
+
+    path: Path
+    mtime_ns: int | None
+    feed_names: tuple[str, ...]
+    valid: bool
 
 
 class SPAStaticFiles(StaticFiles):
@@ -121,6 +138,87 @@ def _restore_test_config(fixture_name: str) -> None:
     shutil.copyfile(Path(fixture), config_path)
 
 
+def _config_path() -> Path:
+    """Return the configured feeds.yaml path."""
+    return Path(os.environ.get("GLEAN_CONFIG", "/etc/glean/feeds.yaml"))
+
+
+def _trace_id_from_header(trace_id: str | None) -> str:
+    """Return a safe trace identifier for request correlation."""
+    if trace_id and _TRACE_ID_RE.fullmatch(trace_id):
+        return trace_id
+    return secrets.token_hex(4)
+
+
+def _health_config_snapshot(app: FastAPI) -> HealthConfigSnapshot:
+    """Return cached config details for /healthz, refreshing on file changes."""
+    config_path = _config_path()
+    try:
+        mtime_ns = config_path.stat().st_mtime_ns
+    except OSError:
+        snapshot = HealthConfigSnapshot(
+            path=config_path,
+            mtime_ns=None,
+            feed_names=(),
+            valid=False,
+        )
+        app.state.glean_health_config_snapshot = snapshot
+        return snapshot
+
+    cached = cast(
+        HealthConfigSnapshot | None,
+        getattr(app.state, "glean_health_config_snapshot", None),
+    )
+    if cached is not None and cached.path == config_path and cached.mtime_ns == mtime_ns:
+        return cached
+
+    try:
+        cfg = load_config(config_path)
+    except ConfigError:
+        snapshot = HealthConfigSnapshot(
+            path=config_path,
+            mtime_ns=mtime_ns,
+            feed_names=(),
+            valid=False,
+        )
+    else:
+        snapshot = HealthConfigSnapshot(
+            path=config_path,
+            mtime_ns=mtime_ns,
+            feed_names=tuple(feed.name for feed in cfg.feeds),
+            valid=True,
+        )
+    app.state.glean_health_config_snapshot = snapshot
+    return snapshot
+
+
+async def _feed_health_snapshot(
+    state: StateStore, feed_names: tuple[str, ...]
+) -> tuple[dict[str, int], list[str]]:
+    """Return last-run ages and active alerts for configured feeds."""
+    if not feed_names:
+        return {}, []
+
+    now = int(time.time())
+    configured_feeds = set(feed_names)
+    async with state.db.execute(
+        "SELECT feed, last_attempt_at, alert_active FROM feed_runs ORDER BY feed"
+    ) as cur:
+        rows = await cur.fetchall()
+
+    last_run_age_seconds: dict[str, int] = {}
+    alert_active_feeds: list[str] = []
+    for feed_name, last_attempt_at, alert_active in rows:
+        feed_name_str = str(feed_name)
+        if feed_name_str not in configured_feeds:
+            continue
+        if last_attempt_at is not None:
+            last_run_age_seconds[feed_name_str] = max(0, now - int(last_attempt_at))
+        if alert_active:
+            alert_active_feeds.append(feed_name_str)
+    return last_run_age_seconds, alert_active_feeds
+
+
 def make_app(state: StateStore, db_path: Path) -> FastAPI:
     """Build the FastAPI app with all routes wired up.
 
@@ -146,6 +244,33 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
     app.add_middleware(LimitBodySizeMiddleware, max_bytes=_max_body_bytes_from_env())
     app.add_middleware(SecurityHeadersMiddleware)
 
+    @app.middleware("http")
+    async def trace_id_middleware(
+        request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        trace_id = _trace_id_from_header(request.headers.get("X-Glean-Trace-Id"))
+        clear_contextvars()
+        bind_contextvars(trace_id=trace_id)
+        request.state.trace_id = trace_id
+        started_at = time.perf_counter()
+        try:
+            response = await call_next(request)
+            duration_ms = int((time.perf_counter() - started_at) * 1000)
+            response.headers["X-Glean-Trace-Id"] = trace_id
+            logger.info(
+                "api_request_completed",
+                method=request.method,
+                path=request.url.path,
+                status_code=response.status_code,
+                duration_ms=duration_ms,
+            )
+            return response
+        except Exception:
+            logger.exception("api_request_failed", method=request.method, path=request.url.path)
+            raise
+        finally:
+            clear_contextvars()
+
     if auth_disabled():
         logger.warning(
             "AUTH_DISABLED — all endpoints unauthenticated; do not expose port 9090 publicly"
@@ -158,6 +283,7 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
     app.state.glean_api_key = api_key_material.plaintext
     app.state.glean_api_key_material = api_key_material
     app.state.glean_started_at = time.time()
+    app.state.glean_started_monotonic = time.monotonic()
     app.state.glean_event_bus = EventBus()
 
     def api_key_getter() -> ApiKeyMaterial:
@@ -176,7 +302,7 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
     health_router = APIRouter()
 
     @health_router.get("/healthz", tags=["health"])
-    async def healthz(request: Request) -> dict[str, int | str]:
+    async def healthz(request: Request) -> dict[str, Any]:
         try:
             await state.ping()
             db_ok = True
@@ -196,14 +322,28 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
             else:
                 sched_ok = bool(running)
 
-        started_at = float(request.app.state.glean_started_at)
-        uptime_s = int(time.time() - started_at)
+        config_snapshot = _health_config_snapshot(request.app)
+        last_run_age_seconds, alert_active_feeds = await _feed_health_snapshot(
+            state, config_snapshot.feed_names
+        )
+        started_monotonic = float(request.app.state.glean_started_monotonic)
+        uptime_seconds = int(time.monotonic() - started_monotonic)
+        degraded = (
+            bool(alert_active_feeds)
+            or not config_snapshot.valid
+            or not db_ok
+            or sched_ok is False
+        )
         return {
-            "status": "ok" if db_ok and (sched_ok is True or sched_ok is None) else "degraded",
+            "status": "degraded" if degraded else "ok",
             "db": "ok" if db_ok else "error",
             "scheduler": "running" if sched_ok else ("stopped" if sched_ok is False else "n/a"),
             "version": __version__,
-            "uptime_s": uptime_s,
+            "uptime_s": uptime_seconds,
+            "uptime_seconds": uptime_seconds,
+            "feed_count": len(config_snapshot.feed_names),
+            "last_run_age_seconds": last_run_age_seconds,
+            "alert_active_feeds": alert_active_feeds,
         }
 
     @health_router.get("/api/v1/initialize", response_model=InitializeResponse, tags=["auth"])
