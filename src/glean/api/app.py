@@ -30,6 +30,7 @@ from glean.api.middleware import LimitBodySizeMiddleware, SecurityHeadersMiddlew
 from glean.api.models import InitializeResponse
 from glean.api.routes.auth_routes import build_auth_router
 from glean.api.routes.config import router as config_router
+from glean.api.routes.digests import router as digests_router
 from glean.api.routes.events import router as events_router
 from glean.api.routes.feeds import router as feeds_router
 from glean.api.routes.system import router as system_router
@@ -397,6 +398,7 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
 
     api_router.include_router(build_auth_router(limiter))
     api_router.include_router(config_router)
+    api_router.include_router(digests_router)
     api_router.include_router(feeds_router)
     api_router.include_router(system_router)
     app.include_router(api_router)
