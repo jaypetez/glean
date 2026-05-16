@@ -62,7 +62,9 @@ nav:
       - Failure model: concepts/failure-model.md
   - How-to:
       - how-to/index.md
-      - Sinks: how-to/sinks/index.md
+      - Sinks:
+          - how-to/sinks/index.md
+          - Dashboard sink: how-to/sinks/dashboard.md
       - LLM: how-to/llm/index.md
       - Ops: how-to/ops/index.md
       - Plugins: how-to/plugins/index.md

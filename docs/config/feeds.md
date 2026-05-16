@@ -192,6 +192,8 @@ feeds:
       - type: file
         path: /data/glean-archive.jsonl
         format: jsonl
+      - type: dashboard
+        keep_last_n: 50
     sources: [...]
     pipeline: [...]
 ```
@@ -280,6 +282,15 @@ The webhook payload is JSON:
 | `required` | no | Default `true` |
 
 File sink paths must resolve under `/data` or `/tmp/glean` by default and may not exceed 10 path segments below the allowed root. Set `GLEAN_FILE_SINK_ROOTS` to a comma-separated list of allowed root directories to customize this allowlist (for example, `GLEAN_FILE_SINK_ROOTS=/data,/archive`). On Windows, set `GLEAN_FILE_SINK_ROOTS` explicitly because the defaults are container/Linux paths. Ensure allowed roots exist and are writable by the glean process.
+
+#### `dashboard`
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `keep_last_n` | no | Per-feed retention cap for stored digest fragments. Default `50`; oldest entries are evicted first. |
+| `required` | no | Default `true` |
+
+The dashboard sink stores rendered digest fragments in SQLite for the built-in web UI and digest APIs. Retention is enforced per feed in the same transaction as the insert, so each feed keeps only its most recent `keep_last_n` fragments.
 
 ### Multiple sinks (fan-out)
 
