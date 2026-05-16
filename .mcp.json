@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "glean-dev": {
+      "type": "stdio",
+      "command": "uv",
+      "args": ["--directory", ".", "run", "python", "scripts/mcp_server.py"]
+    }
+  }
+}
