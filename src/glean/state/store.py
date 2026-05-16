@@ -48,6 +48,8 @@ class StateStore:
         self._db: aiosqlite.Connection | None = None
 
     async def open(self) -> None:
+        # AGENT: To add a column or table, create src/glean/state/migrations/NNNN_*.sql
+        # with `-- depends: NNNN_previous` header. Migrations apply automatically on open.
         await self._apply_migrations()
         self._db = await aiosqlite.connect(self.path)
         async with self._db.execute("PRAGMA journal_mode=WAL") as cur:

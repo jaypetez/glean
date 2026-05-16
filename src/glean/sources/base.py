@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 class Item:
     """One piece of content surfaced by a Source."""
 
+    # AGENT: Item is FROZEN. Use dataclasses.replace() to "modify" — never mutate fields.
     canonical_url: str
     title: str
     body: str = ""
