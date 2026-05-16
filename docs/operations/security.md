@@ -163,9 +163,16 @@ to handle the whole family, or by subclass to handle a specific failure mode.
 
 ## Secret management
 
-Use `.env` for all secrets, including `TELEGRAM_BOT_TOKEN`, `BRAVE_API_KEY`,
-`TAVILY_API_KEY`, `SERPER_API_KEY`, `EXA_API_KEY`, and `GLEAN_API_KEY`. Commit
-`.env.example` as the template and keep `.env` private.
+Use `.env` for all runtime secrets, including `TELEGRAM_BOT_TOKEN`,
+`BRAVE_API_KEY`, `TAVILY_API_KEY`, `SERPER_API_KEY`, `EXA_API_KEY`, and
+`GLEAN_API_KEY`. Commit `.env.example` as the template and keep `.env` private.
+
+The GitHub Actions Claude Code workflow also requires an `ANTHROPIC_API_KEY`
+repository secret so `@claude` mentions can authenticate. Set it with:
+
+```bash
+gh secret set ANTHROPIC_API_KEY
+```
 
 Do not put secrets directly in `feeds.yaml`; it is designed to be safe to commit.
 Reference secrets and per-environment values through interpolation:
