@@ -11,9 +11,8 @@ description: Self-hosted, pluggable agent that gleans signal from RSS, scraping,
   <em>Self-hosted, pluggable agent that gleans signal from RSS, scraping, search, and APIs — processes it with any LLM, fans out to Telegram, Discord, Slack, ntfy, Webhook, and File sinks.</em>
 </p>
 
-<!-- TODO(PR6): Replace this transparent placeholder with a real 30-second quickstart demo GIF after a manual capture session. -->
 <p align="center">
-  <img src="assets/glean-demo-placeholder.gif" alt="Placeholder for a 30-second glean quickstart demo GIF" width="100%" />
+  <img src="assets/glean-hero.svg" alt="glean: pluggable sources flow into a central LLM pipeline that fans out scheduled digests to many sinks" width="100%" />
 </p>
 
 ## Where to start

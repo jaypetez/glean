@@ -27,3 +27,5 @@ ui/e2e/.tmp/
 ui/playwright-report/
 ui/test-results/
 ui/*.local
+
+site/
