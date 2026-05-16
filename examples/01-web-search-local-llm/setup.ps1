@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
 # Example 01 setup — fully self-contained glean stack:
-#   glean + ollama (qwen2.5:7b) + searxng → file sink.
+#   glean + ollama (qwen2.5:7b) + searxng → file + dashboard sinks.
 #
 # Idempotent. Safe to re-run.
 
@@ -109,6 +109,10 @@ Write-Host @"
 
  Tail the logs:
    docker compose -f docker-compose.yml logs -f glean
+
+ Browse digests in the browser:
+   Start-Process http://127.0.0.1:9091/
+   # Get the API key from: docker compose -f docker-compose.yml logs glean | grep GLEAN_INITIAL_API_KEY
 
  The feed will tick every hour on its own from now on.
 

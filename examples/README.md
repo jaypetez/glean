@@ -6,7 +6,7 @@ Self-contained quickstart scenarios. Pick the one closest to your goal, run its 
 
 | # | Name | Stack | Time to first digest |
 |---|------|-------|----------------------|
-| 01 | [web-search-local-llm](01-web-search-local-llm/) | Glean + Ollama (qwen2.5:7b) + SearXNG → file sink | ~10 min (mostly model pull) |
+| 01 | [web-search-local-llm](01-web-search-local-llm/) | Glean + Ollama (qwen2.5:7b) + SearXNG → file + dashboard sinks | ~10 min (mostly model pull) |
 
 ## How to use
 
