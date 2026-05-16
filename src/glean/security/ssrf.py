@@ -42,6 +42,8 @@ class SSRFValidationError(ValueError):
 
 
 def validate_url(url: str, *, allow_private: bool = False) -> str:
+    # AGENT: Call this before EVERY outbound HTTP fetch from a source/sink/search plugin.
+    # See docs/operations/security.md for the threat model.
     """Validate `url` is safe to fetch. Raises SSRFValidationError on bad URL.
 
     With allow_private=True, internal Docker hosts and loopback are allowed, but

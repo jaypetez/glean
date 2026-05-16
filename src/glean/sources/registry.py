@@ -28,6 +28,8 @@ def build_source(spec: dict[str, Any]) -> Source:
 
 
 def _import_builtins() -> None:
+    # AGENT: To add a new source plugin, run `make new-plugin LAYER=source NAME=<name>`
+    # which appends the import below automatically. See docs/plugins/source.md.
     # Eager import so decorators register on first use.
     from glean.sources import hn, reddit, rss, scraper, search  # noqa: F401
 

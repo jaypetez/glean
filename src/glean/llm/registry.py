@@ -31,6 +31,8 @@ def build_provider(spec: dict[str, Any]) -> LLMProvider:
 
 
 def _import_builtins() -> None:
+    # AGENT: To add a new LLM provider, run `make new-plugin LAYER=llm NAME=<name>`
+    # which appends the import below automatically. See docs/plugins/llm.md.
     from glean.llm import anthropic_provider, ollama_provider, openai_provider  # noqa: F401
 
 
