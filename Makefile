@@ -1,10 +1,11 @@
-.PHONY: help dev check test test-cov e2e ui-test ui-build lint format coverage docs-cli docs-api docs-schema docs docs-serve new-plugin clean
+.PHONY: help dev check check-fast test test-cov e2e ui-test ui-build lint format coverage docs-cli docs-api docs-schema docs docs-serve new-plugin clean
 
 help:
 	@echo "Glean — common targets"
 	@echo "  dev         Install all deps (Python + UI)"
 	@echo "  check       Lint + type-check + unit tests (fast pre-push gate)"
-	@echo "  test        Unit tests only"
+	@echo "  check-fast  Lint + type-check (no tests)"
+	@echo "  test        Unit tests only (parallel)"
 	@echo "  test-cov    Unit tests with coverage report"
 	@echo "  e2e         Docker e2e suite (mock services)"
 	@echo "  ui-test     Playwright e2e suite"
@@ -25,8 +26,12 @@ check:
 	uv run mypy src
 	uv run pytest -q
 
+check-fast:
+	uv run ruff check src tests
+	uv run mypy src
+
 test:
-	uv run pytest -q
+	uv run pytest -q -n auto
 
 test-cov:
 	uv run pytest -q --cov=src/glean --cov-report=term-missing --cov-report=html

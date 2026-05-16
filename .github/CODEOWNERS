@@ -1,11 +1,14 @@
-# CODEOWNERS for glean
-#
-# Anyone listed here is automatically requested for review when matching
-# files change in a PR. Combined with branch protection's
-# "require code owner reviews" setting, this means PRs to main need
-# approval from the owner before merging.
-#
-# Format: <path-pattern>  <@user(s)>
+# Default reviewer (single maintainer for now)
+*       @jaypetez
 
-# Default owner — everything in the repo.
-*  @jaypetez
+# Security-critical paths require explicit attention
+/src/glean/security/                     @jaypetez
+/src/glean/state/migrations/             @jaypetez
+/src/glean/config/schema.py              @jaypetez
+/src/glean/llm/output_filter.py          @jaypetez
+/src/glean/sinks/escape.py               @jaypetez
+
+# CI / release infrastructure
+/.github/workflows/                      @jaypetez
+/Dockerfile                              @jaypetez
+/pyproject.toml                          @jaypetez

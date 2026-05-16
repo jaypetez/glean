@@ -38,13 +38,27 @@ jobs:
       - name: Mypy
         run: uv run mypy src
 
-      - name: Pytest + coverage
+      - name: Pytest + coverage (~1m)
         run: |
-          uv run pytest -q \
+          uv run pytest -q -n 4 \
             --cov=src/glean \
             --cov-report=xml \
             --cov-report=term-missing \
             --cov-fail-under=80
+
+      - name: Generate coverage HTML (~15s)
+        if: always()
+        continue-on-error: true
+        run: uv run coverage html -d coverage_html
+
+      - name: Upload coverage HTML artifact
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coverage-html
+          path: coverage_html/
+          retention-days: 14
+          if-no-files-found: ignore
 
       - name: Upload coverage to Codecov
         if: always()
@@ -262,7 +276,7 @@ jobs:
         working-directory: ui
         run: npx playwright install chromium
 
-      - name: Run Playwright tests
+      - name: Run Playwright tests (~2m)
         working-directory: ui
         run: npm run build && npx playwright test
 
@@ -305,7 +319,7 @@ jobs:
           docker compose -f docker-compose.yml config --quiet
           docker compose -f docker-compose.e2e.yml config --quiet
 
-      - name: Build & start E2E stack
+      - name: Build & start E2E stack (~2m)
         run: |
           docker compose -f docker-compose.e2e.yml build
           docker compose -f docker-compose.e2e.yml up -d
@@ -329,7 +343,7 @@ jobs:
             fi
           done
 
-      - name: Run E2E tests
+      - name: Run E2E tests (~2m)
         run: uv run pytest tests/e2e -v -m e2e --reruns 1 --reruns-delay 5 --timeout=120
 
       - name: Show glean logs on failure
@@ -349,7 +363,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - name: Build image
+      - name: Build image (~2m)
         env:
           DOCKER_BUILDKIT: "1"
         run: docker build -t glean:ci .
@@ -402,7 +416,7 @@ jobs:
             echo "tags=${base}:latest,${base}:sha-${GITHUB_SHA::7}"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Build & push
+      - name: Build & push (~4m)
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
         with:
           context: .
