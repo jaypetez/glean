@@ -1,4 +1,4 @@
-.PHONY: help dev check test test-cov e2e ui-test ui-build lint format coverage docs-cli docs-api docs-schema docs docs-serve clean
+.PHONY: help dev check test test-cov e2e ui-test ui-build lint format coverage docs-cli docs-api docs-schema docs docs-serve new-plugin clean
 
 help:
 	@echo "Glean — common targets"
@@ -12,6 +12,7 @@ help:
 	@echo "  lint        Ruff + format check"
 	@echo "  format      Ruff autofix + format"
 	@echo "  coverage    Open coverage HTML report"
+	@echo "  new-plugin  Scaffold a plugin (LAYER=source NAME=my_source)"
 	@echo "  clean       Remove caches"
 
 dev:
@@ -70,6 +71,12 @@ docs: docs-cli docs-api docs-schema
 
 docs-serve:
 	uv run mkdocs serve
+
+new-plugin:
+	@if [ -z "$(LAYER)" ] || [ -z "$(NAME)" ]; then \
+		echo "Usage: make new-plugin LAYER=source NAME=my_source"; exit 1; \
+	fi
+	uv run python scripts/new_plugin.py $(LAYER) $(NAME)
 
 clean:
 	rm -rf .pytest_cache .mypy_cache .ruff_cache htmlcov .coverage coverage.xml
