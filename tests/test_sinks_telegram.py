@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import pytest
 
+from glean.exceptions import SecurityError
+
 pytestmark = pytest.mark.asyncio
 
 
@@ -177,7 +179,7 @@ def test_telegram_sink_rejects_env_metadata_base_url(monkeypatch: pytest.MonkeyP
 
     from glean.sinks.registry import build_sink
 
-    with pytest.raises(ValueError, match="telegram base_url: SSRF blocked"):
+    with pytest.raises(SecurityError, match="metadata|cloud"):
         build_sink({"type": "telegram", "chat_id": 12345})
 
 

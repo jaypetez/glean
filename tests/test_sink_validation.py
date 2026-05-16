@@ -91,8 +91,8 @@ async def test_discord_rejects_blocked_avatar_url_at_config_and_construction() -
         "avatar_url": "http://10.0.0.1/avatar.png",
     }
 
-    _assert_config_rejects(spec, "avatar_url")
-    _assert_construction_rejects(spec, "avatar_url")
+    _assert_config_rejects(spec, "avatar_url|blocked range")
+    _assert_construction_rejects(spec, "avatar_url|blocked range")
 
 
 @pytest.mark.parametrize(

@@ -6,6 +6,8 @@ import socket
 from functools import lru_cache
 from urllib.parse import urlparse
 
+from glean.exceptions import SecurityError
+
 _BLOCKED_NETWORKS_V4 = [
     ipaddress.ip_network("10.0.0.0/8"),
     ipaddress.ip_network("172.16.0.0/12"),
@@ -44,19 +46,19 @@ class SSRFValidationError(ValueError):
 def validate_url(url: str, *, allow_private: bool = False) -> str:
     # AGENT: Call this before EVERY outbound HTTP fetch from a source/sink/search plugin.
     # See docs/operations/security.md for the threat model.
-    """Validate `url` is safe to fetch. Raises SSRFValidationError on bad URL.
+    """Validate `url` is safe to fetch. Raises SecurityError on bad URL.
 
     With allow_private=True, internal Docker hosts and loopback are allowed, but
     cloud-metadata and link-local addresses are still blocked.
     """
     parsed = urlparse(url)
     if parsed.scheme not in _ALLOWED_SCHEMES:
-        raise SSRFValidationError(f"URL scheme {parsed.scheme!r} not allowed (only http/https)")
+        raise SecurityError(f"URL scheme {parsed.scheme!r} not allowed (only http/https)")
     host = _normalize_host(parsed.hostname)
     if not host:
-        raise SSRFValidationError(f"URL has no host: {url}")
+        raise SecurityError(f"URL has no host: {url}")
     if host in _BLOCKED_HOSTS:
-        raise SSRFValidationError(f"Host {host!r} is in cloud-metadata blocklist")
+        raise SecurityError(f"Host {host!r} is in cloud-metadata blocklist")
 
     effective_allow_private = allow_private or host in _allowed_hosts()
     literal = _parse_ip(host)
@@ -138,11 +140,11 @@ def _check_ip(addr: IPAddress, *, host: str, allow_private: bool) -> None:
     check_addr: IPAddress = mapped or addr
 
     if isinstance(check_addr, ipaddress.IPv4Address) and check_addr in _METADATA_V4:
-        raise SSRFValidationError(f"{host} resolves to cloud metadata IP {addr}")
+        raise SecurityError(f"{host} resolves to cloud metadata IP {addr}")
     if isinstance(check_addr, ipaddress.IPv4Address) and check_addr in _LINK_LOCAL_V4:
-        raise SSRFValidationError(f"{host} resolves to blocked link-local range ({addr})")
+        raise SecurityError(f"{host} resolves to blocked link-local range ({addr})")
     if isinstance(addr, ipaddress.IPv6Address) and addr in _LINK_LOCAL_V6:
-        raise SSRFValidationError(f"{host} resolves to blocked link-local range ({addr})")
+        raise SecurityError(f"{host} resolves to blocked link-local range ({addr})")
 
     if allow_private:
         return
@@ -150,18 +152,18 @@ def _check_ip(addr: IPAddress, *, host: str, allow_private: bool) -> None:
     if isinstance(check_addr, ipaddress.IPv4Address):
         for net in _BLOCKED_NETWORKS_V4:
             if check_addr in net:
-                raise SSRFValidationError(f"{host} resolves to blocked range {net} ({addr})")
+                raise SecurityError(f"{host} resolves to blocked range {net} ({addr})")
         return
 
     for net in _BLOCKED_NETWORKS_V6:
         if addr in net:
-            raise SSRFValidationError(f"{host} resolves to blocked range {net} ({addr})")
+            raise SecurityError(f"{host} resolves to blocked range {net} ({addr})")
 
 
 def _is_private_or_local(addr: IPAddress) -> bool:
     try:
         _check_ip(addr, host=str(addr), allow_private=False)
-    except SSRFValidationError:
+    except SecurityError:
         return True
     return False
 

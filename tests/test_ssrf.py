@@ -11,11 +11,12 @@ import respx
 
 from glean.config import load_config
 from glean.config.loader import ConfigError
+from glean.exceptions import SecurityError
 from glean.llm.anthropic_provider import AnthropicProvider
 from glean.llm.ollama_provider import OllamaProvider
 from glean.llm.openai_provider import OpenAIProvider
 from glean.search.searxng import SearXNGBackend
-from glean.security.ssrf import SSRFValidationError, validate_url
+from glean.security.ssrf import validate_url
 from glean.security.ssrf_transport import SSRFGuardedTransport
 from glean.sources._fetch import follow_with_validation
 
@@ -34,6 +35,11 @@ def test_validate_url_allows_public_http_and_https(url: str) -> None:
     assert validate_url(url) == url
 
 
+def test_validate_url_raises_security_error_for_localhost() -> None:
+    with pytest.raises(SecurityError):
+        validate_url("http://127.0.0.1/")
+
+
 @pytest.mark.parametrize(
     "url",
     [
@@ -45,7 +51,7 @@ def test_validate_url_allows_public_http_and_https(url: str) -> None:
     ],
 )
 def test_validate_url_blocks_non_http_schemes(url: str) -> None:
-    with pytest.raises(SSRFValidationError, match="scheme"):
+    with pytest.raises(SecurityError, match="scheme"):
         validate_url(url)
 
 
@@ -65,7 +71,7 @@ def test_validate_url_blocks_non_http_schemes(url: str) -> None:
     ],
 )
 def test_validate_url_blocks_internal_ip_literals(url: str) -> None:
-    with pytest.raises(SSRFValidationError):
+    with pytest.raises(SecurityError):
         validate_url(url)
 
 
@@ -80,13 +86,13 @@ def test_validate_url_blocks_internal_ip_literals(url: str) -> None:
     ],
 )
 def test_validate_url_blocks_cloud_metadata_hostnames(url: str) -> None:
-    with pytest.raises(SSRFValidationError, match="metadata|cloud"):
+    with pytest.raises(SecurityError, match="metadata|cloud"):
         validate_url(url)
 
 
 @pytest.mark.parametrize("url", ["", "https:///path", "http://"])
 def test_validate_url_rejects_empty_or_hostless_urls(url: str) -> None:
-    with pytest.raises(SSRFValidationError):
+    with pytest.raises(SecurityError):
         validate_url(url)
 
 
@@ -103,7 +109,7 @@ def test_validate_url_rejects_hostname_that_resolves_to_private_ip(
 ) -> None:
     monkeypatch.setattr(socket, "getaddrinfo", _fake_getaddrinfo("10.0.0.1"))
 
-    with pytest.raises(SSRFValidationError, match="10.0.0.0/8"):
+    with pytest.raises(SecurityError, match="10.0.0.0/8"):
         validate_url("https://attacker.example")
 
 
@@ -147,7 +153,7 @@ def test_allow_private_allows_internal_service_hostnames_without_dns(
     ],
 )
 def test_allow_private_still_blocks_metadata_and_link_local(url: str) -> None:
-    with pytest.raises(SSRFValidationError):
+    with pytest.raises(SecurityError):
         validate_url(url, allow_private=True)
 
 
@@ -163,7 +169,7 @@ def test_env_allowlist_does_not_override_metadata_blocklist(
 ) -> None:
     monkeypatch.setenv("GLEAN_SSRF_ALLOWED_HOSTS", "metadata.google.internal")
 
-    with pytest.raises(SSRFValidationError):
+    with pytest.raises(SecurityError):
         validate_url("http://metadata.google.internal/")
 
 
@@ -194,7 +200,7 @@ async def test_follow_with_validation_blocks_unsafe_redirect_target() -> None:
     )
 
     async with httpx.AsyncClient(follow_redirects=False) as client:
-        with pytest.raises(SSRFValidationError):
+        with pytest.raises(SecurityError):
             await follow_with_validation(client, "https://example.com/feed")
 
 
@@ -211,12 +217,12 @@ async def test_follow_with_validation_raises_on_too_many_redirects() -> None:
 
 
 def test_searxng_backend_rejects_metadata_base_url() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(SecurityError):
         SearXNGBackend(base_url="http://169.254.169.254/")
 
 
 def test_ollama_provider_rejects_metadata_base_url() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(SecurityError):
         OllamaProvider(base_url="http://169.254.169.254/")
 
 
