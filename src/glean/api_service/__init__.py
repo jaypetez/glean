@@ -19,7 +19,7 @@ from glean.api_service.run_service import (
     run_feed_once,
 )
 
-__all__ = [
+__all__: list[str] = [
     "ConfigSummary",
     "FeedStatus",
     "FeedSummary",

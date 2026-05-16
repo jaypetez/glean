@@ -25,3 +25,21 @@ For a full local setup, install Python and UI dependencies from the repo root:
 uv sync --locked --all-extras
 cd ui && npm ci
 ```
+
+## Conventional commits
+
+We use [conventional commits](https://www.conventionalcommits.org/). PR titles become commit messages on squash-merge, so PR titles must follow the convention:
+
+```text
+<type>(<scope>): <subject>
+```
+
+Allowed types: `feat`, `fix`, `docs`, `chore`, `ci`, `test`, `refactor`, `perf`, `build`, `style`, `revert`.
+
+Locally, install the commit-msg hook so your individual commits are checked too:
+
+```bash
+uv run pre-commit install --hook-type commit-msg
+```
+
+`make dev` does this automatically.
