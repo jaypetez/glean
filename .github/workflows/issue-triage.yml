@@ -1,0 +1,43 @@
+name: Triage Issues with Claude
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: issue-triage-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: anthropics/claude-code-action@51ea8ea73a139f2a74ff649e3092c25a904aed7e # v1.0.123
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Triage GitHub issue #${{ github.event.issue.number }}.
+
+            Read the issue body via `gh issue view ${{ github.event.issue.number }}`.
+
+            Apply appropriate labels via `gh issue edit`. Available labels:
+            - bug, enhancement, documentation, question
+            - good first issue, help wanted, needs-repro, security
+
+            For bugs: identify which subsystem (sources/sinks/llm/state/api/ui) is affected.
+            Before applying any `area:*` label, run `gh label list` and only use an exact
+            matching existing `area:*` label. If no matching `area:*` label exists, skip it.
+            Do not attempt to create or apply labels that are not already present.
+
+            Post a brief triage comment via `gh issue comment` summarizing your assessment
+            and any clarifying questions for the reporter.
+
+            Do NOT close the issue. Do NOT make code changes.
+          claude_args: >-
+            --allowedTools "Bash(gh issue view:*),Bash(gh issue edit:*),Bash(gh issue comment:*),Bash(gh label list)"
+            --max-turns 8

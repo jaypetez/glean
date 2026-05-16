@@ -44,7 +44,7 @@ jobs:
             type=semver,pattern={{major}}
             type=raw,value=latest
 
-      - name: Build & push
+      - name: Build & push (~5m)
         id: build
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
         with:
@@ -104,12 +104,12 @@ jobs:
         with:
           version: '0.5.13'
 
-      - name: Install dependencies + PyInstaller
+      - name: Install dependencies + PyInstaller (~30s)
         run: |
           uv venv .venv
           uv pip install . pyinstaller
 
-      - name: Build binary
+      - name: Build binary (~1m)
         shell: bash
         run: |
           source .venv/bin/activate || . .venv/Scripts/activate
@@ -142,7 +142,7 @@ jobs:
           NFPM_VERSION=2.46.3
           curl -fsSL "https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/nfpm_${NFPM_VERSION}_Linux_x86_64.tar.gz" | tar xz -C /usr/local/bin nfpm
 
-      - name: Build .deb, .rpm, .apk
+      - name: Build .deb, .rpm, .apk (~30s)
         run: |
           chmod +x dist/glean-linux-x86_64
           VERSION="${GITHUB_REF_NAME#v}"

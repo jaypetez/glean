@@ -32,3 +32,9 @@ repos:
           - slowapi>=0.1.9
           - uvicorn[standard]>=0.30
         args: [--strict, --ignore-missing-imports]
+
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.7
+    hooks:
+      - id: actionlint
+        files: ^\.github/workflows/.*\.ya?ml$
