@@ -89,7 +89,7 @@ line-length = 100
 target-version = "py312"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP", "ASYNC", "S", "C4", "RET", "SIM", "PL"]
+select = ["E", "F", "I", "B", "UP", "ASYNC", "S", "C4", "RET", "SIM", "PL", "T20", "ERA001", "RUF100"]
 ignore = [
     "S101",     # asserts are fine
     "PLR0913",  # many keyword args are fine for config models
@@ -100,7 +100,8 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S", "PLR2004", "PLC0415"]
+"scripts/*" = ["T201"]                                     # print is intentional in scripts
+"tests/**" = ["S", "PLR2004", "PLC0415", "T201"]
 "src/glean/cli/**" = ["PLC0415"]                          # lazy imports keep CLI startup fast
 "src/glean/sources/registry.py" = ["PLC0415"]             # late import avoids decorator cycle
 "src/glean/llm/registry.py" = ["PLC0415"]                 # late import avoids decorator cycle

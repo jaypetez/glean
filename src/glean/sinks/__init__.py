@@ -5,7 +5,7 @@ from typing import Any
 
 from glean.sinks.base import SendContext, Sink
 
-__all__ = ["SendContext", "Sink", "build_sink", "register_sink"]
+__all__: list[str] = ["SendContext", "Sink", "build_sink", "register_sink"]
 
 
 def __getattr__(name: str) -> Any:

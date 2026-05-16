@@ -10,7 +10,7 @@ from glean.config.schema import (
     StageSpec,
 )
 
-__all__ = [
+__all__: list[str] = [
     "Config",
     "Defaults",
     "FailureConfig",

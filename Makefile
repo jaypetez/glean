@@ -20,6 +20,7 @@ dev:
 	uv venv
 	uv sync --locked --all-extras
 	cd ui && npm ci
+	uv run pre-commit install --hook-type pre-commit --hook-type commit-msg
 
 check:
 	uv run ruff check src tests

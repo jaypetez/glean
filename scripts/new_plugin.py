@@ -111,7 +111,7 @@ def _source_module(name: str, class_name: str) -> str:
 
 def _source_test(name: str, class_name: str) -> str:
     return dedent(
-        f'''
+        f"""
         from __future__ import annotations
 
         import httpx
@@ -149,13 +149,14 @@ def _source_test(name: str, class_name: str) -> str:
             assert items[0].body == "Hello from the scaffold."
             assert items[0].source_name == "Scaffold"
             assert route.called
-        '''
+        """
     ).lstrip()
 
 
 def _source_feed_snippet(name: str) -> str:
-    return dedent(
-        f'''
+    return (
+        dedent(
+            f"""
 
           # Generated scaffold: source {name}
           # - name: example-{name}-source
@@ -166,8 +167,10 @@ def _source_feed_snippet(name: str) -> str:
           #       url: https://example.com/feed
           #   pipeline:
           #     - dedup
-        '''
-    ).rstrip() + "\n"
+        """
+        ).rstrip()
+        + "\n"
+    )
 
 
 def _sink_module(name: str, class_name: str) -> str:
@@ -229,7 +232,7 @@ def _sink_module(name: str, class_name: str) -> str:
 
 def _sink_test(name: str, class_name: str) -> str:
     return dedent(
-        f'''
+        f"""
         from __future__ import annotations
 
         import json
@@ -268,13 +271,14 @@ def _sink_test(name: str, class_name: str) -> str:
                 "intro": "Daily digest",
                 "messages": ["Hello from the scaffold."],
             }}
-        '''
+        """
     ).lstrip()
 
 
 def _sink_feed_snippet(name: str) -> str:
-    return dedent(
-        f'''
+    return (
+        dedent(
+            f"""
 
           # Generated scaffold: sink {name}
           # - name: example-{name}-sink
@@ -287,8 +291,10 @@ def _sink_feed_snippet(name: str) -> str:
           #       url: https://example.com/feed.xml
           #   pipeline:
           #     - dedup
-        '''
-    ).rstrip() + "\n"
+        """
+        ).rstrip()
+        + "\n"
+    )
 
 
 def _llm_module(name: str, class_name: str) -> str:
@@ -411,7 +417,7 @@ def _llm_module(name: str, class_name: str) -> str:
 
 def _llm_test(name: str, class_name: str) -> str:
     return dedent(
-        f'''
+        f"""
         from __future__ import annotations
 
         import json
@@ -449,13 +455,14 @@ def _llm_test(name: str, class_name: str) -> str:
                 "title": "First item",
                 "body": "Hello from the scaffold.",
             }}
-        '''
+        """
     ).lstrip()
 
 
 def _llm_feed_snippet(name: str) -> str:
-    return dedent(
-        f'''
+    return (
+        dedent(
+            f"""
 
           # Generated scaffold: llm {name}
           # - name: example-{name}-llm
@@ -471,8 +478,10 @@ def _llm_feed_snippet(name: str) -> str:
           #     - dedup
           #     - summarize:
           #         prompt: "One sentence."
-        '''
-    ).rstrip() + "\n"
+        """
+        ).rstrip()
+        + "\n"
+    )
 
 
 def _search_module(name: str, class_name: str) -> str:
@@ -550,7 +559,7 @@ def _search_module(name: str, class_name: str) -> str:
 
 def _search_test(name: str, class_name: str) -> str:
     return dedent(
-        f'''
+        f"""
         from __future__ import annotations
 
         import httpx
@@ -589,13 +598,14 @@ def _search_test(name: str, class_name: str) -> str:
             params = route.calls.last.request.url.params
             assert params["q"] == "needle"
             assert params["limit"] == "2"
-        '''
+        """
     ).lstrip()
 
 
 def _search_feed_snippet(name: str) -> str:
-    return dedent(
-        f'''
+    return (
+        dedent(
+            f"""
 
           # Generated scaffold: search {name}
           # - name: example-{name}-search
@@ -608,8 +618,10 @@ def _search_feed_snippet(name: str) -> str:
           #       base_url: https://example.com
           #   pipeline:
           #     - dedup
-        '''
-    ).rstrip() + "\n"
+        """
+        ).rstrip()
+        + "\n"
+    )
 
 
 LAYER_DEFINITIONS = {
@@ -712,7 +724,6 @@ def _format_registry_import(indent: str, module: str, names: list[str]) -> list[
     wrapped_lines.extend(f"{indent}    {name}," for name in names)
     wrapped_lines.append(f"{indent})")
     return wrapped_lines
-
 
 
 def _append_registry_import(registry_text: str, registry_import: str) -> str:
