@@ -1,0 +1,48 @@
+# Example 01 — Web search → local LLM → file sink.
+#
+# Edit the `query:` field under `sources:` to change what glean searches for.
+# Edit `defaults.llm.model` to switch to a different Ollama model.
+
+defaults:
+  llm:
+    provider: ollama
+    model: qwen2.5:7b
+    base_url: http://ollama:11434
+  render:
+    style: plain
+    link_preview: false
+    max_items: 10
+  bootstrap: skip-and-mark
+  failure:
+    alert_after: 3
+
+feeds:
+  - name: web-search
+    schedule: "every 1h"
+
+    sinks:
+      - type: file
+        path: /data/digests/web-search.md
+        format: markdown
+
+    sources:
+      - type: search
+        query: "open source AI news"
+        engine: searxng
+        base_url: http://searxng:8080
+        limit: 10
+
+    pipeline:
+      - dedup
+      - rank:
+          prompt: |
+            Score 0-1 for practical, technical relevance to an AI engineer.
+            Reward concrete launches, benchmarks, and engineering writeups.
+            Penalize fundraising / PR / opinion pieces.
+          min_relevance: 0.5
+      - summarize:
+          prompt: |
+            One sentence, ≤25 words. State the concrete fact or development.
+            No marketing fluff. No "this article discusses".
+      - digest:
+          intro: "## 🔎 Web search digest"

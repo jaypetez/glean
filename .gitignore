@@ -18,6 +18,7 @@ dist/
 build/
 *.egg-info/
 feeds.yaml
+!examples/**/feeds.yaml
 
 # Frontend
 ui/node_modules/

@@ -93,6 +93,17 @@ docker exec -it glean glean test-feed ai-news-daily
 
 Want self-hosted web search too? See [Web search setup](./docs/getting-started/search.md) — uncomment SearXNG in `docker-compose.yml` and you're done in two more commands.
 
+### One-command setup with a curated example
+
+For an opinionated, end-to-end setup with **no Telegram bot required**, use one of the [examples](./examples/):
+
+```bash
+cd examples/01-web-search-local-llm
+./setup.sh           # Linux / macOS / WSL    (Windows: ./setup.ps1)
+```
+
+That brings up glean + Ollama (`qwen2.5:7b`, ~5 GB) + SearXNG, pulls the model, and writes hourly digests to `./data/digests/web-search.md`. ~10 minutes start to finish.
+
 ## Documentation
 
 Full docs at [jaypetez.github.io/glean](https://jaypetez.github.io/glean).
