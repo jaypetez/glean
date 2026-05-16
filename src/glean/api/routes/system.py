@@ -27,6 +27,9 @@ def _config_path() -> Path:
 async def info(request: Request) -> SystemInfoResponse:
     """Return runtime information for the About page."""
     started_at = float(request.app.state.glean_started_at)
+    started_monotonic = float(
+        getattr(request.app.state, "glean_started_monotonic", time.monotonic())
+    )
     config_path = _config_path()
     feeds_count = 0
     llm_provider: str | None = None
@@ -47,7 +50,7 @@ async def info(request: Request) -> SystemInfoResponse:
         database_path=str(request.app.state.glean_db_path),
         config_path=str(config_path),
         feeds_count=feeds_count,
-        uptime_seconds=time.time() - started_at,
+        uptime_seconds=time.monotonic() - started_monotonic,
         started_at=dt.datetime.fromtimestamp(started_at, tz=dt.UTC),
         llm_provider=llm_provider,
         llm_model=llm_model,
