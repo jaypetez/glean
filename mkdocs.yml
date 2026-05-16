@@ -66,8 +66,17 @@ nav:
       - LLM: how-to/llm/index.md
       - Ops: how-to/ops/index.md
       - Plugins: how-to/plugins/index.md
+  - Agent Runbooks:
+      - agents/index.md
+      - New Session Checklist: agents/new-session-checklist.md
+      - Common Pitfalls: agents/pitfalls.md
+      - Key Files Map: agents/key-files.md
+      - Debug a Feed: agents/debug-feed.md
+      - Add a New Plugin: agents/add-plugin.md
+      - Cut a Release: agents/release.md
   - Reference:
       - reference/index.md
+      - Glossary: reference/glossary.md
       - CLI: reference/cli.md
       - REST API: reference/api.md
       - Plugin Protocols: reference/protocols.md
@@ -101,6 +110,7 @@ nav:
   - Changelog: changelog.md
   - Contributing:
       - Overview: contributing.md
+      - Development setup notes: contributing/setup.md
       - Documentation style guide: contributing/style-guide.md
 
 plugins:

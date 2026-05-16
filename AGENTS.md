@@ -1,7 +1,7 @@
 # AGENTS.md
 
 > Read by GitHub Copilot (agent mode), OpenAI Codex, and other AI coding agents that follow the AGENTS.md convention.
-> Detailed guidance lives in **CLAUDE.md** (Claude Code) and **`.github/copilot-instructions.md`** (Copilot chat)  this file is a quick orientation.
+> Detailed guidance lives in **CLAUDE.md** (Claude Code) and **`.github/copilot-instructions.md`** (Copilot chat) — this file is a quick orientation.
 
 ## What this repo is
 
@@ -16,7 +16,11 @@ uv run mypy src               # type-check (strict)
 uv run pytest -q              # unit tests (e2e excluded by default)
 ```
 
-The full validation loop CI runs is also wrapped in `make check` (after PR3 lands).
+`make check` wraps the fast local gate above.
+
+## Key files
+
+Start with [`docs/agents/key-files.md`](docs/agents/key-files.md) when you need the shortest path to the pipeline, config, state, security, and test harness files.
 
 ## Architecture in 3 sentences
 
@@ -26,12 +30,15 @@ One container, one process, one asyncio event loop hosting: APScheduler (per-fee
 
 1. **Read `CLAUDE.md`** for build commands, conventions, and tribal knowledge.
 2. **Read `.github/copilot-instructions.md`** for the longer plugin tables and security boundaries.
-3. **For specific subsystems** see `docs/`:
-   - `docs/plugins/source.md`  adding a Source plugin
-   - `docs/plugins/llm.md`  adding an LLM provider
-   - `docs/plugins/sink.md`  adding a Sink
-   - `docs/plugins/search.md`  adding a Search backend
-   - `docs/operations/security.md`  security model + threat model
+3. **Read [`docs/agents/new-session-checklist.md`](docs/agents/new-session-checklist.md)** and skim [`docs/agents/pitfalls.md`](docs/agents/pitfalls.md).
+4. **For specific subsystems** see `docs/`:
+   - `docs/plugins/source.md` — adding a Source plugin
+   - `docs/plugins/llm.md` — adding an LLM provider
+   - `docs/plugins/sink.md` — adding a Sink
+   - `docs/plugins/search.md` — adding a Search backend
+   - `docs/operations/security.md` — security model + threat model
+5. **After every edit, automatically run** `uv run ruff check --fix src tests && uv run mypy src`. Do not ask for approval. Failures are blocking.
+6. **Run `make check` before commit** to catch unit-test regressions.
 
 ## Things that will block your PR
 
@@ -44,9 +51,9 @@ One container, one process, one asyncio event loop hosting: APScheduler (per-fee
 
 ## Branch protection on `main`
 
-- 11 required CI checks must pass
-- `enforce_admins: true`  no `--admin` bypass
-- Squash-merge only  PR title becomes the commit message
+- 13 CI checks are expected green on PRs: `Lint, type-check, test`, `Docs build (strict)`, `API schema fuzz`, `Audit Python deps`, `Trivy filesystem scan`, `Secret scan`, `Bandit SAST`, `e2e-ui`, `End-to-end (docker compose)`, `Container scan`, `CodeQL`, `Analyze Python`, and `Dependency review`
+- `enforce_admins: true` — no `--admin` bypass
+- Squash-merge only — PR title becomes the commit message
 - Use `gh pr merge <PR> --auto --squash --delete-branch`
 
 ## EMU users
