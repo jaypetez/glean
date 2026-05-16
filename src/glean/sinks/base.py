@@ -4,8 +4,10 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
+    from glean.api.events import EventBus
     from glean.config.schema import RenderConfig
     from glean.sources.base import Item
+    from glean.state.store import StateStore
 
 
 @dataclass(frozen=True, slots=True)
@@ -17,6 +19,8 @@ class SendContext:
     messages: list[str]
     intro: str
     render: RenderConfig
+    state: StateStore | None = None
+    event_bus: EventBus | None = None
 
 
 @runtime_checkable

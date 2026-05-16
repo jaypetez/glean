@@ -5,7 +5,8 @@ import hashlib
 import os
 import time
 import warnings
-from collections.abc import Iterable
+from collections.abc import AsyncIterator, Iterable
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import aiosqlite
@@ -46,6 +47,7 @@ class StateStore:
         _validate_db_path(self.path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._db: aiosqlite.Connection | None = None
+        self._write_lock = asyncio.Lock()
 
     async def open(self) -> None:
         # AGENT: To add a column or table, create src/glean/state/migrations/NNNN_*.sql
@@ -93,6 +95,11 @@ class StateStore:
             raise RuntimeError("StateStore is not open")
         return self._db
 
+    @asynccontextmanager
+    async def write_connection(self) -> AsyncIterator[aiosqlite.Connection]:
+        async with self._write_lock:
+            yield self.db
+
     async def ping(self) -> None:
         """Run a trivial query to verify the connection is healthy."""
         if self._db is None:
@@ -117,12 +124,13 @@ class StateStore:
         rows = [(feed, item_hash(i), i.canonical_url, now, 1 if sent else 0) for i in items]
         if not rows:
             return
-        await self.db.executemany(
-            "INSERT OR IGNORE INTO seen_items(feed, item_hash, url, seen_at, sent) "
-            "VALUES (?, ?, ?, ?, ?)",
-            rows,
-        )
-        await self.db.commit()
+        async with self._write_lock:
+            await self.db.executemany(
+                "INSERT OR IGNORE INTO seen_items(feed, item_hash, url, seen_at, sent) "
+                "VALUES (?, ?, ?, ?, ?)",
+                rows,
+            )
+            await self.db.commit()
 
     async def is_bootstrapped(self, feed: str) -> bool:
         async with self.db.execute(
@@ -132,58 +140,63 @@ class StateStore:
         return bool(row and row[0])
 
     async def set_bootstrapped(self, feed: str) -> None:
-        await self.db.execute(
-            "INSERT INTO feed_runs(feed, bootstrapped) VALUES (?, 1) "
-            "ON CONFLICT(feed) DO UPDATE SET bootstrapped = 1",
-            (feed,),
-        )
-        await self.db.commit()
+        async with self._write_lock:
+            await self.db.execute(
+                "INSERT INTO feed_runs(feed, bootstrapped) VALUES (?, 1) "
+                "ON CONFLICT(feed) DO UPDATE SET bootstrapped = 1",
+                (feed,),
+            )
+            await self.db.commit()
 
     async def record_success(self, feed: str) -> bool:
         """Return True if a recovery alert should be posted."""
         now = int(time.time())
-        async with self.db.execute(
-            "SELECT alert_active FROM feed_runs WHERE feed = ?", (feed,)
-        ) as cur:
-            row = await cur.fetchone()
-        was_alerting = bool(row and row[0])
-        await self.db.execute(
-            "INSERT INTO feed_runs(feed, last_success_at, last_attempt_at, "
-            "consecutive_failures, alert_active) VALUES (?, ?, ?, 0, 0) "
-            "ON CONFLICT(feed) DO UPDATE SET "
-            "last_success_at = excluded.last_success_at, "
-            "last_attempt_at = excluded.last_attempt_at, "
-            "consecutive_failures = 0, alert_active = 0",
-            (feed, now, now),
-        )
-        await self.db.commit()
+        async with self._write_lock:
+            async with self.db.execute(
+                "SELECT alert_active FROM feed_runs WHERE feed = ?", (feed,)
+            ) as cur:
+                row = await cur.fetchone()
+            was_alerting = bool(row and row[0])
+            await self.db.execute(
+                "INSERT INTO feed_runs(feed, last_success_at, last_attempt_at, "
+                "consecutive_failures, alert_active) VALUES (?, ?, ?, 0, 0) "
+                "ON CONFLICT(feed) DO UPDATE SET "
+                "last_success_at = excluded.last_success_at, "
+                "last_attempt_at = excluded.last_attempt_at, "
+                "consecutive_failures = 0, alert_active = 0",
+                (feed, now, now),
+            )
+            await self.db.commit()
         return was_alerting
 
     async def record_failure(self, feed: str, error: str, alert_after: int) -> tuple[int, bool]:
         """Return (consecutive_failures, should_alert_now)."""
         now = int(time.time())
-        await self.db.execute(
-            "INSERT INTO feed_runs(feed, last_attempt_at, last_error, "
-            "consecutive_failures) VALUES (?, ?, ?, 1) "
-            "ON CONFLICT(feed) DO UPDATE SET "
-            "last_attempt_at = excluded.last_attempt_at, "
-            "last_error = excluded.last_error, "
-            "consecutive_failures = consecutive_failures + 1",
-            (feed, now, error),
-        )
-        async with self.db.execute(
-            "SELECT consecutive_failures, alert_active FROM feed_runs WHERE feed = ?",
-            (feed,),
-        ) as cur:
-            row = await cur.fetchone()
-        await self.db.commit()
-        if row is None:
-            return 1, False
-        count, active = int(row[0]), bool(row[1])
-        if count >= alert_after and not active:
-            await self.db.execute("UPDATE feed_runs SET alert_active = 1 WHERE feed = ?", (feed,))
+        async with self._write_lock:
+            await self.db.execute(
+                "INSERT INTO feed_runs(feed, last_attempt_at, last_error, "
+                "consecutive_failures) VALUES (?, ?, ?, 1) "
+                "ON CONFLICT(feed) DO UPDATE SET "
+                "last_attempt_at = excluded.last_attempt_at, "
+                "last_error = excluded.last_error, "
+                "consecutive_failures = consecutive_failures + 1",
+                (feed, now, error),
+            )
+            async with self.db.execute(
+                "SELECT consecutive_failures, alert_active FROM feed_runs WHERE feed = ?",
+                (feed,),
+            ) as cur:
+                row = await cur.fetchone()
             await self.db.commit()
-            return count, True
+            if row is None:
+                return 1, False
+            count, active = int(row[0]), bool(row[1])
+            if count >= alert_after and not active:
+                await self.db.execute(
+                    "UPDATE feed_runs SET alert_active = 1 WHERE feed = ?", (feed,)
+                )
+                await self.db.commit()
+                return count, True
         return count, False
 
     async def get_etag(self, url: str) -> tuple[str | None, str | None]:
@@ -196,17 +209,19 @@ class StateStore:
         return row[0], row[1]
 
     async def set_etag(self, url: str, etag: str | None, last_modified: str | None) -> None:
-        await self.db.execute(
-            "INSERT INTO etag_cache(url, etag, last_modified, cached_at) "
-            "VALUES (?, ?, ?, ?) ON CONFLICT(url) DO UPDATE SET "
-            "etag = excluded.etag, last_modified = excluded.last_modified, "
-            "cached_at = excluded.cached_at",
-            (url, etag, last_modified, int(time.time())),
-        )
-        await self.db.commit()
+        async with self._write_lock:
+            await self.db.execute(
+                "INSERT INTO etag_cache(url, etag, last_modified, cached_at) "
+                "VALUES (?, ?, ?, ?) ON CONFLICT(url) DO UPDATE SET "
+                "etag = excluded.etag, last_modified = excluded.last_modified, "
+                "cached_at = excluded.cached_at",
+                (url, etag, last_modified, int(time.time())),
+            )
+            await self.db.commit()
 
     async def prune_seen(self, older_than_days: int = 60) -> int:
         cutoff = int(time.time()) - older_than_days * 86400
-        cur = await self.db.execute("DELETE FROM seen_items WHERE seen_at < ?", (cutoff,))
-        await self.db.commit()
-        return cur.rowcount or 0
+        async with self._write_lock:
+            cur = await self.db.execute("DELETE FROM seen_items WHERE seen_at < ?", (cutoff,))
+            await self.db.commit()
+            return cur.rowcount or 0

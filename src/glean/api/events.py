@@ -1,7 +1,8 @@
 """In-process pub/sub event bus for SSE delivery.
 
-A single shared bus is mounted on the FastAPI app. The Runner publishes
-RunEvent records as feeds run; SSE subscribers each get their own queue.
+A single shared bus is mounted on the FastAPI app. The Runner and sinks publish
+RunEvent records for feed runs and digest persistence; SSE subscribers each get
+their own queue.
 """
 
 from __future__ import annotations
@@ -18,7 +19,7 @@ from fastapi import HTTPException, status
 
 from glean.security.scrub import scrub
 
-EventType = Literal["run_started", "run_completed", "run_failed"]
+EventType = Literal["run_started", "run_completed", "run_failed", "digest.persisted"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -31,8 +32,22 @@ class RunEvent:
     sent: int | None = None
     duration_ms: int | None = None
     error: str | None = None
+    digest_ids: list[int] | None = None
+    sent_at: str | None = None
+    trace_id: str | None = None
+    item_count: int | None = None
 
     def to_json(self) -> dict[str, object]:
+        if self.type == "digest.persisted":
+            return {
+                "type": self.type,
+                "feed_name": self.feed,
+                "timestamp": self.timestamp.isoformat(),
+                "digest_ids": list(self.digest_ids) if self.digest_ids is not None else None,
+                "sent_at": self.sent_at,
+                "trace_id": self.trace_id,
+                "item_count": self.item_count,
+            }
         return {
             "type": self.type,
             "feed": self.feed,

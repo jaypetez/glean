@@ -214,6 +214,8 @@ class Runner:
             messages=messages,
             intro=intro,
             render=render_cfg,
+            state=self.state,
+            event_bus=self._event_bus,
         )
         results = await asyncio.gather(
             *(sink.send(ctx) for sink in sinks),
