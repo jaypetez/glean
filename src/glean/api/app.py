@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import os
 import re
 import secrets
@@ -10,11 +11,12 @@ import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
 
 from apscheduler import RunState
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, Response, status
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, ConfigDict, Field
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -25,7 +27,7 @@ from structlog.contextvars import bind_contextvars, clear_contextvars
 
 from glean import __version__
 from glean.api.auth import ApiKeyMaterial, auth_disabled, get_or_create_api_key, make_verify_api_key
-from glean.api.events import EventBus
+from glean.api.events import EventBus, RunEvent
 from glean.api.middleware import LimitBodySizeMiddleware, SecurityHeadersMiddleware
 from glean.api.models import InitializeResponse
 from glean.api.routes.auth_routes import build_auth_router
@@ -45,6 +47,7 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 ExceptionHandler = Callable[[Request, Exception], Response | Awaitable[Response]]
+RouteHandler = TypeVar("RouteHandler", bound=Callable[..., Any])
 _TRACE_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 
 
@@ -121,6 +124,7 @@ async def _clear_test_state(state: StateStore) -> None:
     await state.db.execute("DELETE FROM seen_items")
     await state.db.execute("DELETE FROM feed_runs")
     await state.db.execute("DELETE FROM etag_cache")
+    await state.db.execute("DELETE FROM digests")
     await state.db.commit()
 
 
@@ -137,6 +141,21 @@ def _restore_test_config(fixture_name: str) -> None:
     config_path = Path(config)
     config_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(Path(fixture), config_path)
+
+
+class TestSeedDigestRequest(BaseModel):
+    """E2E-only payload for seeding persisted digests."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    feed_name: str = Field(min_length=1)
+    style: Literal["html", "markdown_v2", "plain"] = "html"
+    intro: str | None = None
+    body: str = Field(min_length=1)
+    fragment_index: int = Field(default=0, ge=0)
+    item_count: int = Field(default=1, ge=0)
+    trace_id: str | None = None
+    sent_at: dt.datetime | None = None
 
 
 def _config_path() -> Path:
@@ -239,6 +258,10 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
     )
     limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
     app.state.limiter = limiter
+
+    def exempt_from_rate_limit(handler: RouteHandler) -> RouteHandler:
+        """Preserve handler types when applying SlowAPI exemptions."""
+        return cast(RouteHandler, cast(Any, limiter.exempt)(handler))
     rate_limit_handler = cast(ExceptionHandler, _rate_limit_exceeded_handler)
     app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
     app.add_middleware(SlowAPIMiddleware)
@@ -366,6 +389,7 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
 
     if _test_mode_enabled():
 
+        @exempt_from_rate_limit
         @api_router.post("/test/reset", tags=["system"])
         async def test_reset(request: Request, fixture: str = "default") -> dict[str, object]:
             if not _test_mode_enabled():
@@ -375,6 +399,7 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
             _restore_test_config(fixture)
             return {"ok": True, "message": "test state reset"}
 
+        @exempt_from_rate_limit
         @api_router.get("/test/rss", tags=["system"])
         async def test_rss() -> Response:
             if not _test_mode_enabled():
@@ -395,6 +420,53 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
 </rss>
 """
             return Response(content=rss, media_type="application/rss+xml")
+
+        # E2E-only helper: seed dashboard digests without waiting for a scheduled pipeline run.
+        @exempt_from_rate_limit
+        @api_router.post("/test/seed-digest", tags=["system"])
+        async def test_seed_digest(
+            request: Request, payload: TestSeedDigestRequest
+        ) -> dict[str, object]:
+            if not _test_mode_enabled():
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not found")
+            sent_at = (payload.sent_at or dt.datetime.now(dt.UTC)).isoformat()
+            cursor = await state.db.execute(
+                """
+                INSERT INTO digests (
+                    feed_name,
+                    sent_at,
+                    style,
+                    intro,
+                    body,
+                    fragment_index,
+                    item_count,
+                    trace_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    payload.feed_name,
+                    sent_at,
+                    payload.style,
+                    payload.intro,
+                    payload.body,
+                    payload.fragment_index,
+                    payload.item_count,
+                    payload.trace_id,
+                ),
+            )
+            await state.db.commit()
+            row_id = int(cursor.lastrowid or 0)
+            await request.app.state.glean_event_bus.publish(
+                RunEvent(
+                    type="digest.persisted",
+                    feed=payload.feed_name,
+                    digest_ids=[row_id],
+                    sent_at=sent_at,
+                    trace_id=payload.trace_id,
+                    item_count=payload.item_count,
+                )
+            )
+            return {"ok": True, "id": row_id}
 
     api_router.include_router(build_auth_router(limiter))
     api_router.include_router(config_router)

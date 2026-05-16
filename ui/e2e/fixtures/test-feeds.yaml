@@ -14,10 +14,9 @@ defaults:
 feeds:
   - name: e2e-news
     schedule: every 1h
+    bootstrap: send-all
     sinks:
-      - type: file
-        path: e2e/.tmp/e2e-news.jsonl
-        format: jsonl
+      - type: dashboard
     sources:
       - type: rss
         name: glean E2E Feed
@@ -27,9 +26,7 @@ feeds:
   - name: e2e-weekly
     schedule: daily 09:00
     sinks:
-      - type: file
-        path: e2e/.tmp/e2e-weekly.jsonl
-        format: jsonl
+      - type: dashboard
     sources:
       - type: rss
         name: glean E2E Feed

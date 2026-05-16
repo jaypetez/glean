@@ -114,6 +114,18 @@ export interface FeedStatus {
   bootstrapped: boolean;
 }
 
+export interface Digest {
+  id: number;
+  feed_name: string;
+  sent_at: string;
+  style: "html" | "markdown_v2" | "plain";
+  intro: string | null;
+  body: string;
+  fragment_index: number;
+  item_count: number;
+  trace_id: string | null;
+}
+
 export interface ValidateResponse {
   valid: boolean;
   feeds_count: number;

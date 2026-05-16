@@ -11,6 +11,7 @@
   import AppShell from "./lib/components/AppShell.svelte";
   import Logo from "./lib/components/Logo.svelte";
   import Dashboard from "./lib/routes/Dashboard.svelte";
+  import Digests from "./lib/routes/Digests.svelte";
   import FeedEditor from "./lib/routes/FeedEditor.svelte";
   import Settings from "./lib/routes/Settings.svelte";
   import Setup from "./lib/routes/Setup.svelte";
@@ -114,6 +115,7 @@
         <Route path="/skills/new"><SkillEditor mode="create" /></Route>
         <Route path="/skills/:name" let:params><SkillEditor mode="edit" name={params.name} /></Route
         >
+        <Route path="/digests"><Digests /></Route>
         <Route path="/settings"><Settings /></Route>
         <Route path="/"><Dashboard /></Route>
       {/if}

@@ -14,7 +14,13 @@ from glean.logging import configure_logging
 from glean.state.store import StateStore
 
 
-def _prepare_runtime_paths() -> tuple[Path, Path, Path, Path, Path]:
+def _rewrite_fixture(source: Path, destination: Path, port: int) -> None:
+    content = source.read_text(encoding="utf-8")
+    content = content.replace("http://localhost:8080", f"http://localhost:{port}")
+    destination.write_text(content, encoding="utf-8")
+
+
+def _prepare_runtime_paths(port: int) -> tuple[Path, Path, Path, Path, Path]:
     ui_dir = Path(__file__).resolve().parents[1]
     tmp_dir = Path(os.environ.get("GLEAN_E2E_STATE_DIR", ui_dir / "e2e" / ".tmp"))
     if tmp_dir.exists():
@@ -23,13 +29,18 @@ def _prepare_runtime_paths() -> tuple[Path, Path, Path, Path, Path]:
 
     default_fixture = ui_dir / "e2e" / "fixtures" / "test-feeds.yaml"
     empty_fixture = ui_dir / "e2e" / "fixtures" / "empty-feeds.yaml"
+    runtime_default_fixture = tmp_dir / "fixture-default.yaml"
+    runtime_empty_fixture = tmp_dir / "fixture-empty.yaml"
     active_config = tmp_dir / "feeds.yaml"
-    shutil.copyfile(default_fixture, active_config)
-    return ui_dir, tmp_dir, default_fixture, empty_fixture, active_config
+    _rewrite_fixture(default_fixture, runtime_default_fixture, port)
+    _rewrite_fixture(empty_fixture, runtime_empty_fixture, port)
+    shutil.copyfile(runtime_default_fixture, active_config)
+    return ui_dir, tmp_dir, runtime_default_fixture, runtime_empty_fixture, active_config
 
 
 async def main() -> None:
-    ui_dir, tmp_dir, default_fixture, empty_fixture, active_config = _prepare_runtime_paths()
+    port = int(os.environ.get("GLEAN_E2E_PORT", "8080"))
+    ui_dir, tmp_dir, default_fixture, empty_fixture, active_config = _prepare_runtime_paths(port)
     db_path = tmp_dir / "state.db"
 
     os.environ.setdefault("GLEAN_DISABLE_AUTH", "1")
@@ -52,7 +63,7 @@ async def main() -> None:
         uvicorn.Config(
             app=make_app(state, db_path),
             host="127.0.0.1",
-            port=int(os.environ.get("GLEAN_E2E_PORT", "8080")),
+            port=port,
             log_config=None,
             access_log=False,
         )

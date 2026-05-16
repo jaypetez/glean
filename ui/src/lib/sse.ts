@@ -1,6 +1,7 @@
 import { getApiKey } from "./api";
 
 export type RunEventType = "run_started" | "run_completed" | "run_failed";
+export type DigestEventType = "digest.persisted";
 
 export interface RunEvent {
   type: RunEventType;
@@ -13,12 +14,24 @@ export interface RunEvent {
   error: string | null;
 }
 
+export interface DigestPersistedEvent {
+  type: DigestEventType;
+  feed_name: string;
+  timestamp: string;
+  digest_ids: number[] | null;
+  sent_at: string | null;
+  trace_id: string | null;
+  item_count: number | null;
+}
+
+export type AppEvent = RunEvent | DigestPersistedEvent;
+
 export interface EventSubscription {
   close: () => void;
 }
 
 interface SubscribeEventsOptions {
-  onEvent: (event: RunEvent) => void;
+  onEvent: (event: AppEvent) => void;
   onConnectionChange?: (connected: boolean) => void;
   onError?: (error: unknown) => void;
 }
@@ -28,7 +41,8 @@ interface EventTokenResponse {
   expires_in: number;
 }
 
-const runEventTypes: RunEventType[] = ["run_started", "run_completed", "run_failed"];
+const runEventTypes = ["run_started", "run_completed", "run_failed"] as const;
+const eventTypes = [...runEventTypes, "digest.persisted"] as const;
 const initialReconnectDelayMs = 2_000;
 const maxReconnectDelayMs = 30_000;
 
@@ -50,6 +64,16 @@ function isRunEvent(value: unknown): value is RunEvent {
     typeof candidate.timestamp === "string" &&
     runEventTypes.includes(candidate.type as RunEventType)
   );
+}
+
+function isDigestPersistedEvent(value: unknown): value is DigestPersistedEvent {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<DigestPersistedEvent>;
+  return candidate.type === "digest.persisted" && typeof candidate.feed_name === "string";
+}
+
+function isAppEvent(value: unknown): value is AppEvent {
+  return isRunEvent(value) || isDigestPersistedEvent(value);
 }
 
 function eventsUrl(token: string): string {
@@ -74,10 +98,10 @@ export function subscribeEvents(options: SubscribeEventsOptions): EventSubscript
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let reconnectDelayMs = initialReconnectDelayMs;
 
-  const handleRunEvent = (message: MessageEvent) => {
+  const handleEvent = (message: MessageEvent) => {
     try {
       const payload = JSON.parse(message.data) as unknown;
-      if (isRunEvent(payload)) {
+      if (isAppEvent(payload)) {
         options.onEvent(payload);
       }
     } catch (error) {
@@ -131,8 +155,8 @@ export function subscribeEvents(options: SubscribeEventsOptions): EventSubscript
         scheduleReconnect();
       };
 
-      for (const eventType of runEventTypes) {
-        source.addEventListener(eventType, handleRunEvent);
+      for (const eventType of eventTypes) {
+        source.addEventListener(eventType, handleEvent);
       }
     } catch (error) {
       if (!closed) {

@@ -4,6 +4,7 @@ import { resetState } from "./helpers";
 
 const routes: Array<{ path: string; heading: string; fixture?: "default" | "empty" }> = [
   { path: "/", heading: "Feeds" },
+  { path: "/digests", heading: "Digests", fixture: "empty" },
   { path: "/feeds/new", heading: "New feed" },
   { path: "/skills", heading: "Skills" },
   { path: "/setup", heading: "Create your first glean feed", fixture: "empty" },
@@ -32,7 +33,7 @@ for (const route of routes) {
   test(`has no serious or critical axe violations on ${route.path}`, async ({ page }) => {
     await resetState(page, route.fixture ?? "default");
     await page.goto(route.path);
-    await expect(page.getByRole("heading", { name: route.heading })).toBeVisible();
+    await expect(page.getByRole("heading", { name: route.heading, exact: true })).toBeVisible();
     await scanRoute(page);
   });
 }

@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import { Link } from "svelte-routing";
   import { listFeedConfigs, listFeedStatuses, runFeedNow } from "../api";
-  import { subscribeEvents, type EventSubscription, type RunEvent } from "../sse";
+  import { subscribeEvents, type AppEvent, type EventSubscription } from "../sse";
   import type { FeedListItem, FeedStatus } from "../types";
   import Logo from "../components/Logo.svelte";
 
@@ -85,7 +85,8 @@
     runningFeeds = next;
   }
 
-  function applyRunEvent(event: RunEvent): void {
+  function applyRunEvent(event: AppEvent): void {
+    if (event.type === "digest.persisted") return;
     if (!feeds.some((feed) => feed.name === event.feed)) return;
 
     if (event.type === "run_started") {

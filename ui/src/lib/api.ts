@@ -7,6 +7,7 @@
 import type {
   Defaults,
   DefaultsConfig,
+  Digest,
   FeedConfig,
   FeedListItem,
   FeedStatus,
@@ -15,6 +16,8 @@ import type {
   SystemInfo,
   ValidateResponse,
 } from "./types";
+
+export type { Digest } from "./types";
 
 const API_KEY_STORAGE_KEY = "glean.api_key";
 
@@ -204,6 +207,27 @@ export async function runFeedNow(name: string): Promise<void> {
     const text = await resp.text();
     throw new Error(`run feed failed: ${resp.status} ${text}`);
   }
+}
+
+function digestQuery(opts?: { limit?: number; before?: number }): string {
+  const params = new URLSearchParams();
+  if (opts?.limit !== undefined) params.set("limit", String(opts.limit));
+  if (opts?.before !== undefined) params.set("before", String(opts.before));
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
+export async function listDigests(opts?: { limit?: number; before?: number }): Promise<Digest[]> {
+  return apiJson<Digest[]>(`/api/v1/digests${digestQuery(opts)}`);
+}
+
+export async function listFeedDigests(
+  name: string,
+  opts?: { limit?: number; before?: number },
+): Promise<Digest[]> {
+  return apiJson<Digest[]>(
+    `/api/v1/feeds/${encodeURIComponent(name)}/digests${digestQuery(opts)}`,
+  );
 }
 
 // --- Skill config CRUD ---
