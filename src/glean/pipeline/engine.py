@@ -284,6 +284,8 @@ class Runner:
         return result
 
     async def run_feed(self, name: str, *, dry_run: bool = False) -> RunResult:
+        # AGENT: This is the heart of glean. Read docs/agents/key-files.md before editing.
+        # Stage order is YAML-driven (feed.pipeline) — never hardcode it here.
         trace_id = secrets.token_hex(4)
         context_tokens = bind_contextvars(feed=name, trace_id=trace_id)
         log = self._logger.bind(feed=name, trace_id=trace_id)
@@ -403,7 +405,7 @@ class Runner:
                                 fc.ops_chat_id,
                                 f"🚨 <b>{html.escape(name)}</b> failing: {alert_error}",
                             )
-                        except Exception:  # noqa: BLE001
+                        except Exception:
                             log.exception("ops_alert_send_failed")
 
             return await finalize()
