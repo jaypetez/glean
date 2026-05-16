@@ -1,0 +1,61 @@
+# Minimal SearXNG configuration tailored for example 01.
+#
+# - server.limiter: false       — private single-user, no bot protection needed.
+# - server.public_instance: false — disables public-facing UI surface area.
+# - search.formats includes json — required by glean's SearXNG backend.
+#
+# Reference: https://docs.searxng.org/admin/settings/settings.html
+
+use_default_settings: true
+
+general:
+  instance_name: "glean-ex01-search"
+  privacypolicy_url: false
+  donation_url: false
+  contact_url: false
+
+search:
+  formats:
+    - html
+    - json
+  safe_search: 0
+  default_lang: "en"
+  autocomplete: ""
+
+server:
+  secret_key: ""          # set via SEARXNG_SECRET env var; entrypoint enforces 32+ hex chars
+  limiter: false
+  public_instance: false
+  image_proxy: false
+
+ui:
+  static_use_hash: true
+  default_locale: en
+
+# A small, reliable engine set. Enable more by removing `disabled: false` blocks
+# or adding new ones; full list at:
+# https://docs.searxng.org/admin/settings/settings_engine.html
+engines:
+  - name: duckduckgo
+    engine: duckduckgo
+    categories: general
+    timeout: 3.0
+    disabled: false
+
+  - name: brave
+    engine: brave
+    categories: general
+    timeout: 3.0
+    disabled: false
+
+  - name: mojeek
+    engine: mojeek
+    categories: general
+    timeout: 3.0
+    disabled: false
+
+  - name: startpage
+    engine: startpage
+    categories: general
+    timeout: 4.0
+    disabled: false
