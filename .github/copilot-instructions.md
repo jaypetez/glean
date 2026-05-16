@@ -36,7 +36,7 @@ trivy fs --severity HIGH,CRITICAL .
 
 `pyproject.toml` is the single source of truth for ruff/mypy/pytest config. mypy is **strict** (`disallow_untyped_defs`, `warn_return_any`, `warn_unused_ignores`).
 
-CI required checks (all 11): `Lint, type-check, test`, `Audit Python deps`, `Trivy filesystem scan`, `Secret scan` (gitleaks), `Bandit SAST`, `End-to-end (docker compose)`, `e2e-ui` (Playwright), `Container scan`, `CodeQL`, `Analyze Python`, `Dependency review`. All must pass — `enforce_admins: true`, no `--admin` bypass.
+CI runs 13 PR checks: `Lint, type-check, test`, `Docs build (strict)`, `API schema fuzz`, `Audit Python deps`, `Trivy filesystem scan`, `Secret scan` (gitleaks), `Bandit SAST`, `e2e-ui` (Playwright), `End-to-end (docker compose)`, `Container scan`, `CodeQL`, `Analyze Python`, and `Dependency review`. Keep all of them green on agent-authored PRs — `enforce_admins: true`, no `--admin` bypass.
 
 ## Architecture
 
@@ -127,7 +127,7 @@ Transient HTTP/LLM 429s and 5xxs retry within a tick with bounded backoff. Failu
 
 - **Branch naming:** `feat/<slug>`, `fix/<slug>`, `docs/<slug>`, `chore/<slug>`. Squash-merge only — PR title becomes the commit message.
 - **Commit trailer:** `Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>` on agent-authored commits.
-- **Branch protection on `main`** is strict: 11 required checks, `enforce_admins: true`, `required_conversation_resolution: true`. **Never use `--admin`** on `gh pr merge`. Use `gh pr merge <PR> --auto --squash --delete-branch` and let CI gate.
+- **Branch protection on `main`** is strict: keep 13 PR checks green (`Lint, type-check, test`, `Docs build (strict)`, `API schema fuzz`, `Audit Python deps`, `Trivy filesystem scan`, `Secret scan`, `Bandit SAST`, `e2e-ui`, `End-to-end (docker compose)`, `Container scan`, `CodeQL`, `Analyze Python`, `Dependency review`), `enforce_admins: true`, `required_conversation_resolution: true`. **Never use `--admin`** on `gh pr merge`. Use `gh pr merge <PR> --auto --squash --delete-branch` and let CI gate.
 - **CodeQL review threads block merges.** When CodeQL flags a finding, fix the code, then resolve the review thread via GraphQL `resolveReviewThread` mutation (the alert auto-closes when the underlying SARIF result disappears, but the thread doesn't auto-resolve).
 - **`README.md` MUST stay out of `.dockerignore`** — hatchling reads it from `pyproject.toml`. Putting it in `.dockerignore` breaks the image build with a confusing cache-key error.
 - **No secrets in code or YAML.** `feeds.yaml` is committable; secrets live in `.env` (gitignored) and are referenced via `${VAR}` in `feeds.yaml`. Push protection is on at the repo level. gitleaks runs in CI.

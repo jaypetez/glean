@@ -2,6 +2,16 @@
 
 > Self-hosted, pluggable personal agent that gleans signal from RSS, scraping, and search — processes via any LLM, fans out to Telegram/Discord/Slack/ntfy/Webhook/File.
 
+## Agent runbooks
+
+- [Agent Runbooks overview](https://jaypetez.github.io/glean/agents/): Task-focused recipes for coding agents
+- [New Session Checklist](https://jaypetez.github.io/glean/agents/new-session-checklist/): Read this first before editing
+- [Common Pitfalls](https://jaypetez.github.io/glean/agents/pitfalls/): High-probability mistakes to avoid
+- [Key Files Map](https://jaypetez.github.io/glean/agents/key-files/): Where the pipeline, config, state, security, and test logic live
+- [Debug a Feed](https://jaypetez.github.io/glean/agents/debug-feed/): Diagnose why a feed is not sending
+- [Add a New Plugin](https://jaypetez.github.io/glean/agents/add-plugin/): Source, sink, LLM provider, and search backend workflow
+- [Cut a Release](https://jaypetez.github.io/glean/agents/release/): Version bump, PR, tag, and release steps
+
 ## Essential reading
 
 - [Concepts: What is a feed](https://jaypetez.github.io/glean/concepts/feed/): The core mental model
@@ -11,6 +21,7 @@
 
 ## Reference
 
+- [Glossary](https://jaypetez.github.io/glean/reference/glossary/): glean-specific terminology for feeds, bootstrap, dedup, trace IDs, skills, and MCP tools
 - [CLI](https://jaypetez.github.io/glean/reference/cli/): All glean subcommands
 - [REST API](https://jaypetez.github.io/glean/reference/api/): Live Swagger UI
 - [JSON Schema](https://jaypetez.github.io/glean/reference/feeds-schema.json): For IDE/agent validation
