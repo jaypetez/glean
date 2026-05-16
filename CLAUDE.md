@@ -1,10 +1,11 @@
 # CLAUDE.md
 
-@docs/plugins/source.md
-@docs/plugins/llm.md
-@docs/plugins/sink.md
-@docs/plugins/search.md
-@docs/operations/security.md
+<!-- Lazy-load: import only what's relevant for the current task -->
+<!-- For source plugin work: @docs/plugins/source.md -->
+<!-- For LLM provider work: @docs/plugins/llm.md -->
+<!-- For sink work: @docs/plugins/sink.md -->
+<!-- For search backend work: @docs/plugins/search.md -->
+<!-- For security changes: @docs/operations/security.md -->
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -16,10 +17,10 @@ uv venv
 . .venv/Scripts/activate          # Windows; macOS/Linux: . .venv/bin/activate
 uv pip install -e ".[dev]"
 
-# the three checks CI gates on — run all before pushing
-ruff check src tests
-mypy src                          # strict mode, will catch real bugs
-pytest -q
+# fast local gate — run before pushing
+uv run ruff check src tests
+uv run mypy src                   # strict mode, will catch real bugs
+uv run pytest -q
 
 # single test
 pytest tests/test_runner.py -q
@@ -42,6 +43,8 @@ docker exec -it glean glean test-feed <feed-name>
 `pyproject.toml` is the single source of truth for ruff, mypy, and pytest config.
 `mypy` is **strict** (`disallow_untyped_defs`, `warn_return_any`, `warn_unused_ignores`); CI fails on any new error.
 
+CI runs 13 PR checks: `Lint, type-check, test`, `Docs build (strict)`, `API schema fuzz`, `Audit Python deps`, `Trivy filesystem scan`, `Secret scan`, `Bandit SAST`, `e2e-ui`, `End-to-end (docker compose)`, `Container scan`, `CodeQL`, `Analyze Python`, and `Dependency review`. Keep all of them green before merge attempts — `enforce_admins: true`, no `--admin` bypass.
+
 ## Standardized dev loop
 
 ```bash
@@ -54,7 +57,7 @@ make ui-test  # playwright UI e2e
 
 Pre-commit hooks: `uv run pre-commit install` once, then ruff + mypy + a few hygiene checks run on `git commit`.
 
-On Windows, install `make` via Chocolatey (`choco install make`), use WSL, or run the underlying commands directly.
+Windows-specific setup notes (including `make` installation) live in [`docs/contributing/setup.md`](docs/contributing/setup.md).
 
 ## Architecture
 
@@ -90,7 +93,7 @@ Two parallel registry patterns, same shape:
 
 Both registries call `_import_builtins()` at module load to force decorator side-effects. **To add a new source/provider, write the file and add the import to `_import_builtins()`** in the matching registry — that's the only wiring. Constructor kwargs come straight from the YAML spec minus the `type`/`provider` key, so the signature *is* the user-facing API.
 
-See `docs/plugins.md` for examples. Smallest reference implementations: `sources/rss.py` and `llm/ollama_provider.py`.
+See `docs/plugins/index.md` for examples. Smallest reference implementations: `sources/rss.py` and `llm/ollama_provider.py`.
 
 ### Item flow contract
 
@@ -133,7 +136,7 @@ Transient HTTP/LLM 429s and 5xxs are retried *within a tick* with bounded backof
 ## Repo & workflow
 
 - **MIT license**, public repo, single maintainer (`@jaypetez`).
-- **Branch protection on `main`**: required check `Lint, type-check, test`, 1 approving review required, CODEOWNERS-gated, linear history, no force-push, no deletion. Admins bypass review (so you can self-merge), but **do not push directly to main** — always go through a PR.
+- **Branch protection on `main`**: keep 13 PR checks green (`Lint, type-check, test`, `Docs build (strict)`, `API schema fuzz`, `Audit Python deps`, `Trivy filesystem scan`, `Secret scan`, `Bandit SAST`, `e2e-ui`, `End-to-end (docker compose)`, `Container scan`, `CodeQL`, `Analyze Python`, `Dependency review`), 1 approving review is required, CODEOWNERS gates protected paths, linear history is enforced, and force-push/deletion are blocked. **Never use `--admin`** and never push directly to `main`.
 - **Squash-merge only**; the PR title becomes the commit message.
 - **Image** at `ghcr.io/jaypetez/glean` — multi-arch (amd64+arm64), built from `Dockerfile` (`python:3.14-slim` base). Tags: `latest` + `sha-<short>` on each push to main; full semver on `v*.*.*` tag (release.yml).
 - **Dockerfile gotcha**: hatchling reads `readme = "README.md"` from pyproject.toml, so `README.md` MUST stay in the build context (it's COPYed in the builder stage and NOT in `.dockerignore`). If you re-add it to `.dockerignore`, the image build will fail with a confusing `failed to compute cache key` error.
