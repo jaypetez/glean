@@ -927,6 +927,7 @@ dev = [
     { name = "time-machine" },
     { name = "typer-cli" },
     { name = "types-pyyaml" },
+    { name = "watchfiles" },
 ]
 docs = [
     { name = "mkdocs-git-revision-date-localized-plugin" },
@@ -984,6 +985,7 @@ requires-dist = [
     { name = "typer-cli", marker = "extra == 'dev'", specifier = ">=0.12" },
     { name = "types-pyyaml", marker = "extra == 'dev'" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
+    { name = "watchfiles", marker = "extra == 'dev'", specifier = ">=0.21" },
     { name = "yoyo-migrations", specifier = ">=8.2" },
 ]
 provides-extras = ["dev", "docs"]
