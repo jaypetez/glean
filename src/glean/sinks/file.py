@@ -103,6 +103,7 @@ class FileSink:
                     "source_name": item.source_name,
                     "published_at": item.published_at.isoformat() if item.published_at else None,
                     "relevance": item.relevance,
+                    "structured": item.structured,
                 }
                 f.write(json.dumps(row, ensure_ascii=False))
                 f.write("\n")

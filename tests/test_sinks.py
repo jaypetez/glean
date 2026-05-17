@@ -791,6 +791,26 @@ async def test_file_sink_jsonl_format(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_file_sink_jsonl_includes_structured(tmp_path: Path) -> None:
+    out = tmp_path / "out.jsonl"
+    sink = build_sink({"type": "file", "path": str(out), "format": "jsonl"})
+    item = Item(
+        canonical_url="https://example.com/p1",
+        title="Paper",
+        source_type="rss",
+        source_name="arxiv",
+        structured={"key_contribution": "FlashAttention v3", "tech_stack": ["python", "cuda"]},
+    )
+    await sink.send(_make_ctx([item]))
+    await sink.aclose()
+    row = json.loads(out.read_text(encoding="utf-8").strip().split("\n")[0])
+    assert row["structured"] == {
+        "key_contribution": "FlashAttention v3",
+        "tech_stack": ["python", "cuda"],
+    }
+
+
+@pytest.mark.asyncio
 async def test_file_sink_markdown_format(tmp_path: Path) -> None:
     out = tmp_path / "out.md"
     sink = build_sink({"type": "file", "path": str(out), "format": "markdown"})
