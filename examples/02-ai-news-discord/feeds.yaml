@@ -1,0 +1,49 @@
+# Example 02 — AI news via RSS → Ollama → Discord + dashboard.
+#
+# Edit the RSS sources, schedule, or model to suit your interests.
+
+defaults:
+  llm:
+    provider: ollama
+    model: qwen2.5:7b
+    base_url: http://ollama:11434
+  render:
+    style: plain
+    link_preview: false
+    max_items: 10
+  bootstrap: skip-and-mark
+  failure:
+    alert_after: 3
+
+feeds:
+  - name: ai-news
+    schedule: "daily 08:00"
+
+    sinks:
+      - type: discord
+        webhook_url: ${DISCORD_WEBHOOK_URL}
+      - type: dashboard
+        keep_last_n: 50
+
+    sources:
+      - type: rss
+        url: https://simonwillison.net/atom/everything/
+      - type: rss
+        url: https://openai.com/blog/rss.xml
+      - type: rss
+        url: https://hnrss.org/newest?q=AI
+
+    pipeline:
+      - dedup
+      - rank:
+          prompt: |
+            Score 0-1 for practical AI engineering relevance.
+            Reward concrete launches, technical writeups, benchmarks.
+            Penalize fundraising / pure PR / opinion pieces.
+          min_relevance: 0.5
+      - summarize:
+          prompt: |
+            One sentence, <=25 words. State the concrete fact or development.
+            No marketing fluff. No "this article discusses".
+      - digest:
+          intro: "## AI news daily"
