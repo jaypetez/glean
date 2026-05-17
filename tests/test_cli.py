@@ -278,6 +278,21 @@ def test_require_token_exits_when_missing(monkeypatch) -> None:
     assert exc.value.exit_code == 1
 
 
+def test_optional_token_returns_env_value(monkeypatch) -> None:
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "abc")
+    assert cli_module._optional_token() == "abc"
+
+
+def test_optional_token_returns_none_when_missing(monkeypatch) -> None:
+    monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
+    assert cli_module._optional_token() is None
+
+
+def test_optional_token_returns_none_for_empty_value(monkeypatch) -> None:
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "")
+    assert cli_module._optional_token() is None
+
+
 @pytest.mark.asyncio
 async def test_test_feed_async_prints_messages_for_dry_run(
     monkeypatch,
