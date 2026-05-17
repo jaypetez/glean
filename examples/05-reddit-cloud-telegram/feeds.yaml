@@ -1,0 +1,69 @@
+# Example 05 — Reddit -> cloud LLM -> Telegram + dashboard.
+#
+# Default: OpenAI gpt-4o-mini.
+# To use Anthropic instead, replace the defaults.llm block with the commented
+# alternative at the bottom of this file.
+
+defaults:
+  llm:
+    provider: openai
+    model: gpt-4o-mini
+    # base_url: https://api.openai.com/v1   # default
+  render:
+    style: plain
+    link_preview: false
+    max_items: 10
+  bootstrap: skip-and-mark
+  telegram:
+    bot_token: ${TELEGRAM_BOT_TOKEN}
+  failure:
+    alert_after: 3
+    ops_chat_id: ${TELEGRAM_OPS_CHAT_ID}
+  # Cost guard for paid LLMs:
+  max_llm_calls_per_run: 80
+
+feeds:
+  - name: reddit-ml
+    schedule: "every 2h"
+    chat_id: ${TELEGRAM_CHAT_ID}
+
+    sinks:
+      - type: telegram
+        chat_id: ${TELEGRAM_CHAT_ID}
+      - type: dashboard
+        keep_last_n: 50
+
+    sources:
+      - type: reddit
+        subreddit: LocalLLaMA
+        sort: top
+        timeframe: day
+      - type: reddit
+        subreddit: MachineLearning
+        sort: top
+        timeframe: day
+
+    pipeline:
+      - dedup
+      - rank:
+          prompt: |
+            Score 0-1 based on whether this would interest someone who builds
+            ML systems for a startup. Prioritize concrete launches, benchmark
+            deep-dives, and engineering writeups. Penalize memes, vent threads,
+            and pure-theory speculation.
+          min_relevance: 0.55
+      - summarize:
+          prompt: |
+            One sentence, <=25 words, stating the actual fact or finding.
+            No "this post discusses". No marketing fluff.
+      - digest:
+          intro: "Top ML on Reddit"
+
+# To use Anthropic instead of OpenAI, replace the defaults.llm block with:
+#
+# defaults:
+#   llm:
+#     provider: anthropic
+#     model: claude-haiku-4-5
+#
+# And set ANTHROPIC_API_KEY in .env instead of OPENAI_API_KEY.
