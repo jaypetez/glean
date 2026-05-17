@@ -1,0 +1,64 @@
+defaults:
+  llm:
+    provider: ollama
+    model: qwen2.5:7b
+    base_url: http://ollama:11434
+  render:
+    style: plain
+    link_preview: false
+    max_items: 8
+  bootstrap: skip-and-mark
+  failure:
+    alert_after: 3
+
+skills:
+  - name: paper-digest
+    description: "Extract structured fields from academic paper abstracts."
+    system_prompt: |
+      You are a research analyst distilling papers for practitioners.
+      Focus on practical implications, not academic framing.
+    prompt: |
+      Extract paper details from the abstract:
+
+      Title: {title}
+      Abstract: {body}
+    output_schema:
+      key_contribution: str           # <=15 words
+      methodology: str                # <=10 words
+      practical_relevance: str        # <=15 words
+      tech_stack: "list[str]"
+      summary: str
+
+feeds:
+  - name: arxiv-papers
+    schedule: "daily 09:00"
+
+    sinks:
+      - type: ntfy
+        topic: ${NTFY_TOPIC}
+        # Default ntfy server. Self-host or use a different one:
+        # base_url: https://ntfy.example.com
+      - type: file
+        path: /data/digests/arxiv-papers.jsonl
+        format: jsonl
+      - type: dashboard
+        keep_last_n: 50
+
+    sources:
+      - type: rss
+        url: http://export.arxiv.org/rss/cs.AI
+      - type: rss
+        url: http://export.arxiv.org/rss/cs.LG
+
+    pipeline:
+      - dedup
+      - rank:
+          prompt: |
+            Score 0-1 for practical ML-engineering relevance.
+            Reward methods you could implement in a weekend.
+            Penalize theory-only papers and incremental benchmarks.
+          min_relevance: 0.55
+      - apply_skill:
+          skill: paper-digest
+      - digest:
+          intro: "arXiv: top papers today"

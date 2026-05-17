@@ -95,14 +95,17 @@ Want self-hosted web search too? See [Web search setup](./docs/getting-started/s
 
 ### One-command setup with a curated example
 
-For an opinionated, end-to-end setup with **no Telegram bot required**, use one of the [examples](./examples/):
+Pick the example closest to what you want:
 
-```bash
-cd examples/01-web-search-local-llm
-./setup.sh           # Linux / macOS / WSL    (Windows: ./setup.ps1)
-```
+| Example | Use case | Run |
+|---------|----------|-----|
+| **01** `web-search-local-llm` | Hourly self-hosted web search → markdown file + browser viewer | `cd examples/01-web-search-local-llm && ./setup.sh` |
+| **02** `ai-news-discord` | Daily AI news → Discord channel | `cd examples/02-ai-news-discord && ./setup.sh` |
+| **03** `github-releases-slack` | Track 5+ GitHub repos for new releases → Slack | `cd examples/03-github-releases-slack && ./setup.sh` |
+| **04** `arxiv-skill-ntfy` | Daily arXiv papers (structured) → phone push + JSONL | `cd examples/04-arxiv-skill-ntfy && ./setup.sh` |
+| **05** `reddit-cloud-telegram` | Hourly Reddit ML digests via cloud LLM → Telegram | `cd examples/05-reddit-cloud-telegram && ./setup.sh` |
 
-That brings up glean + Ollama (`qwen2.5:7b`, ~5 GB) + SearXNG, pulls the model, and writes hourly digests to `./data/digests/web-search.md`. ~10 minutes start to finish.
+Every example bundles its own `docker-compose.yml` and writes to a relative `./data/`, so they coexist with a real glean install and with each other. Windows users: use `./setup.ps1`. Full menu and conventions in [`examples/`](./examples/).
 
 ## Documentation
 

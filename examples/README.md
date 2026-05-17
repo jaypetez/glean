@@ -4,9 +4,13 @@ Self-contained quickstart scenarios. Pick the one closest to your goal, run its 
 
 ## Available examples
 
-| # | Name | Stack | Time to first digest |
-|---|------|-------|----------------------|
-| 01 | [web-search-local-llm](01-web-search-local-llm/) | Glean + Ollama (qwen2.5:7b) + SearXNG → file + dashboard sinks | ~10 min (mostly model pull) |
+| # | Name | Stack | Time to first digest | Audience |
+|---|------|-------|----------------------|----------|
+| 01 | [web-search-local-llm](01-web-search-local-llm/) | Glean + Ollama (qwen2.5:7b) + SearXNG → file + dashboard | ~10 min | Self-hosted search |
+| 02 | [ai-news-discord](02-ai-news-discord/) | Glean + Ollama → 3 RSS sources → Discord + dashboard | ~10 min | Daily AI newsletter |
+| 03 | [github-releases-slack](03-github-releases-slack/) | Glean (no LLM) → GitHub `releases.atom` × 5 → Slack + dashboard | ~2 min | DevOps teams |
+| 04 | [arxiv-skill-ntfy](04-arxiv-skill-ntfy/) | Glean + Ollama → arXiv RSS → ntfy push + JSONL + dashboard (uses skills) | ~10 min | Researchers |
+| 05 | [reddit-cloud-telegram](05-reddit-cloud-telegram/) | Glean (cloud LLM) → Reddit subs → Telegram + dashboard | ~3 min | Cloud-LLM users |
 
 ## How to use
 

@@ -1,0 +1,33 @@
+name: glean-ex05
+
+services:
+  glean:
+    image: ghcr.io/jaypetez/glean:latest
+    container_name: glean-ex05-glean
+    init: true
+    stop_grace_period: 30s
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    env_file:
+      - .env
+    environment:
+      TZ: ${TZ:-UTC}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - ./data:/data
+      - ./feeds.yaml:/etc/glean/feeds.yaml:ro
+    networks:
+      - glean-ex05
+    ports:
+      - "127.0.0.1:9095:9090"   # different host port so it can run alongside other examples
+
+networks:
+  glean-ex05:
+    name: glean-ex05
+    driver: bridge
