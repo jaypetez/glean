@@ -11,6 +11,9 @@ Set-Location -Path $ScriptDir
 Write-Host '[ex02] Stopping containers + removing volumes…' -ForegroundColor Cyan
 & docker compose -f docker-compose.yml down -v --remove-orphans
 
+Write-Host '[ex02] Restoring feeds.yaml from feeds.yaml.bak (if present)…' -ForegroundColor Cyan
+if (Test-Path 'feeds.yaml.bak') { Move-Item -Force feeds.yaml.bak feeds.yaml }
+
 Write-Host '[ex02] Removing local data\ and .env…' -ForegroundColor Cyan
 if (Test-Path data) { Remove-Item -Recurse -Force data }
 if (Test-Path .env) { Remove-Item -Force .env }
