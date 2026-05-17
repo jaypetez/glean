@@ -24,7 +24,7 @@ $ glean [OPTIONS] COMMAND [ARGS]...
 * `validate-config`: Parse feeds.yaml and exit 0 if valid, 1...
 * `list-feeds`: Show configured feeds and their last-run...
 * `test-feed`: Run a feed once.
-* `send-now`: Run a feed off-schedule and actually send...
+* `send-now`: Run a feed off-schedule and send via its...
 * `run`: Run the scheduler daemon.
 
 ## `glean version`
@@ -113,7 +113,7 @@ $ glean test-feed [OPTIONS] NAME
 
 ## `glean send-now`
 
-Run a feed off-schedule and actually send to Telegram.
+Run a feed off-schedule and send via its configured sinks.
 
 **Usage**:
 
