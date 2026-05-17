@@ -1,0 +1,61 @@
+# Example 03 — GitHub releases -> Slack.
+#
+# No LLM by default: release titles are usually self-explanatory, so this feed
+# stays fast and lightweight with a simple dedup -> digest pipeline.
+
+defaults:
+  render:
+    style: plain
+    link_preview: false
+    max_items: 8
+  bootstrap: skip-and-mark
+  failure:
+    alert_after: 3
+
+feeds:
+  - name: github-releases
+    schedule: "every 6h"
+
+    sinks:
+      - type: slack
+        webhook_url: ${SLACK_WEBHOOK_URL}
+      - type: dashboard
+        keep_last_n: 50
+
+    sources:
+      - type: rss
+        url: https://github.com/python/cpython/releases.atom
+      - type: rss
+        url: https://github.com/fastapi/fastapi/releases.atom
+      - type: rss
+        url: https://github.com/sveltejs/svelte/releases.atom
+      - type: rss
+        url: https://github.com/docker/compose/releases.atom
+      - type: rss
+        url: https://github.com/jaypetez/glean/releases.atom
+
+    pipeline:
+      - dedup
+      - digest:
+          intro: "*New releases since last check*"
+
+# To summarize the release body (changelog) instead of just listing titles:
+#   1. Add this under the existing `defaults:` block:
+#
+#      llm:
+#        provider: ollama
+#        model: qwen2.5:7b
+#        base_url: http://ollama:11434
+#
+#   2. Insert this stage between `dedup` and `digest` in the existing pipeline:
+#
+#      - summarize:
+#          prompt: |
+#            One sentence summary of the most important user-facing change.
+#
+#   3. Add an `ollama` service to docker-compose.yml (see example 02 for the pattern).
+#
+#   4. Optionally tweak the digest intro to:
+#
+#      - digest:
+#          intro: "*New releases this period*"
