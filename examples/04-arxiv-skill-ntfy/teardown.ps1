@@ -14,5 +14,9 @@ Write-Host '[ex04] Stopping containers + removing volumes…' -ForegroundColor C
 Write-Host '[ex04] Removing local data\ and .env…' -ForegroundColor Cyan
 if (Test-Path data) { Remove-Item -Recurse -Force data }
 if (Test-Path .env) { Remove-Item -Force .env }
+if (Test-Path feeds.yaml.bak) {
+    Write-Host '[ex04] Restoring feeds.yaml from feeds.yaml.bak…' -ForegroundColor Cyan
+    Move-Item -Force feeds.yaml.bak feeds.yaml
+}
 
 Write-Host '[ex04] Done. Re-run .\setup.ps1 to start fresh.' -ForegroundColor Green

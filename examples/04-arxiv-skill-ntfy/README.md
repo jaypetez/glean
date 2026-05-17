@@ -11,6 +11,19 @@ Two containers: `glean-ex04-glean` and `glean-ex04-ollama`. Both run on the priv
 - ~10 GB free disk for the Ollama model + container images
 - Enough RAM for `qwen2.5:7b` (≈8–16 GB is comfortable)
 
+## GPU acceleration
+
+The setup scripts auto-detect the best Ollama mode in this order: `external`, `nvidia`, `rocm`, then `none` (CPU-only). Set `GLEAN_OLLAMA_GPU=none|nvidia|rocm|external` in `.env` to force a specific mode.
+
+| Mode | Auto-detected when | Compose override | Notes |
+|------|---------------------|------------------|-------|
+| `external` | `http://host.docker.internal:11434` or `http://127.0.0.1:11434` already serves Ollama | `docker-compose.external-ollama.yml` | Reuses the host Ollama instance and skips the model pull. |
+| `nvidia` | `nvidia-smi` succeeds on the host | `docker-compose.nvidia.yml` | Requires NVIDIA drivers plus `nvidia-container-toolkit`. |
+| `rocm` | `rocm-smi` exists and `/dev/kfd` is present | `docker-compose.rocm.yml` | Requires a Linux host with ROCm devices exposed to Docker. |
+| `none` | No external Ollama or GPU runtime is detected | none | Uses the default CPU-only `ollama/ollama:latest` container. |
+
+The setup script prints the chosen GPU mode, verifies the GPU inside the Ollama container for NVIDIA/ROCm, and restores `feeds.yaml` on teardown if external mode patched it.
+
 ## One-shot setup
 
 ```bash
@@ -21,7 +34,7 @@ Two containers: `glean-ex04-glean` and `glean-ex04-ollama`. Both run on the priv
 ./setup.ps1
 ```
 
-The script copies `.env.example` to `.env` if needed, verifies you chose a private ntfy topic, starts Ollama, pulls `qwen2.5:7b`, starts glean on port **9094**, and dry-runs the `arxiv-papers` feed.
+The script copies `.env.example` to `.env` if needed, verifies you chose a private ntfy topic, auto-detects the Ollama runtime, starts Ollama, pulls `qwen2.5:7b` unless you're using an external Ollama, starts glean on port **9094**, and dry-runs the `arxiv-papers` feed.
 
 ## Subscribe on your phone
 
@@ -74,7 +87,7 @@ The reusable extraction template lives in the `skills:` block at `feeds.yaml:14-
 ./teardown.ps1
 ```
 
-This stops the stack, removes containers and volumes, and deletes the local `.env` plus `data/` directory.
+This stops the stack, removes containers and volumes, deletes the local `.env` plus `data/` directory, and restores `feeds.yaml` if external Ollama mode patched it.
 
 ## Going further
 
