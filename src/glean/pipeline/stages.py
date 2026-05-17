@@ -80,7 +80,8 @@ async def rank_stage(
                     "rank_failed",
                     feed=feed,
                     url=item.canonical_url,
-                    err=scrub(str(exc))[:500],
+                    err_type=type(exc).__name__,
+                    err=scrub(str(exc))[:500] or "(no message)",
                 )
                 s = 0.0
             return dataclasses.replace(item, relevance=s), True
@@ -119,7 +120,8 @@ async def summarize_stage(
                     "summarize_failed",
                     feed=feed,
                     url=item.canonical_url,
-                    err=scrub(str(exc))[:500],
+                    err_type=type(exc).__name__,
+                    err=scrub(str(exc))[:500] or "(no message)",
                 )
                 summary = item.summary or ""
             return dataclasses.replace(item, llm_summary=summary)
@@ -142,7 +144,12 @@ async def digest_intro(
     try:
         return filter_llm_output(await llm.digest(items, prompt))
     except Exception as exc:
-        logger.warning("digest_failed", feed=feed, err=scrub(str(exc))[:500])
+        logger.warning(
+            "digest_failed",
+            feed=feed,
+            err_type=type(exc).__name__,
+            err=scrub(str(exc))[:500] or "(no message)",
+        )
         return prompt
 
 
@@ -194,7 +201,8 @@ async def apply_skill_stage(
                     feed=feed,
                     skill=skill.name,
                     url=item.canonical_url,
-                    err=scrub(str(exc))[:500],
+                    err_type=type(exc).__name__,
+                    err=scrub(str(exc))[:500] or "(no message)",
                 )
                 result = {}
 

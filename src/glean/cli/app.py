@@ -66,6 +66,18 @@ def _require_token() -> str:
     return token
 
 
+def _optional_token() -> str | None:
+    """Return the Telegram bot token if configured; otherwise None.
+
+    Used by `run` and `test-feed --send` so a glean deployment that uses only
+    non-telegram sinks (file, dashboard, discord, slack, ntfy, webhook) does
+    not need to set TELEGRAM_BOT_TOKEN at all. If a feed actually needs
+    telegram (legacy `chat_id` field or `- type: telegram` sink) and the
+    token is missing, the pipeline raises at send time with a clear message.
+    """
+    return os.environ.get("TELEGRAM_BOT_TOKEN") or None
+
+
 @app.command()
 def version() -> None:
     """Print version and exit."""
@@ -174,7 +186,11 @@ async def _test_feed_async(cfg, db_path: Path, name: str, *, send: bool) -> None
 
     store = StateStore(db_path)
     await store.open()
-    telegram = TelegramSender(_require_token()) if send else None
+    if send:
+        token = _optional_token()
+        telegram = TelegramSender(token) if token else None
+    else:
+        telegram = None
     try:
         result = await run_feed_once(cfg, store, name, dry_run=not send, telegram=telegram)
         typer.echo("---")
@@ -206,7 +222,7 @@ def send_now(
     db: DbOpt = Path(_DEFAULT_DB),
     log_level: LogLevelOpt = "INFO",
 ) -> None:
-    """Run a feed off-schedule and actually send to Telegram."""
+    """Run a feed off-schedule and send via its configured sinks."""
     configure_logging(log_level)
     cfg = _load_or_exit(config)
     try:
@@ -245,7 +261,8 @@ async def _run_async(cfg, db_path: Path, health_port: int) -> None:  # type: ign
     server = await run_api_server(store, db_path, port=health_port)
     api_app = cast(FastAPI, server.config.app)
     event_bus = api_app.state.glean_event_bus
-    telegram = TelegramSender(_require_token())
+    token = _optional_token()
+    telegram = TelegramSender(token) if token else None
     runner = Runner(cfg, store, telegram, event_bus=event_bus)
 
     api_task = asyncio.create_task(server.serve(), name="glean-api")
