@@ -55,7 +55,7 @@ function Get-GpuMode {
     return 'none'
 }
 
-function Patch-FeedsYamlForExternalOllama {
+function Update-FeedsYamlForExternalOllama {
     if (Select-String -Path feeds.yaml -Pattern 'base_url: http://host.docker.internal:11434' -SimpleMatch -Quiet) {
         return
     }
@@ -64,7 +64,14 @@ function Patch-FeedsYamlForExternalOllama {
     Copy-Item feeds.yaml feeds.yaml.bak -Force
     $content = Get-Content feeds.yaml -Raw
     $patched = $content.Replace('base_url: http://ollama:11434', 'base_url: http://host.docker.internal:11434')
-    Set-Content -Path feeds.yaml -Value $patched -NoNewline
+    Set-Content -Path feeds.yaml -Value $patched
+}
+
+function Restore-FeedsYamlFromBackup {
+    if (Test-Path feeds.yaml.bak) {
+        Log 'Restoring feeds.yaml from feeds.yaml.bak'
+        Move-Item -Force feeds.yaml.bak feeds.yaml
+    }
 }
 
 Log 'Checking prerequisites...'
@@ -89,7 +96,7 @@ if ($topic -notmatch '^[A-Za-z0-9_-]{1,64}$') {
 
 $gpuModeMatch = Select-String -Path .env -Pattern '^GLEAN_OLLAMA_GPU=' | Select-Object -First 1
 if ([string]::IsNullOrWhiteSpace($env:GLEAN_OLLAMA_GPU) -and $gpuModeMatch) {
-    $env:GLEAN_OLLAMA_GPU = ($gpuModeMatch.Line -split '=', 2)[1].Trim()
+    $env:GLEAN_OLLAMA_GPU = ($gpuModeMatch.Line -split '=', 2)[1].Trim().Trim('"').Trim("'")
 }
 
 $Mode = Get-GpuMode
@@ -97,14 +104,19 @@ Log "GPU mode: $Mode (override via GLEAN_OLLAMA_GPU in .env)"
 $ComposeArgs = @('-f', 'docker-compose.yml')
 switch ($Mode) {
     'nvidia' {
+        Restore-FeedsYamlFromBackup
         $ComposeArgs += @('-f', 'docker-compose.nvidia.yml')
     }
     'rocm' {
+        Restore-FeedsYamlFromBackup
         $ComposeArgs += @('-f', 'docker-compose.rocm.yml')
     }
     'external' {
         $ComposeArgs += @('-f', 'docker-compose.external-ollama.yml')
-        Patch-FeedsYamlForExternalOllama
+        Update-FeedsYamlForExternalOllama
+    }
+    'none' {
+        Restore-FeedsYamlFromBackup
     }
 }
 

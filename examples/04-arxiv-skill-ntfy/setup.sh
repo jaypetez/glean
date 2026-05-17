@@ -44,6 +44,13 @@ patch_feeds_yaml_for_external_ollama() {
   rm -f feeds.yaml.tmp
 }
 
+restore_feeds_yaml_from_backup() {
+  if [[ -f feeds.yaml.bak ]]; then
+    log "Restoring feeds.yaml from feeds.yaml.bak"
+    mv -f feeds.yaml.bak feeds.yaml
+  fi
+}
+
 log "Checking prerequisites…"
 command -v docker >/dev/null 2>&1 || die "docker is required."
 docker compose version >/dev/null 2>&1 || die "docker compose v2 is required (try: docker compose version)."
@@ -63,7 +70,7 @@ if [[ ! "${NTFY_TOPIC}" =~ ^[A-Za-z0-9_-]{1,64}$ ]]; then
   die "NTFY_TOPIC must be 1-64 characters using only letters, digits, '_' or '-'."
 fi
 
-ENV_GPU_MODE="$(grep -E '^GLEAN_OLLAMA_GPU=' .env | head -1 | cut -d= -f2- | tr -d '\r')"
+ENV_GPU_MODE="$(grep -E '^GLEAN_OLLAMA_GPU=' .env | head -1 | cut -d= -f2- | tr -d '\r' | sed -e 's/^["'"'"']//' -e 's/["'"'"']$//')"
 if [[ -n "${ENV_GPU_MODE}" && -z "${GLEAN_OLLAMA_GPU:-}" ]]; then
   GLEAN_OLLAMA_GPU="${ENV_GPU_MODE}"
 fi
@@ -73,14 +80,19 @@ log "GPU mode: ${MODE} (override via GLEAN_OLLAMA_GPU in .env)"
 COMPOSE_FILE_ARGS=("-f" "docker-compose.yml")
 case "${MODE}" in
   nvidia)
+    restore_feeds_yaml_from_backup
     COMPOSE_FILE_ARGS+=("-f" "docker-compose.nvidia.yml")
     ;;
   rocm)
+    restore_feeds_yaml_from_backup
     COMPOSE_FILE_ARGS+=("-f" "docker-compose.rocm.yml")
     ;;
   external)
     COMPOSE_FILE_ARGS+=("-f" "docker-compose.external-ollama.yml")
     patch_feeds_yaml_for_external_ollama
+    ;;
+  none)
+    restore_feeds_yaml_from_backup
     ;;
 esac
 COMPOSE=(docker compose "${COMPOSE_FILE_ARGS[@]}")
