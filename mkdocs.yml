@@ -45,6 +45,7 @@ nav:
   - Getting Started:
       - Installation: getting-started/install.md
       - Quickstart: getting-started/quickstart.md
+      - Examples: getting-started/examples.md
       - Web search: getting-started/search.md
   - Tutorials:
       - tutorials/index.md
