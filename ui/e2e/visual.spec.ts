@@ -6,11 +6,30 @@ test.beforeEach(async ({ page }) => {
   await resetState(page);
 });
 
-test("dashboard visual snapshot", async ({ page }) => {
+test("home visual snapshot", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Feeds" })).toBeVisible();
-  await expect(page.getByText("Connected")).toBeVisible();
-  await expect(page).toHaveScreenshot("dashboard.png", {
+  await expect(page.getByRole("heading", { name: /Glean is running/i })).toBeVisible();
+  await expect(page).toHaveScreenshot("home.png", {
+    fullPage: true,
+    maxDiffPixelRatio: 0.05,
+    mask: DYNAMIC_MASKS(page),
+  });
+});
+
+test("feeds list visual snapshot", async ({ page }) => {
+  await page.goto("/feeds");
+  await expect(page.getByRole("heading", { name: /Feeds/i })).toBeVisible();
+  await expect(page).toHaveScreenshot("feeds-list.png", {
+    fullPage: true,
+    maxDiffPixelRatio: 0.05,
+    mask: DYNAMIC_MASKS(page),
+  });
+});
+
+test("feed detail overview visual snapshot", async ({ page }) => {
+  await page.goto("/feeds/e2e-news");
+  await expect(page.getByRole("tab", { name: /Overview/i })).toBeVisible();
+  await expect(page).toHaveScreenshot("feed-detail-overview.png", {
     fullPage: true,
     maxDiffPixelRatio: 0.05,
     mask: DYNAMIC_MASKS(page),
@@ -26,10 +45,10 @@ test("new feed visual snapshot", async ({ page }) => {
   });
 });
 
-test("settings visual snapshot", async ({ page }) => {
+test("settings api auth visual snapshot", async ({ page }) => {
   await page.goto("/settings");
-  await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
-  await expect(page).toHaveScreenshot("settings.png", {
+  await expect(page.getByRole("heading", { name: /Settings/i })).toBeVisible();
+  await expect(page).toHaveScreenshot("settings-api-auth.png", {
     fullPage: true,
     maxDiffPixelRatio: 0.05,
   });

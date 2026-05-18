@@ -105,14 +105,30 @@ skills: []
                 "/api/v1/test/reset",
                 headers={"X-Glean-Api-Key": app.state.glean_api_key},
             )
-            feed_runs = await state.db.execute_fetchall("SELECT feed FROM feed_runs")
+            feed_runs = await state.db.execute_fetchall(
+                "SELECT feed, bootstrapped FROM feed_runs ORDER BY feed"
+            )
+            digests = await state.db.execute_fetchall(
+                "SELECT feed_name FROM digests ORDER BY sent_at DESC, id DESC"
+            )
+            run_history = await state.db.execute_fetchall(
+                "SELECT feed_name, status FROM feed_run_history ORDER BY started_at DESC, id DESC"
+            )
     finally:
         await state.close()
 
     assert resp.status_code == 200
     assert resp.json() == {"ok": True, "message": "test state reset"}
     assert active_config.read_text(encoding="utf-8") == fixture_config.read_text(encoding="utf-8")
-    assert feed_runs == []
+    assert feed_runs == [("fixture-feed", 1)]
+    assert digests == [("fixture-feed",), ("fixture-feed",), ("fixture-feed",)]
+    assert run_history == [
+        ("fixture-feed", "success"),
+        ("fixture-feed", "success"),
+        ("fixture-feed", "skip"),
+        ("fixture-feed", "failure"),
+        ("fixture-feed", "success"),
+    ]
 
 
 async def test_test_reset_can_restore_empty_fixture(
@@ -147,6 +163,83 @@ async def test_test_reset_can_restore_empty_fixture(
 
     assert resp.status_code == 200
     assert active_config.read_text(encoding="utf-8") == empty_config.read_text(encoding="utf-8")
+
+
+async def test_test_reset_seeds_primary_and_secondary_fixture_data(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fixture_config = tmp_path / "fixture-feeds.yaml"
+    active_config = tmp_path / "active-feeds.yaml"
+    fixture_config.write_text(
+        """
+feeds:
+  - name: alpha
+    schedule: every 1h
+    chat_id: \"12345\"
+    sources:
+      - type: rss
+        url: https://example.com/alpha.xml
+    pipeline:
+      - dedup
+  - name: beta
+    schedule: daily 09:00
+    chat_id: \"67890\"
+    sources:
+      - type: rss
+        url: https://example.com/beta.xml
+    pipeline:
+      - dedup
+skills: []
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    active_config.write_text("feeds: []\nskills: []\n", encoding="utf-8")
+    monkeypatch.setenv("GLEAN_TEST_MODE", "1")
+    monkeypatch.setenv("GLEAN_CONFIG", str(active_config))
+    monkeypatch.setenv("GLEAN_TEST_CONFIG_FIXTURE", str(fixture_config))
+
+    state = StateStore(tmp_path / "state.db")
+    await state.open()
+    try:
+        app = make_app(state, tmp_path / "state.db")
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.post(
+                "/api/v1/test/reset",
+                headers={"X-Glean-Api-Key": app.state.glean_api_key},
+            )
+            feed_runs = await state.db.execute_fetchall(
+                "SELECT feed, last_error, alert_active, bootstrapped FROM feed_runs ORDER BY feed"
+            )
+            digests = await state.db.execute_fetchall(
+                "SELECT feed_name, intro FROM digests ORDER BY sent_at DESC, id DESC"
+            )
+            run_history = await state.db.execute_fetchall(
+                "SELECT feed_name, status, sent, error FROM feed_run_history "
+                "ORDER BY started_at DESC, id DESC"
+            )
+    finally:
+        await state.close()
+
+    assert resp.status_code == 200
+    assert feed_runs == [
+        ("alpha", None, 0, 1),
+        ("beta", "ConnectionError: timeout", 1, 1),
+    ]
+    assert digests == [
+        ("alpha", "Primary digest 1"),
+        ("alpha", "Primary digest 2"),
+        ("alpha", "Primary digest 3"),
+        ("beta", "Secondary digest"),
+    ]
+    assert run_history == [
+        ("alpha", "success", 3, None),
+        ("alpha", "success", 2, None),
+        ("alpha", "skip", 0, None),
+        ("alpha", "failure", 0, "ConnectionError: timeout"),
+        ("alpha", "success", 1, None),
+    ]
 
 
 async def test_test_seed_digest_route_is_not_registered_outside_test_mode(
