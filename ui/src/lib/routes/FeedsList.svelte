@@ -2,9 +2,10 @@
   import { onMount } from "svelte";
   import { Link } from "svelte-routing";
   import { listFeedConfigs, listFeedStatuses, runFeedNow } from "../api";
+  import Breadcrumbs from "../components/Breadcrumbs.svelte";
+  import Logo from "../components/Logo.svelte";
   import { subscribeEvents, type AppEvent, type EventSubscription } from "../sse";
   import type { FeedListItem, FeedStatus } from "../types";
-  import Logo from "../components/Logo.svelte";
 
   type StatusKind = "running" | "ok" | "warning" | "error";
 
@@ -144,8 +145,21 @@
     return "ok";
   }
 
+  function statusLabel(feed: FeedCard): string {
+    switch (statusKind(feed)) {
+      case "running":
+        return "Running";
+      case "error":
+        return "Failure";
+      case "warning":
+        return "Warning";
+      case "ok":
+        return "Healthy";
+    }
+  }
+
   function statusPillClass(feed: FeedCard): string {
-    const base = "rounded-full border px-2 py-0.5 text-xs font-medium capitalize";
+    const base = "rounded-full border px-2 py-0.5 text-xs font-medium";
     switch (statusKind(feed)) {
       case "running":
         return `${base} border-cyan/30 bg-cyan/15 text-cyan motion-safe:animate-pulse`;
@@ -162,55 +176,28 @@
     if (!value) return "Never";
     return new Date(value).toLocaleString();
   }
-
-  function runningCount(): number {
-    return runningFeeds.size;
-  }
-
-  function healthyCount(): number {
-    return feeds.filter((feed) => statusKind(feed) === "ok").length;
-  }
-
-  function alertCount(): number {
-    return feeds.filter((feed) => feed.alert_active).length;
-  }
 </script>
 
 <div class="mx-auto max-w-6xl px-6 py-6">
+  <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Feeds" }]} />
+
   <header class="mb-6 flex items-center justify-between gap-4">
     <div>
       <h1 class="text-2xl font-semibold text-primary">Feeds</h1>
-      <p class="text-sm text-tertiary">Configured feeds and live run status</p>
+      <p class="text-sm text-tertiary">
+        Open any feed to inspect its overview, digests, recent runs, or editor.
+      </p>
     </div>
     <Link
       to="/feeds/new"
       class="rounded-md bg-cyan px-3 py-1.5 text-sm font-medium text-base hover:bg-cyan-light"
     >
-      New feed
+      Add a feed
     </Link>
   </header>
 
-  <section class="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4" aria-label="Feed summary">
-    <div class="rounded-lg border border-border bg-surface p-4">
-      <p class="text-xs uppercase tracking-wide text-tertiary">Total feeds</p>
-      <p class="mt-1 text-2xl font-semibold text-primary">{feeds.length}</p>
-    </div>
-    <div class="rounded-lg border border-border bg-surface p-4">
-      <p class="text-xs uppercase tracking-wide text-tertiary">Running</p>
-      <p class="mt-1 text-2xl font-semibold text-cyan">{runningCount()}</p>
-    </div>
-    <div class="rounded-lg border border-border bg-surface p-4">
-      <p class="text-xs uppercase tracking-wide text-tertiary">Healthy</p>
-      <p class="mt-1 text-2xl font-semibold text-status-ok">{healthyCount()}</p>
-    </div>
-    <div class="rounded-lg border border-border bg-surface p-4">
-      <p class="text-xs uppercase tracking-wide text-tertiary">Alerts</p>
-      <p class="mt-1 text-2xl font-semibold text-status-error">{alertCount()}</p>
-    </div>
-  </section>
-
   {#if loading}
-    <p class="text-tertiary">Loading...</p>
+    <p class="text-tertiary">Loading feeds...</p>
   {:else if error}
     <div
       class="rounded-lg border border-status-error/50 bg-status-error/10 p-4 text-sm text-status-error"
@@ -223,7 +210,7 @@
       <div class="max-w-md space-y-2">
         <h2 class="text-lg font-semibold text-primary">No feeds yet</h2>
         <p class="text-sm text-tertiary">
-          Configure your first feed to start gleaning signal from RSS, scraping, or web search.
+          Create your first feed to start gleaning signal from RSS, scraping, or web search.
         </p>
       </div>
       <Link
@@ -236,54 +223,67 @@
   {:else}
     <ul class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
       {#each feeds as feed (feed.name)}
-        <li class="rounded-lg border border-border bg-surface p-4 hover:border-cyan/40 transition">
-          <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0">
-              <Link to={`/feeds/${encodeURIComponent(feed.name)}`} class="block">
+        <li>
+          <article
+            class="relative group rounded-lg border border-border bg-surface p-4 transition hover:border-cyan/40 hover:bg-elevated/40"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
                 <h2 class="truncate font-mono text-base font-medium text-primary">{feed.name}</h2>
-              </Link>
-              <p class="mt-1 font-mono text-xs text-tertiary">{feed.schedule}</p>
-            </div>
-            <span class={statusPillClass(feed)}>{statusKind(feed)}</span>
-          </div>
-
-          <div class="mt-3 flex flex-wrap gap-1.5 text-xs">
-            {#each feed.pipeline_stages as stage}
-              <span class="rounded-full bg-muted px-2 py-0.5 font-mono text-tertiary">{stage}</span>
-            {/each}
-          </div>
-
-          <dl class="mt-4 space-y-2 text-xs">
-            <div class="flex justify-between gap-3">
-              <dt class="text-faint">Last success</dt>
-              <dd class="text-right text-tertiary">{formatDate(feed.last_success_at)}</dd>
-            </div>
-            <div class="flex justify-between gap-3">
-              <dt class="text-faint">Failures</dt>
-              <dd class="text-tertiary">{feed.consecutive_failures}</dd>
-            </div>
-            {#if feed.last_error}
-              <div>
-                <dt class="text-faint">Last error</dt>
-                <dd class="mt-1 line-clamp-2 text-status-error">{feed.last_error}</dd>
+                <p class="mt-1 font-mono text-xs text-tertiary">{feed.schedule}</p>
               </div>
-            {/if}
-          </dl>
-
-          <div class="mt-4 flex items-center justify-between gap-3 text-xs text-faint">
-            <div class="flex gap-3">
-              <span>{feed.sources_count} source{feed.sources_count === 1 ? "" : "s"}</span>
-              <span>{feed.sinks_count} sink{feed.sinks_count === 1 ? "" : "s"}</span>
+              <span class={statusPillClass(feed)}>{statusLabel(feed)}</span>
             </div>
-            <button
-              type="button"
-              onclick={() => onRunNow(feed.name)}
-              disabled={runningFeeds.has(feed.name)}
-              class="rounded-md border border-cyan/30 bg-cyan/10 px-3 py-1.5 text-sm font-medium text-cyan hover:bg-cyan/20 disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-tertiary"
-            >
-              {runningFeeds.has(feed.name) ? "Running..." : "Run now"}
-            </button>
-          </div>
+
+            <div class="mt-3 flex flex-wrap gap-1.5 text-xs">
+              {#each feed.pipeline_stages as stage}
+                <span class="rounded-full bg-muted px-2 py-0.5 font-mono text-tertiary"
+                  >{stage}</span
+                >
+              {/each}
+            </div>
+
+            <dl class="mt-4 space-y-2 text-xs">
+              <div class="flex justify-between gap-3">
+                <dt class="text-faint">Last success</dt>
+                <dd class="text-right text-tertiary">{formatDate(feed.last_success_at)}</dd>
+              </div>
+              <div class="flex justify-between gap-3">
+                <dt class="text-faint">Failures</dt>
+                <dd class="text-tertiary">{feed.consecutive_failures}</dd>
+              </div>
+              <div class="flex justify-between gap-3">
+                <dt class="text-faint">Bootstrapped</dt>
+                <dd class="text-tertiary">{feed.bootstrapped ? "Yes" : "No"}</dd>
+              </div>
+              {#if feed.last_error}
+                <div>
+                  <dt class="text-faint">Last error</dt>
+                  <dd class="mt-1 line-clamp-2 text-status-error">{feed.last_error}</dd>
+                </div>
+              {/if}
+            </dl>
+
+            <div class="mt-4 flex items-center justify-between gap-3 text-xs text-faint">
+              <div class="flex gap-3">
+                <span>{feed.sources_count} source{feed.sources_count === 1 ? "" : "s"}</span>
+                <span>{feed.sinks_count} sink{feed.sinks_count === 1 ? "" : "s"}</span>
+              </div>
+              <button
+                type="button"
+                onclick={() => void onRunNow(feed.name)}
+                disabled={runningFeeds.has(feed.name)}
+                class="relative z-10 rounded-md border border-cyan/30 bg-cyan/10 px-3 py-1.5 text-sm font-medium text-cyan hover:bg-cyan/20 disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-tertiary"
+              >
+                {runningFeeds.has(feed.name) ? "Running..." : "Run now"}
+              </button>
+            </div>
+            <Link
+              to={`/feeds/${encodeURIComponent(feed.name)}`}
+              class="absolute inset-0 rounded-lg"
+              aria-label={`Open ${feed.name}`}
+            />
+          </article>
         </li>
       {/each}
     </ul>

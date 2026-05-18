@@ -36,3 +36,12 @@ When you're debugging or adding features, these are the files that matter:
 - `tests/conftest.py::_isolate_env` — autouse fixture stripping secret env vars
 - `tests/conftest.py::tmp_db` — per-test SQLite fixture
 - `tests/e2e/conftest.py` — Docker compose stack lifecycle
+
+## UI
+- `ui/src/App.svelte` — client-side route table and auth/bootstrap flow
+- `ui/src/lib/routes/Home.svelte` — Home landing page for daemon health and recent digests
+- `ui/src/lib/routes/FeedsList.svelte` — Feeds index with status cards and run-now actions
+- `ui/src/lib/routes/FeedDetail.svelte` — per-feed Overview / Digests / Runs / Edit tabs
+- `ui/src/lib/routes/Settings.svelte` — Settings shell with deep-linkable sub-tabs
+- `ui/src/lib/components/Breadcrumbs.svelte` — shared breadcrumb trail for page hierarchy
+- `ui/e2e/_server.py` — Playwright FastAPI harness and fixture config wiring

@@ -3,13 +3,14 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import dataclasses
+import datetime as dt
 import html
 import os
 import secrets
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 import httpx
 from structlog.contextvars import bind_contextvars, reset_contextvars
@@ -292,11 +293,41 @@ class Runner:
         context_tokens = bind_contextvars(feed=name, trace_id=trace_id)
         log = self._logger.bind(feed=name, trace_id=trace_id)
         started = time.monotonic()
+        started_at = dt.datetime.now(dt.UTC)
         feed = self.config.feed(name)
         result = RunResult(feed=name)
+        bootstrap_skipped = False
 
         async def finalize() -> RunResult:
             finalized = await self._finalize_run_result(result, started, dry_run=dry_run)
+            run_status: Literal["success", "failure", "skip"]
+            if finalized.error is not None:
+                run_status = "failure"
+            elif bootstrap_skipped or (finalized.sent == 0 and finalized.fetched == 0):
+                run_status = "skip"
+            else:
+                run_status = "success"
+            try:
+                await self.state.record_run_history(
+                    feed_name=name,
+                    started_at=started_at,
+                    duration_ms=finalized.duration_ms,
+                    status=run_status,
+                    fetched=finalized.fetched,
+                    after_dedup=finalized.after_dedup,
+                    dropped=finalized.dropped,
+                    sent=finalized.sent,
+                    overflow=finalized.overflow,
+                    error=finalized.error,
+                    trace_id=trace_id,
+                    dry_run=dry_run,
+                )
+            except Exception as exc:
+                log.warning(
+                    "run_history_record_failed",
+                    err_type=type(exc).__name__,
+                    err=scrub(str(exc))[:200] or "(no message)",
+                )
             if finalized.error is None:
                 log.info(
                     "run_feed.complete",
@@ -320,6 +351,7 @@ class Runner:
                         await self.state.mark_seen(name, items, sent=True)
                         await self.state.set_bootstrapped(name)
                         await self.state.record_success(name)
+                    bootstrap_skipped = True
                     result.skipped_reason = "bootstrap"
                     result.after_dedup = 0
                     log.info("bootstrap_skip", indexed=len(items), dry_run=dry_run)

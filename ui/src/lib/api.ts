@@ -19,6 +19,22 @@ import type {
 
 export type { Digest } from "./types";
 
+export interface FeedRun {
+  id: number;
+  feed_name: string;
+  started_at: string;
+  duration_ms: number;
+  status: "success" | "failure" | "skip";
+  fetched: number;
+  after_dedup: number;
+  dropped: number;
+  sent: number;
+  overflow: number;
+  error: string | null;
+  trace_id: string | null;
+  dry_run: boolean;
+}
+
 const API_KEY_STORAGE_KEY = "glean.api_key";
 
 let apiKeyPromise: Promise<string> | null = null;
@@ -190,13 +206,17 @@ export async function validateConfig(config: {
 
 export async function validateFeedConfig(
   feed: FeedConfig,
-  defaults: DefaultsConfig = {}
+  defaults: DefaultsConfig = {},
 ): Promise<ValidateResponse> {
   return validateConfig({ defaults, feeds: [feed] });
 }
 
 export async function listFeedStatuses(): Promise<FeedStatus[]> {
   return apiJson<FeedStatus[]>("/api/v1/feeds");
+}
+
+export async function getFeedStatus(name: string): Promise<FeedStatus> {
+  return apiJson<FeedStatus>(`/api/v1/feeds/${encodeURIComponent(name)}/status`);
 }
 
 export async function runFeedNow(name: string): Promise<void> {
@@ -225,8 +245,20 @@ export async function listFeedDigests(
   name: string,
   opts?: { limit?: number; before?: number },
 ): Promise<Digest[]> {
-  return apiJson<Digest[]>(
-    `/api/v1/feeds/${encodeURIComponent(name)}/digests${digestQuery(opts)}`,
+  return apiJson<Digest[]>(`/api/v1/feeds/${encodeURIComponent(name)}/digests${digestQuery(opts)}`);
+}
+
+export async function listFeedRuns(
+  name: string,
+  opts?: { limit?: number; before?: number; status?: "success" | "failure" | "skip" },
+): Promise<FeedRun[]> {
+  const params = new URLSearchParams();
+  if (opts?.limit !== undefined) params.set("limit", String(opts.limit));
+  if (opts?.before !== undefined) params.set("before", String(opts.before));
+  if (opts?.status) params.set("status", opts.status);
+  const query = params.toString();
+  return apiJson<FeedRun[]>(
+    `/api/v1/feeds/${encodeURIComponent(name)}/runs${query ? `?${query}` : ""}`,
   );
 }
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime as dt
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -54,6 +55,26 @@ class FeedStatusResponse(BaseModel):
     consecutive_failures: int
     alert_active: bool
     bootstrapped: bool
+
+
+class FeedRunResponse(BaseModel):
+    """Persisted feed run returned by the runs history API."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    feed_name: str
+    started_at: dt.datetime
+    duration_ms: int
+    status: Literal["success", "failure", "skip"]
+    fetched: int
+    after_dedup: int
+    dropped: int
+    sent: int
+    overflow: int
+    error: str | None
+    trace_id: str | None
+    dry_run: bool
 
 
 class RunResultResponse(BaseModel):
