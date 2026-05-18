@@ -1041,7 +1041,7 @@ requires-dist = [
     { name = "types-pyyaml", marker = "extra == 'dev'" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
     { name = "watchfiles", marker = "extra == 'dev'", specifier = ">=0.21" },
-    { name = "yoyo-migrations", specifier = ">=8.2" },
+    { name = "yoyo-migrations", specifier = ">=9.0.0" },
 ]
 provides-extras = ["dev", "docs"]
 
