@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Link } from "svelte-routing";
   import Tabs from "../components/Tabs.svelte";
+  import Breadcrumbs from "../components/Breadcrumbs.svelte";
   import ApiAuthTab from "../components/settings/ApiAuthTab.svelte";
   import AppearanceTab from "../components/settings/AppearanceTab.svelte";
   import DefaultsTab from "../components/settings/DefaultsTab.svelte";
@@ -44,6 +44,17 @@
     return tabs.find((tab) => tab.id === activeTab)?.label ?? "Settings";
   }
 
+  function breadcrumbItems(): Array<{ label: string; href?: string }> {
+    const items: Array<{ label: string; href?: string }> = [
+      { label: "Home", href: "/" },
+      { label: "Settings" },
+    ];
+    if (activeTab !== DEFAULT_TAB) {
+      items.push({ label: activeLabel() });
+    }
+    return items;
+  }
+
   $effect(() => {
     if (typeof window === "undefined") return;
     syncFromHash();
@@ -54,17 +65,7 @@
 </script>
 
 <div class="mx-auto max-w-6xl px-6 py-6">
-  {#if activeTab !== DEFAULT_TAB}
-    <nav aria-label="Breadcrumb" class="mb-4 text-sm text-tertiary">
-      <div class="flex flex-wrap items-center gap-2">
-        <Link to="/" class="hover:text-primary">Home</Link>
-        <span aria-hidden="true">&rsaquo;</span>
-        <Link to="/settings" class="hover:text-primary">Settings</Link>
-        <span aria-hidden="true">&rsaquo;</span>
-        <span class="text-primary">{activeLabel()}</span>
-      </div>
-    </nav>
-  {/if}
+  <Breadcrumbs items={breadcrumbItems()} />
 
   <header class="mb-6">
     <h1 class="text-2xl font-semibold text-primary">Settings</h1>

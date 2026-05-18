@@ -122,6 +122,7 @@ def _max_body_bytes_from_env() -> int:
 async def _clear_test_state(state: StateStore) -> None:
     """Clear state tables for Playwright e2e isolation."""
     await state.db.execute("DELETE FROM seen_items")
+    await state.db.execute("DELETE FROM feed_run_history")
     await state.db.execute("DELETE FROM feed_runs")
     await state.db.execute("DELETE FROM etag_cache")
     await state.db.execute("DELETE FROM digests")
@@ -141,6 +142,185 @@ def _restore_test_config(fixture_name: str) -> None:
     config_path = Path(config)
     config_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(Path(fixture), config_path)
+
+
+async def _seed_test_feed_statuses(
+    state: StateStore,
+    *,
+    primary_feed: str,
+    secondary_feed: str | None,
+    now: dt.datetime,
+) -> None:
+    """Seed representative feed status rows for Playwright's default fixture."""
+    primary_ts = int((now - dt.timedelta(minutes=15)).timestamp())
+    secondary_ts = int((now - dt.timedelta(hours=2)).timestamp())
+    rows: list[tuple[str, int | None, int, str | None, int, int, int]] = [
+        (primary_feed, primary_ts, primary_ts, None, 0, 0, 1),
+    ]
+    if secondary_feed:
+        rows.append(
+            (
+                secondary_feed,
+                None,
+                secondary_ts,
+                "ConnectionError: timeout",
+                3,
+                1,
+                1,
+            )
+        )
+
+    await state.db.executemany(
+        """
+        INSERT INTO feed_runs (
+            feed,
+            last_success_at,
+            last_attempt_at,
+            last_error,
+            consecutive_failures,
+            alert_active,
+            bootstrapped
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        rows,
+    )
+    await state.db.commit()
+
+
+async def _seed_test_digests(
+    state: StateStore,
+    *,
+    primary_feed: str,
+    secondary_feed: str | None,
+    now: dt.datetime,
+) -> None:
+    """Seed digest history so Home and feed-detail pages have stable content."""
+    rows: list[tuple[str, str, str, str | None, str, int, int, str | None]] = [
+        (
+            primary_feed,
+            (now - dt.timedelta(minutes=10)).isoformat(),
+            "plain",
+            "Primary digest 1",
+            "Primary digest 1 body",
+            0,
+            3,
+            "e2e-digest-00001",
+        ),
+        (
+            primary_feed,
+            (now - dt.timedelta(hours=1)).isoformat(),
+            "plain",
+            "Primary digest 2",
+            "Primary digest 2 body",
+            0,
+            2,
+            "e2e-digest-00002",
+        ),
+        (
+            primary_feed,
+            (now - dt.timedelta(hours=3)).isoformat(),
+            "html",
+            "Primary digest 3",
+            "<p>Primary digest 3 body</p>",
+            0,
+            1,
+            "e2e-digest-00003",
+        ),
+    ]
+    if secondary_feed:
+        rows.append(
+            (
+                secondary_feed,
+                (now - dt.timedelta(hours=6)).isoformat(),
+                "plain",
+                "Secondary digest",
+                "Secondary digest body",
+                0,
+                2,
+                "e2e-digest-00004",
+            )
+        )
+
+    await state.db.executemany(
+        """
+        INSERT INTO digests (
+            feed_name,
+            sent_at,
+            style,
+            intro,
+            body,
+            fragment_index,
+            item_count,
+            trace_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        rows,
+    )
+    await state.db.commit()
+
+
+async def _seed_test_run_history(
+    state: StateStore,
+    *,
+    feed_name: str,
+    now: dt.datetime,
+) -> None:
+    """Seed a representative run history for the primary Playwright feed."""
+    seed_runs: list[tuple[Literal["success", "failure", "skip"], int]] = [
+        ("success", 3),
+        ("success", 2),
+        ("skip", 0),
+        ("failure", 0),
+        ("success", 1),
+    ]
+    for index, (run_status, sent) in enumerate(seed_runs):
+        await state.record_run_history(
+            feed_name=feed_name,
+            started_at=now - dt.timedelta(hours=index),
+            duration_ms=1500 + index * 100,
+            status=run_status,
+            fetched=10,
+            after_dedup=8,
+            dropped=max(0, 8 - sent),
+            sent=sent,
+            overflow=0,
+            error="ConnectionError: timeout" if run_status == "failure" else None,
+            trace_id=f"e2e-run-{index:05d}",
+            dry_run=False,
+        )
+
+
+async def _seed_test_fixture(state: StateStore, fixture_name: str) -> None:
+    """Seed deterministic Playwright fixture data after a /test/reset."""
+    if fixture_name != "default":
+        return
+    try:
+        cfg = load_config(_config_path())
+    except ConfigError as exc:
+        logger.warning("test_fixture_seed_skipped", fixture=fixture_name, err=str(exc)[:200])
+        return
+
+    feed_names = [feed.name for feed in cfg.feeds]
+    if not feed_names:
+        return
+
+    primary_feed = "e2e-news" if "e2e-news" in feed_names else feed_names[0]
+    secondary_feed = next((name for name in feed_names if name != primary_feed), None)
+    now = dt.datetime.now(dt.UTC).replace(microsecond=0)
+
+    await _seed_test_feed_statuses(
+        state,
+        primary_feed=primary_feed,
+        secondary_feed=secondary_feed,
+        now=now,
+    )
+    await _seed_test_digests(
+        state,
+        primary_feed=primary_feed,
+        secondary_feed=secondary_feed,
+        now=now,
+    )
+    await _seed_test_run_history(state, feed_name=primary_feed, now=now)
 
 
 class TestSeedDigestRequest(BaseModel):
@@ -325,6 +505,7 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
 
     health_router = APIRouter()
 
+    @exempt_from_rate_limit
     @health_router.get("/healthz", tags=["health"])
     async def healthz(request: Request) -> dict[str, Any]:
         try:
@@ -397,6 +578,7 @@ def make_app(state: StateStore, db_path: Path) -> FastAPI:
             await _clear_test_state(state)
             request.app.state.limiter.reset()
             _restore_test_config(fixture)
+            await _seed_test_fixture(state, fixture)
             return {"ok": True, "message": "test state reset"}
 
         @exempt_from_rate_limit
