@@ -5,7 +5,7 @@ test.beforeEach(async ({ page }) => {
   await resetState(page);
 });
 
-test("shows defaults, toggles theme, and cancels API key rotation", async ({ page }) => {
+test("shows defaults, density selector renders in light-only mode, and cancels API key rotation", async ({ page }) => {
   await page.goto("/settings#defaults");
   await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Defaults" })).toHaveAttribute("aria-selected", "true");
@@ -14,15 +14,14 @@ test("shows defaults, toggles theme, and cancels API key rotation", async ({ pag
   await expect(page.getByText("Defaults are read-only here for now")).toBeVisible();
 
   await page.getByRole("tab", { name: "Appearance" }).click();
-  await page.getByRole("button", { name: "dark" }).click();
-  await expect(page.locator("html")).toHaveClass(/theme-dark/);
-  await page.getByRole("button", { name: "light" }).click();
+  // Theme picker has been removed; UI is always rendered in light mode.
   await expect(page.locator("html")).toHaveClass(/theme-light/);
-  await page.getByRole("button", { name: "system" }).click();
-  await expect
-    .poll(async () => page.evaluate(() => localStorage.getItem("glean.theme")))
-    .toBe("system");
-  await expect(page.locator("html")).toHaveClass(/theme-(dark|light)/);
+  await expect(page.locator("html")).not.toHaveClass(/theme-dark/);
+  await expect(page.getByText("Glean is always rendered in light mode.")).toBeVisible();
+  await page.getByRole("button", { name: "compact" }).click();
+  await expect(page.locator("html")).toHaveClass(/density-compact/);
+  await page.getByRole("button", { name: "comfortable" }).click();
+  await expect(page.locator("html")).not.toHaveClass(/density-compact/);
 
   let rotateRequests = 0;
   await page.route("**/api/v1/auth/rotate", async (route) => {

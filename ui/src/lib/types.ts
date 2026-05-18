@@ -1,6 +1,6 @@
 // Mirrors src/glean/config/schema.py (subset relevant for editing).
 
-export type ThemeChoice = "system" | "dark" | "light";
+export type ThemeChoice = "light";
 export type DensityChoice = "comfortable" | "compact";
 
 export interface TelegramDefaults {
