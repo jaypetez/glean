@@ -1,0 +1,17 @@
+services:
+  ollama:
+    image: alpine:3.21
+    container_name: glean-ex02-ollama
+    command: ["sh", "-c", "echo 'using external ollama on host; container idle' && sleep infinity"]
+    healthcheck:
+      test: ["CMD", "true"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 16M
+  glean:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

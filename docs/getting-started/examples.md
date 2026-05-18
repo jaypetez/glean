@@ -75,6 +75,53 @@ See [`examples/README.md`](https://github.com/jaypetez/glean/tree/main/examples)
 | 04 | `glean-ex04-glean` :9094 | yes (qwen2.5:7b) | `NTFY_TOPIC` (no account needed) |
 | 05 | `glean-ex05-glean` :9095 | **no** | `OPENAI_API_KEY` (or `ANTHROPIC_API_KEY`) + Telegram bot |
 
+## GPU acceleration for Ollama
+
+Examples that include Ollama ([01](https://github.com/jaypetez/glean/blob/main/examples/01-web-search-local-llm/README.md), [02](https://github.com/jaypetez/glean/blob/main/examples/02-ai-news-discord/README.md), [04](https://github.com/jaypetez/glean/blob/main/examples/04-arxiv-skill-ntfy/README.md)) auto-detect your hardware and configure the stack accordingly. Run `./setup.sh` (or `./setup.ps1` on Windows) and the script tells you which mode it picked.
+
+### Detection order
+
+1. **External Ollama** — if `http://host.docker.internal:11434/api/tags` (or `http://127.0.0.1:11434/api/tags`) returns 200, the example skips its own Ollama container and points glean at your host's instance. **Best path for macOS**.
+2. **NVIDIA** — `nvidia-smi` exits 0 and Docker is configured for NVIDIA GPU access, so setup adds `docker-compose.nvidia.yml` and mounts the NVIDIA driver into the container via `deploy.resources.reservations.devices`. Requires [`nvidia-container-toolkit`](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html).
+3. **AMD ROCm** — `rocm-smi` plus `/dev/kfd` present means setup adds `docker-compose.rocm.yml`, switches to the `ollama/ollama:rocm` image, and mounts `/dev/kfd` plus `/dev/dri`. Linux only.
+4. **CPU fallback** — if none of the above is detected, setup uses only the base compose file. This still works well for `qwen2.5:7b` on modern hardware.
+
+| Detected | When | Compose used |
+|----------|------|--------------|
+| `external` | Native Ollama on the host responds on port `11434` | `+ docker-compose.external-ollama.yml` |
+| `nvidia` | `nvidia-smi` available + NVIDIA Container Toolkit installed | `+ docker-compose.nvidia.yml` |
+| `rocm` | `rocm-smi` + `/dev/kfd` present (Linux only) | `+ docker-compose.rocm.yml` |
+| `none` | None of the above | base compose only (CPU) |
+
+### Overriding detection
+
+Set `GLEAN_OLLAMA_GPU=none|nvidia|rocm|external` in the example's `.env` to force a mode. The setup scripts validate the value up front; if you force a mode whose runtime prerequisites are not actually available, Docker or Ollama startup fails and the example tells you what runtime still needs to be installed.
+
+### Platform-specific setup
+
+**macOS** — Docker on Mac runs in a Linux VM with no Metal access. Install Ollama natively, then setup auto-detects `external` mode:
+
+```bash
+brew install ollama
+ollama serve &              # in another terminal or as a service
+ollama pull qwen2.5:7b      # pre-pull the model
+cd examples/01-web-search-local-llm && ./setup.sh
+```
+
+**Linux / Windows with NVIDIA** — install the container toolkit, configure Docker, then setup auto-detects:
+
+```bash
+# Linux: install nvidia-container-toolkit per https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html
+sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker
+# Windows WSL2: install the toolkit inside WSL, restart Docker Desktop
+# Sanity check:
+docker run --rm --gpus=all nvidia/cuda:12.4.0-base-ubuntu22.04 nvidia-smi
+```
+
+**Linux with AMD ROCm** — see [Ollama AMD GPU docs](https://github.com/ollama/ollama/blob/main/docs/gpu.md#amd-radeon) for host setup details, then run the example normally.
+
+See the example READMEs for the per-stack details and caveats: [01 — web-search-local-llm](https://github.com/jaypetez/glean/blob/main/examples/01-web-search-local-llm/README.md), [02 — ai-news-discord](https://github.com/jaypetez/glean/blob/main/examples/02-ai-news-discord/README.md), and [04 — arxiv-skill-ntfy](https://github.com/jaypetez/glean/blob/main/examples/04-arxiv-skill-ntfy/README.md).
+
 ## See also
 
 - [Quickstart](quickstart.md)

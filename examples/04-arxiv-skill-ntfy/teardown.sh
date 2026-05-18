@@ -13,4 +13,9 @@ docker compose -f docker-compose.yml down -v --remove-orphans || true
 echo "[ex04] Removing local data/ and .env…"
 rm -rf data .env
 
+if [[ -f feeds.yaml.bak ]]; then
+  echo "[ex04] Restoring feeds.yaml from feeds.yaml.bak…"
+  mv -f feeds.yaml.bak feeds.yaml
+fi
+
 echo "[ex04] Done. Re-run ./setup.sh to start fresh."

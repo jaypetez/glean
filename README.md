@@ -105,6 +105,8 @@ Pick the example closest to what you want:
 | **04** `arxiv-skill-ntfy` | Daily arXiv papers (structured) → phone push + JSONL | `cd examples/04-arxiv-skill-ntfy && ./setup.sh` |
 | **05** `reddit-cloud-telegram` | Hourly Reddit ML digests via cloud LLM → Telegram | `cd examples/05-reddit-cloud-telegram && ./setup.sh` |
 
+> **GPU support is automatic.** Examples that use Ollama detect your NVIDIA / AMD / native Ollama setup and configure the stack accordingly. See [examples/README.md → GPU acceleration](./examples/README.md#gpu-acceleration) for the full matrix.
+
 Every example bundles its own `docker-compose.yml` and writes to a relative `./data/`, so they coexist with a real glean install and with each other. Windows users: use `./setup.ps1`. Full menu and conventions in [`examples/`](./examples/).
 
 ## Documentation

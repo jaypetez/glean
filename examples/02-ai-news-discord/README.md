@@ -9,7 +9,20 @@ A self-hosted daily AI-news example for glean. It pulls from three RSS feeds, de
 - ~10 GB free disk for the Ollama model + container images
 - ~8 GB RAM minimum for `qwen2.5:7b` (more headroom helps on CPU-only hosts)
 
-GPU acceleration is optional — this example works on CPU.
+## GPU acceleration
+
+The setup scripts auto-detect the best Ollama mode in this order: `external` → `nvidia` → `rocm` → `none`.
+
+| Mode | What happens | Auto-selected when | Requirements |
+|------|--------------|--------------------|--------------|
+| `external` | `glean` connects to Ollama already running on the host at `http://host.docker.internal:11434` | A host Ollama responds on port `11434` | Host Ollama running, with `qwen2.5:7b` already pulled |
+| `nvidia` | Adds NVIDIA GPU passthrough to the bundled Ollama container | `nvidia-smi` works on the host | NVIDIA GPU + drivers + `nvidia-container-toolkit`, then restart Docker |
+| `rocm` | Switches the bundled Ollama container to `ollama/ollama:rocm` and passes through `/dev/kfd` + `/dev/dri` | `rocm-smi` exists and `/dev/kfd` is present | ROCm-capable AMD GPU on Linux |
+| `none` | Uses the default CPU-only Ollama container | No external Ollama or compatible GPU is detected | No extra setup |
+
+To force a mode, set `GLEAN_OLLAMA_GPU=none|nvidia|rocm|external` in `.env` before running setup.
+
+In `external` mode, the setup script temporarily rewrites `feeds.yaml` to point at `host.docker.internal` and restores the original file during teardown. In `nvidia` and `rocm` modes, the script also checks whether the Ollama container can actually see the GPU and prints guidance if Docker still needs host GPU runtime setup.
 
 ## One-shot setup
 
@@ -21,7 +34,7 @@ GPU acceleration is optional — this example works on CPU.
 ./setup.ps1       # Windows PowerShell
 ```
 
-The setup script copies `.env.example` to `.env`, checks your Discord webhook, starts Ollama, pulls `qwen2.5:7b`, starts glean, runs a dry-run, and prints next steps.
+The setup script copies `.env.example` to `.env`, checks your Discord webhook, auto-detects the Ollama mode, starts Ollama, pulls `qwen2.5:7b` when needed, starts glean, runs a dry-run, and prints next steps.
 
 ## Getting a Discord webhook URL
 

@@ -10,6 +10,11 @@ cd "${SCRIPT_DIR}"
 echo "[ex02] Stopping containers + removing volumes…"
 docker compose -f docker-compose.yml down -v --remove-orphans || true
 
+echo "[ex02] Restoring feeds.yaml from feeds.yaml.bak (if present)…"
+if [[ -f feeds.yaml.bak ]]; then
+  mv -f feeds.yaml.bak feeds.yaml
+fi
+
 echo "[ex02] Removing local data/ and .env…"
 rm -rf data .env
 

@@ -55,6 +55,21 @@ Rules:
 - **No real secrets**: every credential is either generated locally (e.g. `SEARXNG_SECRET`) or a placeholder the user replaces.
 - **Output** goes to `./data/digests/` so users can immediately see results.
 
+## GPU acceleration
+
+Examples that include Ollama (01, 02, 04) auto-detect the best mode for your machine:
+
+| Detected | When | Compose used |
+|----------|------|--------------|
+| `external` | Native Ollama on the host (`http://host.docker.internal:11434/api/tags` returns 200) | `+ docker-compose.external-ollama.yml` |
+| `nvidia` | `nvidia-smi` available + NVIDIA Container Toolkit installed | `+ docker-compose.nvidia.yml` |
+| `rocm` | `rocm-smi` + `/dev/kfd` present (Linux only) | `+ docker-compose.rocm.yml` |
+| `none` | None of the above | base compose only (CPU) |
+
+Override the detection with `GLEAN_OLLAMA_GPU=none|nvidia|rocm|external` in the example's `.env`. **macOS users**: Docker on Mac can't access Metal, so the fastest path is `brew install ollama && ollama serve` on the host — setup auto-detects `external` mode and skips the Ollama container entirely.
+
+See each example's README for details: [01](./01-web-search-local-llm/README.md), [02](./02-ai-news-discord/README.md), and [04](./04-arxiv-skill-ntfy/README.md).
+
 ## Removing an example
 
 ```bash
