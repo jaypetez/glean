@@ -6,10 +6,15 @@
   import { subscribeEvents, type AppEvent, type EventSubscription } from "../sse";
   import type { Digest } from "../types";
 
+  interface Props {
+    feedFilter?: string;
+  }
+
   const DIGEST_PAGE_SIZE = 50;
 
   const pendingLiveFeeds = new Set<string>();
 
+  let { feedFilter }: Props = $props();
   let digests: Digest[] = $state([]);
   let feedNames: string[] = $state([]);
   let selectedFeed = $state("");
@@ -22,6 +27,10 @@
   let expandedIds: Set<number> = $state(new Set());
 
   const liveRefreshing = $derived(liveRefreshCount > 0);
+
+  $effect(() => {
+    selectedFeed = feedFilter ?? "";
+  });
 
   onMount(() => {
     void initialize();
@@ -61,15 +70,13 @@
   }
 
   async function loadFeedNames(): Promise<string[]> {
+    if (feedFilter) return [feedFilter];
     const feeds = await listFeedConfigs();
     return feeds.map((feed) => feed.name).sort((left, right) => left.localeCompare(right));
   }
 
-  async function fetchDigestPage(opts?: {
-    feedName?: string;
-    before?: number;
-  }): Promise<Digest[]> {
-    const feedName = opts?.feedName ?? selectedFeed;
+  async function fetchDigestPage(opts?: { feedName?: string; before?: number }): Promise<Digest[]> {
+    const feedName = (opts?.feedName ?? selectedFeed) || feedFilter || "";
     if (feedName) {
       return listFeedDigests(feedName, { limit: DIGEST_PAGE_SIZE, before: opts?.before });
     }
@@ -168,7 +175,10 @@
   }
 
   function plainText(value: string): string {
-    return value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    return value
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   function previewText(digest: Digest): string {
@@ -194,7 +204,13 @@
   <header class="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
     <div>
       <h1 class="text-2xl font-semibold text-primary">Digests</h1>
-      <p class="text-sm text-tertiary">Stored digest history with live updates from the dashboard sink.</p>
+      <p class="text-sm text-tertiary">
+        {#if feedFilter}
+          Stored digest history scoped to {feedFilter}.
+        {:else}
+          Stored digest history with live updates from the dashboard sink.
+        {/if}
+      </p>
     </div>
 
     <label class="flex min-w-56 flex-col gap-1 text-xs text-tertiary">
@@ -203,9 +219,12 @@
         aria-label="Feed filter"
         bind:value={selectedFeed}
         onchange={() => void applyFilter()}
-        class="density-control rounded-md border border-border bg-surface px-3 py-2 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-cyan"
+        disabled={Boolean(feedFilter)}
+        class="density-control rounded-md border border-border bg-surface px-3 py-2 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-cyan disabled:cursor-not-allowed disabled:bg-muted disabled:text-tertiary"
       >
-        <option value="">All feeds</option>
+        {#if !feedFilter}
+          <option value="">All feeds</option>
+        {/if}
         {#each feedNames as feedName}
           <option value={feedName}>{feedName}</option>
         {/each}
@@ -215,7 +234,8 @@
 
   <div class="mb-4 rounded-lg border border-border bg-surface px-4 py-3 text-sm" aria-live="polite">
     <div class="flex flex-wrap items-center gap-2 text-tertiary">
-      <span class={`h-2.5 w-2.5 rounded-full ${sseConnected ? "bg-cyan" : "bg-status-warn"}`}></span>
+      <span class={`h-2.5 w-2.5 rounded-full ${sseConnected ? "bg-cyan" : "bg-status-warn"}`}
+      ></span>
       <span>{sseConnected ? "Connected" : "Reconnecting..."}</span>
       {#if liveRefreshing}
         <span class="text-faint">Updating digest history...</span>
@@ -224,7 +244,9 @@
   </div>
 
   {#if error}
-    <div class="mb-4 rounded-lg border border-status-error/50 bg-status-error/10 p-4 text-sm text-status-error">
+    <div
+      class="mb-4 rounded-lg border border-status-error/50 bg-status-error/10 p-4 text-sm text-status-error"
+    >
       {error}
     </div>
   {/if}
@@ -265,7 +287,11 @@
                 <span class="rounded-full bg-cyan/10 px-2 py-0.5 font-mono text-xs text-cyan">
                   {digest.feed_name}
                 </span>
-                <time class="text-xs text-tertiary" datetime={digest.sent_at} title={digest.sent_at}>
+                <time
+                  class="text-xs text-tertiary"
+                  datetime={digest.sent_at}
+                  title={digest.sent_at}
+                >
                   {formatSentAt(digest.sent_at)}
                 </time>
                 <span class="rounded-full bg-muted px-2 py-0.5 text-xs text-tertiary">
@@ -289,11 +315,14 @@
               {/if}
 
               {#if digest.style === "html"}
-                <div class="break-words text-sm leading-6 text-secondary [&_a]:text-cyan [&_code]:font-mono [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:bg-elevated [&_pre]:p-3" >
+                <div
+                  class="break-words text-sm leading-6 text-secondary [&_a]:text-cyan [&_code]:font-mono [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:bg-elevated [&_pre]:p-3"
+                >
                   {@html sanitizeHtml(digest.body)}
                 </div>
               {:else}
-                <pre class="overflow-x-auto whitespace-pre-wrap rounded-md bg-elevated p-3 font-mono text-sm text-secondary">{digest.body}</pre>
+                <pre
+                  class="overflow-x-auto whitespace-pre-wrap rounded-md bg-elevated p-3 font-mono text-sm text-secondary">{digest.body}</pre>
               {/if}
 
               {#if digest.trace_id}
