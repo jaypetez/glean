@@ -994,7 +994,7 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.10" },
-    { name = "aiosqlite", specifier = ">=0.20" },
+    { name = "aiosqlite", specifier = ">=0.22.1" },
     { name = "anthropic", specifier = ">=0.40.0" },
     { name = "apscheduler", specifier = ">=4.0.0a6" },
     { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.8" },
