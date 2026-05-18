@@ -59,7 +59,7 @@ The longer game: any "periodically pull X, process with an LLM, deliver to Y" wo
 - **Live dashboard** — feed cards with status pills, run-now buttons, summary strip (total / running / healthy / alerts), and a live SSE connection that updates as runs start, complete, or fail.
 - **Visual editors** — feed editor with split-pane live YAML preview; skill editor for the structured-extraction templates with field-by-field schema builder.
 - **First-run setup wizard** — five-step guided onboarding (welcome → Telegram → LLM → templates → done) with six starter feed templates (AI/ML news, Reddit pulse, web search briefing, engineering blogs, GitHub trending, custom).
-- **Settings page** — defaults editor, API key rotation, dark/light/system theme toggle, density toggle, system info.
+- **Settings page** — defaults editor, API key rotation, density toggle, system info.
 - **API-first** — every UI action is a documented `/api/v1/*` REST call with auto-generated `X-Glean-Api-Key` auth (Sonarr-style). The CLI uses the same shared service layer, so they never disagree on truth.
 
 ### Distribution & operations
@@ -174,7 +174,7 @@ When the config is empty, navigating to the dashboard redirects to a five-step g
 ![First-run setup wizard with a 5-step stepper (Welcome / Telegram / LLM / Templates / Done) at the top, the welcome step active showing "Welcome to glean" and an "I'm ready to start" checkbox, plus Back and Next buttons](./assets/screenshots/setup-wizard.png)
 
 ### Settings
-Four sub-tabs: **API & auth** (current key state + rotation), **Defaults** (read-only view of pipeline / LLM / render defaults from `feeds.yaml`), **Appearance** (theme + density toggles), **Health** (auto-refreshing `/healthz` card with version, uptime, feed count, alert state). Each tab deep-links via URL hash (`/settings#health`).
+Four sub-tabs: **API & auth** (current key state + rotation), **Defaults** (read-only view of pipeline / LLM / render defaults from `feeds.yaml`), **Appearance** (density toggle — glean is light-mode only), **Health** (auto-refreshing `/healthz` card with version, uptime, feed count, alert state). Each tab deep-links via URL hash (`/settings#health`).
 
 ![Settings page showing 4 sub-tabs (API & auth / Defaults / Appearance / Health) with the API & auth tab active, current API key state, and a Replace key form](./assets/screenshots/settings.png)
 
