@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-import glean.state.store as store_module
+from glean.state import store as store_module
 from glean.state.store import StateStore
 
 pytestmark = pytest.mark.asyncio
