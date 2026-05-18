@@ -1,10 +1,13 @@
 <script lang="ts">
   import { Gear } from "@phosphor-icons/svelte";
   import type { Snippet } from "svelte";
+
   interface Props {
     children: Snippet;
+    breadcrumbs?: Snippet;
   }
-  let { children }: Props = $props();
+
+  let { children, breadcrumbs }: Props = $props();
 </script>
 
 <div class="flex min-h-full flex-col">
@@ -35,7 +38,7 @@
           class="rounded-md px-3 py-1.5 text-secondary hover:bg-elevated hover:text-primary"
           href="/"
         >
-          Dashboard
+          Home
         </a>
         <a
           class="rounded-md px-3 py-1.5 text-tertiary hover:bg-elevated hover:text-primary"
@@ -66,6 +69,11 @@
     </div>
   </header>
   <main class="flex-1">
+    {#if breadcrumbs}
+      <div class="mx-auto max-w-6xl px-6 pt-4">
+        {@render breadcrumbs()}
+      </div>
+    {/if}
     {@render children()}
   </main>
   <footer class="border-t border-border bg-base/50 py-4">
