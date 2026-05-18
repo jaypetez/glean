@@ -365,6 +365,101 @@
         "title": "FeedListResponse",
         "type": "object"
       },
+      "FeedRunResponse": {
+        "additionalProperties": false,
+        "description": "Persisted feed run returned by the runs history API.",
+        "properties": {
+          "after_dedup": {
+            "title": "After Dedup",
+            "type": "integer"
+          },
+          "dropped": {
+            "title": "Dropped",
+            "type": "integer"
+          },
+          "dry_run": {
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "duration_ms": {
+            "title": "Duration Ms",
+            "type": "integer"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "feed_name": {
+            "title": "Feed Name",
+            "type": "string"
+          },
+          "fetched": {
+            "title": "Fetched",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "overflow": {
+            "title": "Overflow",
+            "type": "integer"
+          },
+          "sent": {
+            "title": "Sent",
+            "type": "integer"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "success",
+              "failure",
+              "skip"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Id"
+          }
+        },
+        "required": [
+          "id",
+          "feed_name",
+          "started_at",
+          "duration_ms",
+          "status",
+          "fetched",
+          "after_dedup",
+          "dropped",
+          "sent",
+          "overflow",
+          "error",
+          "trace_id",
+          "dry_run"
+        ],
+        "title": "FeedRunResponse",
+        "type": "object"
+      },
       "FeedStatusResponse": {
         "additionalProperties": false,
         "description": "Status of a single feed (combines config + feed_runs row).",
@@ -2239,6 +2334,118 @@
           }
         },
         "summary": "Run Feed Now",
+        "tags": [
+          "feeds"
+        ]
+      }
+    },
+    "/api/v1/feeds/{name}/runs": {
+      "get": {
+        "operationId": "list_feed_runs_api_v1_feeds__name__runs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "success",
+                    "failure",
+                    "skip"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FeedRunResponse"
+                  },
+                  "title": "Response List Feed Runs Api V1 Feeds  Name  Runs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Feed Runs",
         "tags": [
           "feeds"
         ]

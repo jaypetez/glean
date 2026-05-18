@@ -1,17 +1,21 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import hashlib
 import os
 import time
 import warnings
 from collections.abc import AsyncIterator, Iterable
 from contextlib import asynccontextmanager
+from datetime import datetime
 from pathlib import Path
+from typing import Literal
 
 import aiosqlite
 from yoyo import get_backend, read_migrations
 
+from glean.logging import get_logger
 from glean.sources.base import Item
 
 
@@ -21,6 +25,25 @@ def item_hash(item: Item) -> str:
     else:
         seed = f"{item.title}\n{item.body[:512]}"
     return hashlib.sha256(seed.encode("utf-8")).hexdigest()
+
+
+logger = get_logger(__name__)
+
+_RUN_HISTORY_SAVEPOINT_SQL = "SAVEPOINT feed_run_history_write"
+_RUN_HISTORY_ROLLBACK_SQL = "ROLLBACK TO SAVEPOINT feed_run_history_write"
+_RUN_HISTORY_RELEASE_SQL = "RELEASE SAVEPOINT feed_run_history_write"
+_RUN_HISTORY_INSERT_SQL = (
+    "INSERT INTO feed_run_history ("
+    "feed_name, started_at, duration_ms, status, fetched, after_dedup, dropped, sent, "
+    "overflow, error, trace_id, dry_run"
+    ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+)
+_RUN_HISTORY_PRUNE_SQL = (
+    "DELETE FROM feed_run_history WHERE feed_name = ? AND id NOT IN ("
+    "SELECT id FROM feed_run_history WHERE feed_name = ? "
+    "ORDER BY started_at DESC, id DESC LIMIT ?"
+    ")"
+)
 
 
 def _allowed_db_roots() -> list[Path]:
@@ -198,6 +221,62 @@ class StateStore:
                 await self.db.commit()
                 return count, True
         return count, False
+
+    async def record_run_history(
+        self,
+        *,
+        feed_name: str,
+        started_at: datetime,
+        duration_ms: int,
+        status: Literal["success", "failure", "skip"],
+        fetched: int = 0,
+        after_dedup: int = 0,
+        dropped: int = 0,
+        sent: int = 0,
+        overflow: int = 0,
+        error: str | None = None,
+        trace_id: str | None = None,
+        dry_run: bool = False,
+        keep_last_n: int = 200,
+    ) -> None:
+        """Append a tick record to feed_run_history. Best-effort: errors are swallowed."""
+        async with self.write_connection() as conn:
+            savepoint_started = False
+            try:
+                await conn.execute(_RUN_HISTORY_SAVEPOINT_SQL)
+                savepoint_started = True
+                await conn.execute(
+                    _RUN_HISTORY_INSERT_SQL,
+                    (
+                        feed_name,
+                        started_at.isoformat(),
+                        duration_ms,
+                        status,
+                        fetched,
+                        after_dedup,
+                        dropped,
+                        sent,
+                        overflow,
+                        error,
+                        trace_id,
+                        1 if dry_run else 0,
+                    ),
+                )
+                await conn.execute(_RUN_HISTORY_PRUNE_SQL, (feed_name, feed_name, keep_last_n))
+                await conn.execute(_RUN_HISTORY_RELEASE_SQL)
+                await conn.commit()
+            except Exception as exc:
+                if savepoint_started:
+                    with contextlib.suppress(Exception):
+                        await conn.execute(_RUN_HISTORY_ROLLBACK_SQL)
+                    with contextlib.suppress(Exception):
+                        await conn.execute(_RUN_HISTORY_RELEASE_SQL)
+                logger.warning(
+                    "record_run_history_failed",
+                    feed=feed_name,
+                    err_type=type(exc).__name__,
+                    err=str(exc)[:200] or "(no message)",
+                )
 
     async def get_etag(self, url: str) -> tuple[str | None, str | None]:
         async with self.db.execute(
