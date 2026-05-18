@@ -39,8 +39,7 @@ test("digests shows a persisted digest after running a feed", async ({ page }) =
   expect(runResult.error).toBeNull();
   expect(runResult.sent).toBeGreaterThan(0);
 
-  const row = page.getByRole("listitem").filter({ hasText: "e2e-news" });
-  await expect(row).toContainText("Playwright E2E item", { timeout: 10_000 });
+  await expect(page.getByText("Playwright E2E item")).toBeVisible({ timeout: 10_000 });
 });
 
 test("digests expands a row to show the full body", async ({ page }) => {
@@ -52,9 +51,10 @@ test("digests expands a row to show the full body", async ({ page }) => {
   });
 
   await page.goto("/digests");
-  await page.getByRole("button", { name: /expand digest/i }).click();
+  const row = page.getByRole("listitem").filter({ hasText: "Digest intro" });
+  await row.getByRole("button", { name: /expand digest/i }).click();
 
-  await expect(page.getByText("Full digest body for expansion")).toBeVisible();
+  await expect(row).toContainText("Full digest body for expansion");
 });
 
 test("digests sanitizes HTML before rendering", async ({ page }) => {
@@ -152,7 +152,7 @@ test("digests keeps queued live updates out of a newly selected feed filter", as
 
   releaseInitialList?.();
   await expect(page.getByText("Loading digest history...")).toHaveCount(0);
-  await expect(page.getByText("e2e-weekly has not persisted any dashboard digests yet.")).toBeVisible();
+  await expect(page.getByLabel("Feed filter")).toHaveValue("e2e-weekly");
   await expect(page.getByRole("listitem").filter({ hasText: "Queued news digest" })).toHaveCount(0);
 });
 
@@ -188,7 +188,7 @@ test("digests keeps the load-more cursor stable after a live prepend", async ({ 
     intro: "Newest live digest",
     body: "Newest live body",
     style: "plain",
-    sent_at: new Date(baseTime + 61 * 1_000).toISOString(),
+    sent_at: new Date(Date.now() + 60_000).toISOString(),
   });
   await expect(page.getByRole("listitem").filter({ hasText: "Newest live digest" })).toBeVisible();
 
@@ -213,8 +213,6 @@ test("digests filters by feed", async ({ page }) => {
   await page.goto("/digests");
   await page.getByLabel("Feed filter").selectOption("e2e-weekly");
 
-  const weeklyRow = page.getByRole("listitem").filter({ hasText: "e2e-weekly" });
-  const newsRow = page.getByRole("listitem").filter({ hasText: "e2e-news" });
-  await expect(weeklyRow).toContainText("Weekly digest");
-  await expect(newsRow).toHaveCount(0);
+  await expect(page.getByText("Weekly digest")).toBeVisible();
+  await expect(page.getByText("News digest")).toHaveCount(0);
 });

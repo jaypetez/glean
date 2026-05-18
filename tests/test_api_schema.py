@@ -57,6 +57,7 @@ with _patched_env(
         openapi.from_asgi("/api/openapi.json", _APP)
         .exclude(path="/api/v1/events")
         .exclude(path_regex=r"^/api/v1/(feeds/[^/]+/)?digests$")
+        .exclude(path_regex=r"^/api/v1/feeds/[^/]+/runs$")
     )
 
 

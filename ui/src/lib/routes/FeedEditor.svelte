@@ -17,8 +17,10 @@
   interface Props {
     mode: "create" | "edit";
     name?: string;
+    embedded?: boolean;
+    returnTo?: string;
   }
-  let { mode, name }: Props = $props();
+  let { mode, name, embedded = false, returnTo }: Props = $props();
 
   let feed: FeedConfig = $state({
     name: "",
@@ -130,6 +132,16 @@
     }
   }
 
+  function feedPath(feedName: string): string {
+    return `/feeds/${encodeURIComponent(feedName)}`;
+  }
+
+  function cancelPath(): string {
+    if (returnTo) return returnTo;
+    if (mode === "create") return "/feeds";
+    return name ? feedPath(name) : "/feeds";
+  }
+
   async function onSave() {
     if (hasInlineErrors) {
       error = "Resolve the highlighted fields before saving";
@@ -142,10 +154,11 @@
       const prepared = stripEmpty(feed);
       if (mode === "create") {
         await createFeedConfig(prepared);
+        navigate(feedPath(prepared.name));
       } else {
         await updateFeedConfig(name!, prepared);
+        navigate(cancelPath());
       }
-      navigate("/");
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     } finally {
@@ -160,7 +173,7 @@
     validationErrors = [];
     try {
       await deleteFeedConfig(name);
-      navigate("/");
+      navigate("/feeds");
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     } finally {
@@ -169,20 +182,28 @@
   }
 
   function onCancel() {
-    navigate("/");
+    navigate(cancelPath());
   }
 </script>
 
-<div class="mx-auto max-w-7xl px-6 py-6">
-  <header class="mb-6 flex items-center justify-between gap-4">
-    <div>
-      <h1 class="text-2xl font-semibold text-primary">
-        {mode === "create" ? "New feed" : "Edit feed"}
-      </h1>
-      {#if mode === "edit" && name}
-        <p class="font-mono text-sm text-tertiary">{name}</p>
-      {/if}
-    </div>
+<div class={embedded ? "space-y-6" : "mx-auto max-w-7xl px-6 py-6"}>
+  <header
+    class={`mb-6 flex items-center justify-between gap-4 ${embedded ? "rounded-lg border border-border bg-surface p-4" : ""}`}
+  >
+    {#if embedded}
+      <p class="text-sm text-tertiary">
+        Editing <span class="font-mono text-primary">{name}</span>
+      </p>
+    {:else}
+      <div>
+        <h1 class="text-2xl font-semibold text-primary">
+          {mode === "create" ? "New feed" : "Edit feed"}
+        </h1>
+        {#if mode === "edit" && name}
+          <p class="font-mono text-sm text-tertiary">{name}</p>
+        {/if}
+      </div>
+    {/if}
     <div class="flex flex-wrap justify-end gap-2">
       {#if mode === "edit"}
         <button

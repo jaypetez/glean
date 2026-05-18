@@ -3,12 +3,15 @@ import AxeBuilder from "@axe-core/playwright";
 import { resetState } from "./helpers";
 
 const routes: Array<{ path: string; heading: string; fixture?: "default" | "empty" }> = [
-  { path: "/", heading: "Feeds" },
+  { path: "/", heading: "Glean is running" },
+  { path: "/feeds", heading: "Feeds" },
+  { path: "/feeds/e2e-news", heading: "e2e-news" },
   { path: "/digests", heading: "Digests", fixture: "empty" },
   { path: "/feeds/new", heading: "New feed" },
   { path: "/skills", heading: "Skills" },
   { path: "/setup", heading: "Create your first glean feed", fixture: "empty" },
   { path: "/settings", heading: "Settings" },
+  { path: "/settings#health", heading: "Settings" },
 ];
 
 async function scanRoute(page: Page): Promise<void> {
