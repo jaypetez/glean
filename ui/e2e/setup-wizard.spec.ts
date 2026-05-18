@@ -31,5 +31,5 @@ test("redirects to setup and installs a starter template", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "You’re all set" })).toBeVisible();
   await page.getByRole("button", { name: "Go to dashboard" }).click();
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole("heading", { name: "ai-ml-news" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Glean is running" })).toBeVisible();
 });

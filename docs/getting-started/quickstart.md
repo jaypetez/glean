@@ -92,7 +92,16 @@ docker compose exec ollama ollama pull qwen2.5:7b
 docker compose up -d glean
 ```
 
-## 4. Dry-run the feed
+## 4. Open the web UI
+
+Open `http://127.0.0.1:9090/`.
+
+- **Home** is the landing page for daemon health, recent digests, and quick actions.
+- **Feeds** lists every configured feed; open one to get **Overview / Digests / Runs / Edit** tabs.
+- **Digests** shows persisted dashboard-sink history across all feeds.
+- **Skills** and **Settings** are top-level pages for structured output prompts and system controls.
+
+## 5. Dry-run the feed
 
 ```bash
 docker compose exec glean glean test-feed ai-news-daily
@@ -117,6 +126,11 @@ Send once now:
 ```bash
 docker compose exec glean glean send-now ai-news-daily
 ```
+
+Then refresh the web UI:
+
+- **Home** should show the new digest in Recent digests.
+- **Feeds → ai-news-daily** should show the same feed under its Overview, Digests, and Runs tabs.
 
 !!! tip "Not using Telegram?"
     glean can send the same digest to other sinks. See the sink how-tos for [Discord](../how-to/sinks/index.md), [Slack](../how-to/sinks/index.md), [ntfy](../how-to/sinks/index.md), [webhooks](../how-to/sinks/index.md), and [files](../how-to/sinks/index.md).

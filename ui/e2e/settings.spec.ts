@@ -5,16 +5,13 @@ test.beforeEach(async ({ page }) => {
   await resetState(page);
 });
 
-test("persists defaults, toggles theme, and cancels API key rotation", async ({ page }) => {
-  await page.goto("/settings");
+test("shows defaults, toggles theme, and cancels API key rotation", async ({ page }) => {
+  await page.goto("/settings#defaults");
   await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
-
-  await page.getByLabel("Model name").fill("llama3.1:8b");
-  await page.getByRole("button", { name: "Save defaults" }).click();
-  await expect(page.getByText("Defaults saved.")).toBeVisible();
-
-  await page.reload();
-  await expect(page.getByLabel("Model name")).toHaveValue("llama3.1:8b");
+  await expect(page.getByRole("tab", { name: "Defaults" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("heading", { name: "LLM defaults" })).toBeVisible();
+  await expect(page.getByText("qwen2.5:7b")).toBeVisible();
+  await expect(page.getByText("Defaults are read-only here for now")).toBeVisible();
 
   await page.getByRole("tab", { name: "Appearance" }).click();
   await page.getByRole("button", { name: "dark" }).click();
@@ -27,17 +24,12 @@ test("persists defaults, toggles theme, and cancels API key rotation", async ({ 
     .toBe("system");
   await expect(page.locator("html")).toHaveClass(/theme-(dark|light)/);
 
-  await page.getByRole("tab", { name: "About" }).click();
-  const aboutPanel = page.getByRole("tabpanel", { name: "About" });
-  await expect(aboutPanel.getByRole("img", { name: "glean" })).toBeVisible();
-  await expect(aboutPanel.getByRole("heading", { name: "About glean" })).toBeVisible();
-
   let rotateRequests = 0;
   await page.route("**/api/v1/auth/rotate", async (route) => {
     rotateRequests += 1;
     await route.abort();
   });
-  await page.getByRole("tab", { name: "API Key" }).click();
+  await page.getByRole("tab", { name: "API & auth" }).click();
   await page.getByRole("button", { name: "Rotate API key" }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByRole("heading", { name: "Rotate API key?" })).toBeVisible();
