@@ -10,9 +10,11 @@
   } from "./lib/api";
   import AppShell from "./lib/components/AppShell.svelte";
   import Logo from "./lib/components/Logo.svelte";
-  import Dashboard from "./lib/routes/Dashboard.svelte";
   import Digests from "./lib/routes/Digests.svelte";
+  import FeedDetail from "./lib/routes/FeedDetail.svelte";
   import FeedEditor from "./lib/routes/FeedEditor.svelte";
+  import FeedsList from "./lib/routes/FeedsList.svelte";
+  import Home from "./lib/routes/Home.svelte";
   import Settings from "./lib/routes/Settings.svelte";
   import Setup from "./lib/routes/Setup.svelte";
   import SkillEditor from "./lib/routes/SkillEditor.svelte";
@@ -110,14 +112,18 @@
       {:else}
         <Route path="/setup"><Setup /></Route>
         <Route path="/feeds/new"><FeedEditor mode="create" /></Route>
-        <Route path="/feeds/:name" let:params><FeedEditor mode="edit" name={params.name} /></Route>
+        <Route path="/feeds/:name/edit" let:params>
+          <FeedDetail name={params.name} defaultTab="edit" />
+        </Route>
+        <Route path="/feeds/:name" let:params><FeedDetail name={params.name} /></Route>
+        <Route path="/feeds"><FeedsList /></Route>
         <Route path="/skills"><SkillsList /></Route>
         <Route path="/skills/new"><SkillEditor mode="create" /></Route>
         <Route path="/skills/:name" let:params><SkillEditor mode="edit" name={params.name} /></Route
         >
         <Route path="/digests"><Digests /></Route>
         <Route path="/settings"><Settings /></Route>
-        <Route path="/"><Dashboard /></Route>
+        <Route path="/"><Home /></Route>
       {/if}
     </AppShell>
   </Router>

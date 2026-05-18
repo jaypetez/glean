@@ -59,7 +59,7 @@ The longer game: any "periodically pull X, process with an LLM, deliver to Y" wo
 - **Live dashboard** — feed cards with status pills, run-now buttons, summary strip (total / running / healthy / alerts), and a live SSE connection that updates as runs start, complete, or fail.
 - **Visual editors** — feed editor with split-pane live YAML preview; skill editor for the structured-extraction templates with field-by-field schema builder.
 - **First-run setup wizard** — five-step guided onboarding (welcome → Telegram → LLM → templates → done) with six starter feed templates (AI/ML news, Reddit pulse, web search briefing, engineering blogs, GitHub trending, custom).
-- **Settings page** — defaults editor, API key rotation, dark/light/system theme toggle, density toggle, system info.
+- **Settings page** — defaults editor, API key rotation, density toggle, system info.
 - **API-first** — every UI action is a documented `/api/v1/*` REST call with auto-generated `X-Glean-Api-Key` auth (Sonarr-style). The CLI uses the same shared service layer, so they never disagree on truth.
 
 ### Distribution & operations
@@ -127,18 +127,44 @@ Full docs at [jaypetez.github.io/glean](https://jaypetez.github.io/glean).
 
 Open `http://localhost:9090` after `docker compose up` and you get a full management UI served by the same FastAPI process. Every action goes through the documented `/api/v1/*` REST surface — the CLI shares the same code path, so they always agree.
 
-### Dashboard
-Live status grid for every configured feed. Status pills update over SSE as runs start, complete, or fail; the "Run now" button kicks an off-schedule run; the connection indicator at the bottom shows whether the live stream is up.
+### Home
+System-overview landing page: daemon health card, active feeds count, alert count, the 5 most-recent digests across all feeds, plus quick links to common actions. Updates over SSE as feeds tick.
 
-![glean dashboard with three feeds (ai-news-hourly, pc-deals, security-cves), a summary strip showing 3 total / 0 running / 3 healthy / 0 alerts, pipeline pill chains and "Run now" buttons on each card, and a "Connected" indicator at the bottom](./assets/screenshots/dashboard.png)
+![glean Home page showing the daemon health card with version + uptime, an active feeds summary, alert count badge, recent digests list, and primary action buttons](./assets/screenshots/home.png)
+
+### Feeds
+The feeds index — every configured feed as a status card. Status pills update over SSE as runs start, complete, or fail; the "Run now" button kicks an off-schedule run. Click a card to open that feed's detail page.
+
+![Feeds index showing the web-search feed card with healthy status, Run-now button, schedule, source/sink/pipeline pills](./assets/screenshots/feeds.png)
+
+### Per-feed detail (Overview / Digests / Runs / Edit)
+Click any feed to land on its detail page with four tabs:
+
+- **Overview** — status block, schedule, sources, pipeline, sinks, and a preview of the most-recent digests
+- **Digests** — the same digest browser as the cross-feed page, pre-filtered to this feed
+- **Runs** — per-tick history with status badges (success / skip / failure), counts, duration, error preview, and `trace_id` for log correlation
+- **Edit** — embedded `feeds.yaml` editor with live YAML preview
+
+![Feed detail Overview tab for web-search: status block, schedule, sources, pipeline stages, sinks, recent digests preview, breadcrumbs Home › Feeds › web-search](./assets/screenshots/feed-detail.png)
+
+The **Runs** tab is fed by a new per-tick history table (`feed_run_history`, last 200 ticks per feed) so you can audit exactly what each run did — including dry-runs and no-op ticks that didn't send anything.
+
+![Feed detail Runs tab showing per-tick rows with timestamp, duration, status badge, fetched/dedup/dropped/sent counts, trace_id](./assets/screenshots/feed-runs.png)
+
+### Digests
+Cross-feed digest browser with per-feed filter dropdown. Style-aware rendering (HTML via DOMPurify sanitization, markdown via markdown-it, plain via `<pre>`). New digests appear automatically via SSE — no refresh needed.
+
+![Digests page showing rendered digest cards from the web-search feed with intro, body, item count, trace_id, and per-feed filter dropdown](./assets/screenshots/digests.png)
 
 ### Feed editor
 Form on the left, live YAML preview on the right. Sources, sinks, and pipeline stages each have type-aware fields with inline validation. The YAML re-renders on every keystroke so you can see exactly what's being persisted before you save.
 
 ![New feed editor showing a Basics section with Name "ai-news-hourly" and Schedule "every 1h", Sources / Pipeline / Sinks panels with inline validation messages, and a YAML preview pane on the right showing the live serialized config](./assets/screenshots/feed-editor.png)
 
-### Skill editor
+### Skills
 Manage the structured-extraction templates — prompt, system prompt, output schema with field-by-field type picker. Reference any saved skill from a feed pipeline with `apply_skill`.
+
+![Skills list page showing saved skill cards with name, version, description, and used-by-N-feeds count](./assets/screenshots/skills.png)
 
 ![Edit skill page for "deal-finder" showing Basics (name, version, description), Prompts (system prompt, prompt template with {title}/{body} variables documented inline), and an Output Schema table with deal_quality (str), discount_percent (float | None), sale_price (str | None), summary (str)](./assets/screenshots/skill-editor.png)
 
@@ -148,9 +174,9 @@ When the config is empty, navigating to the dashboard redirects to a five-step g
 ![First-run setup wizard with a 5-step stepper (Welcome / Telegram / LLM / Templates / Done) at the top, the welcome step active showing "Welcome to glean" and an "I'm ready to start" checkbox, plus Back and Next buttons](./assets/screenshots/setup-wizard.png)
 
 ### Settings
-Defaults editor (Telegram / LLM / render / failure), API key rotation, theme toggle (dark / light / system), density toggle, and an About tab with system info. The API key is auto-generated on first boot and stored as a verifier on disk; rotation invalidates all clients atomically.
+Four sub-tabs: **API & auth** (current key state + rotation), **Defaults** (read-only view of pipeline / LLM / render defaults from `feeds.yaml`), **Appearance** (density toggle — glean is light-mode only), **Health** (auto-refreshing `/healthz` card with version, uptime, feed count, alert state). Each tab deep-links via URL hash (`/settings#health`).
 
-![Settings page with Defaults / API Key / Appearance / About tabs at the top, a Telegram defaults section with bot token (masked) / default chat ID / ops chat ID inputs, an LLM defaults section with provider (ollama) / model (qwen2.5:7b) / base URL, and Render + Failure defaults panels](./assets/screenshots/settings.png)
+![Settings page showing 4 sub-tabs (API & auth / Defaults / Appearance / Health) with the API & auth tab active, current API key state, and a Replace key form](./assets/screenshots/settings.png)
 
 The UI authenticates with a single-user API key and sends it as `X-Glean-Api-Key` for REST calls. On first run, copy the generated key from the container logs:
 

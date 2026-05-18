@@ -16,24 +16,24 @@ test("creates, edits, and deletes a feed", async ({ page }) => {
   await page.getByLabel("url").fill("http://localhost:8080/api/v1/test/rss");
   await page.getByRole("button", { name: "Create feed" }).click();
 
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/feeds\/e2e-crud$/);
   await expect(page.getByRole("heading", { name: "e2e-crud" })).toBeVisible();
 
-  await page.getByRole("link", { name: "e2e-crud" }).click();
-  await expect(page.getByRole("heading", { name: "Edit feed" })).toBeVisible();
+  await page.getByRole("tab", { name: "Edit" }).click();
+  await expect(page.getByText("Editing", { exact: false })).toBeVisible();
   await page.getByLabel("Schedule").fill("daily 10:30");
   await page.getByRole("button", { name: "Save changes" }).click();
 
-  const updatedCard = page.getByRole("listitem").filter({ hasText: "e2e-crud" });
-  await expect(updatedCard).toContainText("daily 10:30");
+  await expect(page).toHaveURL(/\/feeds\/e2e-crud$/);
+  await expect(page.getByText("daily 10:30")).toBeVisible();
 
-  await page.getByRole("link", { name: "e2e-crud" }).click();
+  await page.goto("/feeds/e2e-crud/edit");
   page.once("dialog", async (dialog) => {
     expect(dialog.message()).toContain("Delete feed e2e-crud");
     await dialog.accept();
   });
   await page.getByRole("button", { name: "Delete" }).click();
 
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/feeds$/);
   await expect(page.getByRole("heading", { name: "e2e-crud" })).toHaveCount(0);
 });
