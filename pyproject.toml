@@ -1,6 +1,6 @@
 [project]
 name = "glean"
-version = "1.3.0"
+version = "1.4.0"
 description = "Pluggable content aggregator that summarizes feeds via LLM and posts digests to Telegram."
 readme = "README.md"
 requires-python = ">=3.12"
