@@ -217,8 +217,8 @@ async def test_find_similar_seen_items_filters_by_window(tmp_db: Path) -> None:
         )
         old_timestamp = int((datetime.now(UTC) - timedelta(days=10)).timestamp())
         await store.db.execute(
-            "UPDATE seen_items SET sent_at = ? WHERE feed = ? AND url = ?",
-            (old_timestamp, "alpha", "https://example.com/old"),
+            "UPDATE seen_items SET seen_at = ?, sent_at = ? WHERE feed = ? AND url = ?",
+            (old_timestamp, old_timestamp, "alpha", "https://example.com/old"),
         )
         await store.db.commit()
 
@@ -291,6 +291,35 @@ async def test_find_similar_seen_items_per_feed_isolation(tmp_db: Path) -> None:
         )
 
         assert matches == [("https://example.com/alpha", "Alpha", pytest.approx(1.0))]
+    finally:
+        await store.close()
+
+
+async def test_find_similar_seen_items_includes_unsent_items(tmp_db: Path) -> None:
+    """Regression: items persisted by semantic_dedup but ranked-out (sent=False)
+    must still participate in similarity matching, otherwise the stage only ever
+    catches near-duplicates of the tiny minority of items that survive the full
+    pipeline."""
+    store = await _store(tmp_db)
+
+    try:
+        await store.mark_seen(
+            "alpha",
+            [_embedded_item("https://example.com/unsent", "Unsent", [1.0, 0.0])],
+            sent=False,
+            embedding_model="model-a",
+        )
+
+        matches = await store.find_similar_seen_items(
+            feed="alpha",
+            embedding=[0.95, 0.05],
+            embedding_model="model-a",
+            threshold=0.8,
+            window=timedelta(days=1),
+        )
+
+        assert len(matches) == 1
+        assert matches[0][0] == "https://example.com/unsent"
     finally:
         await store.close()
 

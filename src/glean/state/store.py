@@ -196,10 +196,14 @@ class StateStore:
         min_similarity: float | None = None,
         window: timedelta,
     ) -> list[tuple[str, str | None, float]]:
-        """Return sent items in a feed whose embeddings meet the similarity threshold.
+        """Return prior items in a feed whose embeddings meet the similarity threshold.
 
         Results are scoped to the requested feed and embedding model, filtered to
-        sent items newer than the provided time window, and sorted by descending
+        any item seen newer than the provided time window (regardless of whether
+        that item was eventually sent — the semantic_dedup pipeline stage persists
+        embeddings of all items that pass through it, including ones that get
+        ranked out, so semantic dedup catches near-duplicates of any previously
+        observed story, not just sent ones). Results are sorted by descending
         cosine similarity.
         """
         if threshold is not None and min_similarity is not None:
@@ -216,7 +220,7 @@ class StateStore:
         matches: list[tuple[str, str | None, float]] = []
         async with self.db.execute(
             "SELECT url, title, embedding FROM seen_items "
-            "WHERE feed = ? AND sent = 1 AND sent_at >= ? AND embedding IS NOT NULL "
+            "WHERE feed = ? AND seen_at >= ? AND embedding IS NOT NULL "
             "AND embedding_model = ?",
             (feed, cutoff, embedding_model),
         ) as cur:

@@ -638,6 +638,28 @@ class Runner:
         )
         result.suppressed_semantic += len(suppressed_records)
 
+        # Persist embeddings of kept items immediately so the NEXT tick can
+        # dedup against them — even if these items get ranked out later in this
+        # tick and never appear in mark_seen(sent=True). Without this, semantic
+        # dedup can only catch near-duplicates of items that survived the full
+        # pipeline; in practice that's a tiny minority, defeating the stage's
+        # purpose.
+        if kept:
+            try:
+                await self._mark_seen(
+                    feed.name,
+                    kept,
+                    sent=False,
+                    embedding_model=embedding_model_name,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "semantic_dedup_embedding_persist_failed",
+                    feed=feed.name,
+                    err_type=type(exc).__name__,
+                    err=scrub(str(exc))[:500] or "(no message)",
+                )
+
         for record in suppressed_records:
             try:
                 await self.state.log_suppression(
