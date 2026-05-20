@@ -433,7 +433,8 @@
             "rank",
             "summarize",
             "digest",
-            "apply_skill"
+            "apply_skill",
+            "semantic_dedup"
           ],
           "title": "Name",
           "type": "string"
