@@ -7,10 +7,11 @@
   import EditTab from "../components/feed-detail/EditTab.svelte";
   import OverviewTab from "../components/feed-detail/OverviewTab.svelte";
   import RunsTab from "../components/feed-detail/RunsTab.svelte";
+  import SuppressedTab from "../components/feed-detail/SuppressedTab.svelte";
   import { subscribeEvents, type AppEvent, type EventSubscription } from "../sse";
   import type { FeedStatus } from "../types";
 
-  type Tab = "overview" | "digests" | "runs" | "edit";
+  type Tab = "overview" | "digests" | "runs" | "suppressed" | "edit";
 
   interface Props {
     name: string;
@@ -21,6 +22,7 @@
     { id: "overview", label: "Overview" },
     { id: "digests", label: "Digests" },
     { id: "runs", label: "Runs" },
+    { id: "suppressed", label: "Suppressed" },
     { id: "edit", label: "Edit" },
   ];
 
@@ -239,6 +241,8 @@
     <DigestsTab {name} />
   {:else if activeTab === "runs"}
     <RunsTab {name} />
+  {:else if activeTab === "suppressed"}
+    <SuppressedTab {name} />
   {:else}
     <EditTab {name} />
   {/if}

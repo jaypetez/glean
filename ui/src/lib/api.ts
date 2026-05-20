@@ -35,6 +35,18 @@ export interface FeedRun {
   dry_run: boolean;
 }
 
+export interface FeedSuppression {
+  id: number;
+  feed_name: string;
+  suppressed_at: string;
+  suppressed_url: string;
+  suppressed_title: string | null;
+  matched_url: string;
+  matched_title: string | null;
+  similarity: number;
+  trace_id: string | null;
+}
+
 const API_KEY_STORAGE_KEY = "glean.api_key";
 
 let apiKeyPromise: Promise<string> | null = null;
@@ -259,6 +271,19 @@ export async function listFeedRuns(
   const query = params.toString();
   return apiJson<FeedRun[]>(
     `/api/v1/feeds/${encodeURIComponent(name)}/runs${query ? `?${query}` : ""}`,
+  );
+}
+
+export async function listFeedSuppressed(
+  name: string,
+  opts?: { limit?: number; before?: number },
+): Promise<FeedSuppression[]> {
+  const params = new URLSearchParams();
+  if (opts?.limit !== undefined) params.set("limit", String(opts.limit));
+  if (opts?.before !== undefined) params.set("before", String(opts.before));
+  const query = params.toString();
+  return apiJson<FeedSuppression[]>(
+    `/api/v1/feeds/${encodeURIComponent(name)}/suppressed${query ? `?${query}` : ""}`,
   );
 }
 
