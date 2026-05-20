@@ -8,7 +8,7 @@ import time
 import warnings
 from collections.abc import AsyncIterator, Iterable
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Literal
 
@@ -17,6 +17,7 @@ from yoyo import get_backend, read_migrations
 
 from glean.logging import get_logger
 from glean.sources.base import Item
+from glean.state.embedding_bytes import cosine_similarity, unpack_embedding
 
 
 def item_hash(item: Item) -> str:
@@ -142,18 +143,93 @@ class StateStore:
             seen = {row[0] async for row in cur}
         return [i for h, i in hashes.items() if h not in seen]
 
-    async def mark_seen(self, feed: str, items: Iterable[Item], *, sent: bool) -> None:
+    async def mark_seen(
+        self,
+        feed: str,
+        items: Iterable[Item],
+        *,
+        sent: bool,
+        embedding: bytes | None = None,
+        embedding_model: str | None = None,
+    ) -> None:
         now = int(time.time())
-        rows = [(feed, item_hash(i), i.canonical_url, now, 1 if sent else 0) for i in items]
+        sent_at = now if sent else None
+        rows = [
+            (
+                feed,
+                item_hash(item),
+                item.canonical_url,
+                item.title,
+                now,
+                1 if sent else 0,
+                sent_at,
+                item.embedding if item.embedding is not None else embedding,
+                embedding_model,
+            )
+            for item in items
+        ]
         if not rows:
             return
         async with self._write_lock:
             await self.db.executemany(
-                "INSERT OR IGNORE INTO seen_items(feed, item_hash, url, seen_at, sent) "
-                "VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO seen_items(feed, item_hash, url, title, seen_at, sent, sent_at, "
+                "embedding, embedding_model) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                "ON CONFLICT(feed, item_hash) DO UPDATE SET "
+                "url = COALESCE(NULLIF(excluded.url, ''), seen_items.url), "
+                "title = COALESCE(NULLIF(excluded.title, ''), seen_items.title), "
+                "seen_at = seen_items.seen_at, "
+                "sent = MAX(seen_items.sent, excluded.sent), "
+                "sent_at = COALESCE(seen_items.sent_at, excluded.sent_at), "
+                "embedding = COALESCE(excluded.embedding, seen_items.embedding), "
+                "embedding_model = COALESCE(excluded.embedding_model, seen_items.embedding_model)",
                 rows,
             )
             await self.db.commit()
+
+    async def find_similar_seen_items(
+        self,
+        *,
+        feed: str,
+        embedding: list[float] | bytes,
+        embedding_model: str,
+        threshold: float | None = None,
+        min_similarity: float | None = None,
+        window: timedelta,
+    ) -> list[tuple[str, str | None, float]]:
+        """Return sent items in a feed whose embeddings meet the similarity threshold.
+
+        Results are scoped to the requested feed and embedding model, filtered to
+        sent items newer than the provided time window, and sorted by descending
+        cosine similarity.
+        """
+        if threshold is not None and min_similarity is not None:
+            raise ValueError(
+                "find_similar_seen_items accepts either threshold or min_similarity, not both"
+            )
+        effective_threshold = min_similarity if min_similarity is not None else threshold
+        if effective_threshold is None:
+            raise ValueError("find_similar_seen_items requires threshold or min_similarity")
+        query_embedding = (
+            unpack_embedding(embedding) if isinstance(embedding, bytes) else list(embedding)
+        )
+        cutoff = int(time.time() - window.total_seconds())
+        matches: list[tuple[str, str | None, float]] = []
+        async with self.db.execute(
+            "SELECT url, title, embedding FROM seen_items "
+            "WHERE feed = ? AND sent = 1 AND sent_at >= ? AND embedding IS NOT NULL "
+            "AND embedding_model = ?",
+            (feed, cutoff, embedding_model),
+        ) as cur:
+            async for row in cur:
+                packed = row[2]
+                if packed is None:
+                    continue
+                similarity = cosine_similarity(query_embedding, unpack_embedding(bytes(packed)))
+                if similarity >= effective_threshold:
+                    title = row[1] if row[1] is None else str(row[1])
+                    matches.append((str(row[0] or ""), title, similarity))
+        matches.sort(key=lambda match: (-match[2], match[0]))
+        return matches
 
     async def is_bootstrapped(self, feed: str) -> bool:
         async with self.db.execute(
@@ -277,6 +353,54 @@ class StateStore:
                     err_type=type(exc).__name__,
                     err=str(exc)[:200] or "(no message)",
                 )
+
+    async def log_suppression(
+        self,
+        *,
+        feed_name: str,
+        suppressed_url: str,
+        suppressed_title: str | None,
+        matched_url: str,
+        matched_title: str | None,
+        similarity: float,
+        trace_id: str | None,
+        keep_last_n: int = 200,
+    ) -> None:
+        """Append a suppression event and prune history to the latest rows per feed."""
+        async with self.write_connection() as conn:
+            savepoint_started = False
+            try:
+                await conn.execute("SAVEPOINT semantic_dedup_log_write")
+                savepoint_started = True
+                await conn.execute(
+                    "INSERT INTO semantic_dedup_log("
+                    "feed_name, suppressed_url, suppressed_title, matched_url, matched_title, "
+                    "similarity, trace_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        feed_name,
+                        suppressed_url,
+                        suppressed_title,
+                        matched_url,
+                        matched_title,
+                        similarity,
+                        trace_id,
+                    ),
+                )
+                await conn.execute(
+                    "DELETE FROM semantic_dedup_log WHERE feed_name = ? AND id NOT IN ("
+                    "SELECT id FROM semantic_dedup_log WHERE feed_name = ? "
+                    "ORDER BY suppressed_at DESC, id DESC LIMIT ?)",
+                    (feed_name, feed_name, keep_last_n),
+                )
+                await conn.execute("RELEASE SAVEPOINT semantic_dedup_log_write")
+                await conn.commit()
+            except Exception:
+                if savepoint_started:
+                    with contextlib.suppress(Exception):
+                        await conn.execute("ROLLBACK TO SAVEPOINT semantic_dedup_log_write")
+                    with contextlib.suppress(Exception):
+                        await conn.execute("RELEASE SAVEPOINT semantic_dedup_log_write")
+                raise
 
     async def get_etag(self, url: str) -> tuple[str | None, str | None]:
         async with self.db.execute(
