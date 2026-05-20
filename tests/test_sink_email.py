@@ -105,11 +105,16 @@ def _payload_for_subtype(message, subtype: str) -> str:
 
 
 async def test_email_sink_connects_with_starttls(smtp_mock: tuple[Mock, Mock]) -> None:
-    _, smtp_client = smtp_mock
+    smtp_ctor, smtp_client = smtp_mock
 
     await _make_email_sink().send(_make_ctx())
 
-    smtp_client.starttls.assert_awaited_once()
+    # STARTTLS is passed to the SMTP constructor via start_tls=True;
+    # aiosmtplib handles the TLS upgrade during connect() automatically.
+    smtp_ctor.assert_called_once()
+    call_kwargs = smtp_ctor.call_args[1]
+    assert call_kwargs.get("start_tls") is True
+    assert call_kwargs.get("use_tls") is False
 
 
 async def test_email_sink_connects_with_implicit_ssl(smtp_mock: tuple[Mock, Mock]) -> None:

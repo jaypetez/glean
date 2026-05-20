@@ -33,7 +33,7 @@ class EmailSink:
         self,
         *,
         smtp_host: str,
-        smtp_port: int = 587,
+        smtp_port: int | str = 587,
         smtp_user: str = "",
         smtp_password: str = "",
         starttls: bool = True,
@@ -54,12 +54,13 @@ class EmailSink:
             raise ValueError("email sink requires 'to' (list of recipient addresses)")
         if starttls and use_ssl:
             raise ValueError("email sink: 'starttls' and 'use_ssl' cannot both be true")
-        if smtp_port < 1 or smtp_port > 65535:
+        port = int(smtp_port)
+        if port < 1 or port > 65535:
             raise ValueError(f"email sink: invalid smtp_port {smtp_port}")
-        validate_url(f"https://{smtp_host}:{smtp_port}/", allow_private=True)
+        validate_url(f"https://{smtp_host}:{port}/", allow_private=True)
 
         self.smtp_host = smtp_host
-        self.smtp_port = smtp_port
+        self.smtp_port = port
         self.smtp_user = smtp_user
         self.smtp_password = smtp_password
         self.starttls = starttls
@@ -90,13 +91,12 @@ class EmailSink:
             hostname=self.smtp_host,
             port=self.smtp_port,
             use_tls=self.use_ssl,
+            start_tls=self.starttls,
         )
         connected = False
         try:
             await smtp.connect()
             connected = True
-            if self.starttls:
-                await smtp.starttls()
             if self.smtp_user:
                 await smtp.login(self.smtp_user, self.smtp_password)
             await smtp.send_message(message)
