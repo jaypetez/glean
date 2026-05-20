@@ -13,6 +13,7 @@ test("feed detail defaults to overview and supports deep-linkable tabs", async (
   await expect(page.getByRole("tab", { name: "Overview" })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Digests" })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Runs" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Suppressed" })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Edit" })).toBeVisible();
   await expect(page.locator('[aria-label="Breadcrumb"] li')).toContainText(["Home", "Feeds", "e2e-news"]);
   await expect(page.getByText("Last success")).toBeVisible();

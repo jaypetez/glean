@@ -58,6 +58,7 @@ with _patched_env(
         .exclude(path="/api/v1/events")
         .exclude(path_regex=r"^/api/v1/(feeds/[^/]+/)?digests$")
         .exclude(path_regex=r"^/api/v1/feeds/[^/]+/runs$")
+        .exclude(path_regex=r"^/api/v1/feeds/[^/]+/suppressed$")
     )
 
 

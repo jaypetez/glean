@@ -10,6 +10,7 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location -Path $ScriptDir
 
 $Model = 'qwen2.5:7b'
+$EmbeddingModel = 'nomic-embed-text'
 
 function Log { param($msg) Write-Host "[ex02] $msg" -ForegroundColor Cyan }
 function Ok  { param($msg) Write-Host "[ex02] $msg" -ForegroundColor Green }
@@ -91,17 +92,17 @@ function Test-ExternalOllamaFromGlean {
 import json
 import sys
 import urllib.request
-model = sys.argv[1]
 with urllib.request.urlopen('http://host.docker.internal:11434/api/tags', timeout=5) as response:
     payload = json.load(response)
 models = {entry.get('name') for entry in payload.get('models', [])}
-sys.exit(0 if model in models else 1)
+missing = [model for model in sys.argv[1:] if model not in models]
+sys.exit(0 if not missing else 1)
 "@
-    & $Compose[0] $Compose[1..($Compose.Count - 1)] exec -T glean python -c $probe $Model *>$null
+    & $Compose[0] $Compose[1..($Compose.Count - 1)] exec -T glean python -c $probe $Model $EmbeddingModel *>$null
     if ($LASTEXITCODE -eq 0) {
-        Ok "glean container can reach host Ollama and found $Model"
+        Ok "glean container can reach host Ollama and found $Model + $EmbeddingModel"
     } else {
-        Warn "glean container could NOT confirm host Ollama at host.docker.internal:11434 with model $Model. Ensure host Ollama is reachable from Docker and run: ollama pull $Model"
+        Warn "glean container could NOT confirm host Ollama at host.docker.internal:11434 with $Model + $EmbeddingModel. Ensure host Ollama is reachable from Docker and run: ollama pull $Model && ollama pull $EmbeddingModel"
     }
 }
 
@@ -198,8 +199,8 @@ if ($Mode -eq 'nvidia') {
 # -- 5. Pull the LLM model ----------------------------------------------------
 
 if ($Mode -eq 'external') {
-    Log "External Ollama mode - skipping model pull (host Ollama expected to have $Model)"
-    Log "If missing, pull on your host: ollama pull $Model"
+    Log "External Ollama mode - skipping model pull (host Ollama expected to have $Model + $EmbeddingModel)"
+    Log "If missing, pull on your host: ollama pull $Model && ollama pull $EmbeddingModel"
 } else {
     $listed = (& $Compose[0] $Compose[1..($Compose.Count - 1)] exec -T ollama ollama list 2>$null) -split "`n"
     $hasModel = $listed | Where-Object { $_ -match "^$([regex]::Escape($Model))(\s|$)" }
@@ -210,6 +211,18 @@ if ($Mode -eq 'external') {
         & $Compose[0] $Compose[1..($Compose.Count - 1)] exec -T ollama ollama pull $Model
         if ($LASTEXITCODE -ne 0) { Die "Failed to pull $Model." }
         Ok "Model $Model pulled."
+    }
+
+    $hasEmbeddingModel = $listed | Where-Object {
+        $_ -match "^$([regex]::Escape($EmbeddingModel))(\s|$)"
+    }
+    if ($hasEmbeddingModel) {
+        Ok "Model $EmbeddingModel already present."
+    } else {
+        Log "Pulling $EmbeddingModel (~270 MB — first time only)…"
+        & $Compose[0] $Compose[1..($Compose.Count - 1)] exec -T ollama ollama pull $EmbeddingModel
+        if ($LASTEXITCODE -ne 0) { Die "Failed to pull $EmbeddingModel." }
+        Ok "Model $EmbeddingModel pulled."
     }
 }
 

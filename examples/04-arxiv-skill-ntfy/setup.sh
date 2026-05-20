@@ -9,6 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${SCRIPT_DIR}"
 
 MODEL="qwen2.5:7b"
+EMBED_MODEL="nomic-embed-text"
 
 log() { printf '\033[1;36m[ex04]\033[0m %s\n' "$*"; }
 ok()  { printf '\033[1;32m[ex04]\033[0m %s\n' "$*"; }
@@ -127,6 +128,7 @@ esac
 
 if [[ "${MODE}" == "external" ]]; then
   ok "Using external Ollama; skipping model pull."
+  log "If missing, pull on your host: ollama pull ${MODEL} && ollama pull ${EMBED_MODEL}"
 else
   if "${COMPOSE[@]}" exec -T ollama ollama list 2>/dev/null | awk 'NR>1 {print $1}' | grep -q "^${MODEL}$"; then
     ok "Model ${MODEL} already present."
@@ -134,6 +136,14 @@ else
     log "Pulling ${MODEL} (~5 GB — first time only)…"
     "${COMPOSE[@]}" exec -T ollama ollama pull "${MODEL}"
     ok "Model ${MODEL} pulled."
+  fi
+
+  if "${COMPOSE[@]}" exec -T ollama ollama list 2>/dev/null | awk 'NR>1 {print $1}' | grep -q "^${EMBED_MODEL}$"; then
+    ok "Model ${EMBED_MODEL} already present."
+  else
+    log "Pulling ${EMBED_MODEL} (~270 MB — first time only)…"
+    "${COMPOSE[@]}" exec -T ollama ollama pull "${EMBED_MODEL}"
+    ok "Model ${EMBED_MODEL} pulled."
   fi
 fi
 

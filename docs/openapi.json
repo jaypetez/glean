@@ -543,6 +543,83 @@
         "title": "FeedStatusResponse",
         "type": "object"
       },
+      "FeedSuppressedResponse": {
+        "additionalProperties": false,
+        "description": "Persisted semantic dedup suppression returned by the feed API.",
+        "properties": {
+          "feed_name": {
+            "title": "Feed Name",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "matched_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Title"
+          },
+          "matched_url": {
+            "title": "Matched Url",
+            "type": "string"
+          },
+          "similarity": {
+            "title": "Similarity",
+            "type": "number"
+          },
+          "suppressed_at": {
+            "format": "date-time",
+            "title": "Suppressed At",
+            "type": "string"
+          },
+          "suppressed_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suppressed Title"
+          },
+          "suppressed_url": {
+            "title": "Suppressed Url",
+            "type": "string"
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Id"
+          }
+        },
+        "required": [
+          "id",
+          "feed_name",
+          "suppressed_at",
+          "suppressed_url",
+          "suppressed_title",
+          "matched_url",
+          "matched_title",
+          "similarity",
+          "trace_id"
+        ],
+        "title": "FeedSuppressedResponse",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -852,7 +929,8 @@
               "rank",
               "summarize",
               "digest",
-              "apply_skill"
+              "apply_skill",
+              "semantic_dedup"
             ],
             "title": "Name",
             "type": "string"
@@ -2504,6 +2582,97 @@
           }
         },
         "summary": "Feed Status",
+        "tags": [
+          "feeds"
+        ]
+      }
+    },
+    "/api/v1/feeds/{name}/suppressed": {
+      "get": {
+        "operationId": "list_feed_suppressed_api_v1_feeds__name__suppressed_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FeedSuppressedResponse"
+                  },
+                  "title": "Response List Feed Suppressed Api V1 Feeds  Name  Suppressed Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Feed Suppressed",
         "tags": [
           "feeds"
         ]

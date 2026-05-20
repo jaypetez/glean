@@ -3,13 +3,17 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 from collections.abc import Callable
+from dataclasses import dataclass
+from datetime import timedelta
 from typing import TYPE_CHECKING
 
 from glean.config.skills import SkillConfig, render_skill_prompt, skill_output_schema
+from glean.llm.embedding import EmbeddingProvider
 from glean.llm.output_filter import filter_llm_output
 from glean.logging import get_logger
 from glean.security.scrub import scrub
 from glean.sources.base import Item
+from glean.state.embedding_bytes import pack_embedding
 
 if TYPE_CHECKING:
     from glean.llm.base import LLMProvider
@@ -19,6 +23,16 @@ logger = get_logger(__name__)
 
 _RANK_CONCURRENCY = 4
 _SUMMARIZE_CONCURRENCY = 4
+_SEMANTIC_DEDUP_CONCURRENCY = 4
+
+
+@dataclass(frozen=True, slots=True)
+class SuppressedItemRecord:
+    suppressed_url: str
+    suppressed_title: str | None
+    matched_url: str
+    matched_title: str | None
+    similarity: float
 
 
 class LLMCallCounter:
@@ -47,6 +61,81 @@ class LLMCallCounter:
         if calls is not None and max_calls is not None:
             logger.warning("llm_budget_capped", feed=feed, calls=calls, max=max_calls)
         return False
+
+
+def _semantic_dedup_text(item: Item) -> str:
+    body = item.body.strip()
+    summary = (item.llm_summary or item.summary or "").strip()
+    parts = [item.title.strip()]
+    if body:
+        parts.append(body)
+    elif summary:
+        parts.append(summary)
+    return "\n\n".join(part for part in parts if part)
+
+
+async def semantic_dedup_stage(
+    feed: str,
+    items: list[Item],
+    embedding_provider: EmbeddingProvider,
+    store: StateStore,
+    *,
+    min_similarity: float = 0.85,
+    window: timedelta = timedelta(days=7),
+    embedding_model_name: str,
+    trace_id: str | None = None,
+    llm_counter: LLMCallCounter | None = None,
+) -> tuple[list[Item], list[SuppressedItemRecord]]:
+    """Suppress items semantically similar to already-sent items in this feed."""
+    if not items:
+        return [], []
+    sem = asyncio.Semaphore(_SEMANTIC_DEDUP_CONCURRENCY)
+
+    async def one(item: Item) -> tuple[Item | None, SuppressedItemRecord | None]:
+        async with sem:
+            # Shares the feed-level LLM budget with other stages by design.
+            if llm_counter is not None and not await llm_counter.increment(feed):
+                return item, None
+            try:
+                text = _semantic_dedup_text(item)
+                embedding = await embedding_provider.embed(text)
+                packed_embedding = pack_embedding(embedding)
+                matches = await store.find_similar_seen_items(
+                    feed=feed,
+                    embedding=embedding,
+                    embedding_model=embedding_model_name,
+                    threshold=min_similarity,
+                    window=window,
+                )
+            except Exception as exc:
+                log_kwargs = {
+                    "feed": feed,
+                    "url": item.canonical_url,
+                    "err_type": type(exc).__name__,
+                    "err": scrub(str(exc))[:500] or "(no message)",
+                }
+                if trace_id is not None:
+                    log_kwargs["trace_id"] = trace_id
+                logger.warning("semantic_dedup_failed", **log_kwargs)
+                return item, None
+
+            if matches:
+                matched_url, matched_title, similarity = matches[0]
+                return None, SuppressedItemRecord(
+                    suppressed_url=item.canonical_url,
+                    suppressed_title=item.title,
+                    matched_url=matched_url,
+                    matched_title=matched_title,
+                    similarity=similarity,
+                )
+
+            return dataclasses.replace(item, embedding=packed_embedding), None
+
+    results = await asyncio.gather(*(one(item) for item in items))
+    kept = [item for item, _record in results if item is not None]
+    suppressed = [record for _item, record in results if record is not None]
+    logger.debug("semantic_dedup", feed=feed, kept=len(kept), suppressed=len(suppressed))
+    return kept, suppressed
 
 
 async def dedup_stage(feed: str, items: list[Item], state: StateStore) -> list[Item]:

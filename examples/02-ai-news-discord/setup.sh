@@ -9,6 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${SCRIPT_DIR}"
 
 MODEL="qwen2.5:7b"
+EMBED_MODEL="nomic-embed-text"
 
 log()  { printf '\033[1;36m[ex02]\033[0m %s\n' "$*"; }
 ok()   { printf '\033[1;32m[ex02]\033[0m %s\n' "$*"; }
@@ -59,16 +60,16 @@ restore_feeds_yaml_if_needed() {
 
 check_external_ollama_from_glean() {
   local probe='import json, sys, urllib.request
-model = sys.argv[1]
 with urllib.request.urlopen("http://host.docker.internal:11434/api/tags", timeout=5) as response:
     payload = json.load(response)
 models = {entry.get("name") for entry in payload.get("models", [])}
-sys.exit(0 if model in models else 1)
+missing = [model for model in sys.argv[1:] if model not in models]
+sys.exit(0 if not missing else 1)
 '
-  if "${COMPOSE[@]}" exec -T glean python -c "${probe}" "${MODEL}" >/dev/null 2>&1; then
-    ok "glean container can reach host Ollama and found ${MODEL}"
+  if "${COMPOSE[@]}" exec -T glean python -c "${probe}" "${MODEL}" "${EMBED_MODEL}" >/dev/null 2>&1; then
+    ok "glean container can reach host Ollama and found ${MODEL} + ${EMBED_MODEL}"
   else
-    warn "glean container could NOT confirm host Ollama at host.docker.internal:11434 with model ${MODEL}. Ensure host Ollama is reachable from Docker and run: ollama pull ${MODEL}"
+    warn "glean container could NOT confirm host Ollama at host.docker.internal:11434 with ${MODEL} + ${EMBED_MODEL}. Ensure host Ollama is reachable from Docker and run: ollama pull ${MODEL} && ollama pull ${EMBED_MODEL}"
   fi
 }
 
@@ -158,14 +159,22 @@ fi
 # -- 5. Pull the LLM model ----------------------------------------------------
 
 if [[ "${MODE}" == "external" ]]; then
-  log "External Ollama mode - skipping model pull (host Ollama expected to have ${MODEL})"
-  log "If missing, pull on your host: ollama pull ${MODEL}"
+  log "External Ollama mode - skipping model pull (host Ollama expected to have ${MODEL} + ${EMBED_MODEL})"
+  log "If missing, pull on your host: ollama pull ${MODEL} && ollama pull ${EMBED_MODEL}"
 elif "${COMPOSE[@]}" exec -T ollama ollama list 2>/dev/null | awk 'NR>1 {print $1}' | grep -q "^${MODEL}$"; then
   ok "Model ${MODEL} already present."
 else
   log "Pulling ${MODEL} (~5 GB — first time only)…"
   "${COMPOSE[@]}" exec -T ollama ollama pull "${MODEL}"
   ok "Model ${MODEL} pulled."
+fi
+
+if [[ "${MODE}" != "external" ]] && "${COMPOSE[@]}" exec -T ollama ollama list 2>/dev/null | awk 'NR>1 {print $1}' | grep -q "^${EMBED_MODEL}$"; then
+  ok "Model ${EMBED_MODEL} already present."
+elif [[ "${MODE}" != "external" ]]; then
+  log "Pulling ${EMBED_MODEL} (~270 MB — first time only)…"
+  "${COMPOSE[@]}" exec -T ollama ollama pull "${EMBED_MODEL}"
+  ok "Model ${EMBED_MODEL} pulled."
 fi
 
 # -- 6. Start glean -----------------------------------------------------------

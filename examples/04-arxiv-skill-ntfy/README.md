@@ -1,6 +1,6 @@
 # 04 — arXiv papers → skill extraction → ntfy + JSONL
 
-A self-hosted glean stack that watches **arXiv cs.AI + cs.LG**, ranks for practical ML-engineering relevance, extracts structured paper metadata with a reusable skill, pushes the digest to **ntfy.sh**, and archives each paper as **JSONL** while also keeping recent digests in the built-in dashboard.
+A self-hosted glean stack that watches **arXiv cs.AI + cs.LG**, suppresses near-duplicate papers with semantic dedup, ranks for practical ML-engineering relevance, extracts structured paper metadata with a reusable skill, pushes the digest to **ntfy.sh**, and archives each paper as **JSONL** while also keeping recent digests in the built-in dashboard.
 
 Two containers: `glean-ex04-glean` and `glean-ex04-ollama`. Both run on the private `glean-ex04` bridge network.
 
@@ -8,7 +8,7 @@ Two containers: `glean-ex04-glean` and `glean-ex04-ollama`. Both run on the priv
 
 - Docker 24+ with `docker compose` v2
 - `curl` (used by the setup script health checks)
-- ~10 GB free disk for the Ollama model + container images
+- ~10 GB free disk for the Ollama models + container images (`qwen2.5:7b` + `nomic-embed-text` still fit in the same budget)
 - Enough RAM for `qwen2.5:7b` (≈8–16 GB is comfortable)
 
 ## GPU acceleration
@@ -34,7 +34,7 @@ The setup script prints the chosen GPU mode, verifies the GPU inside the Ollama 
 ./setup.ps1
 ```
 
-The script copies `.env.example` to `.env` if needed, verifies you chose a private ntfy topic, auto-detects the Ollama runtime, starts Ollama, pulls `qwen2.5:7b` unless you're using an external Ollama, starts glean on port **9094**, and dry-runs the `arxiv-papers` feed.
+The script copies `.env.example` to `.env` if needed, verifies you chose a private ntfy topic, auto-detects the Ollama runtime, starts Ollama, pulls `qwen2.5:7b` plus `nomic-embed-text` unless you're using an external Ollama, starts glean on port **9094**, and dry-runs the `arxiv-papers` feed.
 
 ## Subscribe on your phone
 
@@ -50,7 +50,12 @@ The script copies `.env.example` to `.env` if needed, verifies you chose a priva
 | `file` | JSONL | Appends one JSON object per paper to `/data/digests/arxiv-papers.jsonl` |
 | `dashboard` | Stored rendered digest | Keeps the last 50 digests in the built-in web UI |
 
-The feed runs daily at `09:00`, reads arXiv RSS for `cs.AI` and `cs.LG`, ranks items for weekend-project practicality, applies the `paper-digest` skill, and renders a short intro: `arXiv: top papers today`.
+The feed runs daily at `09:00`, reads arXiv RSS for `cs.AI` and `cs.LG`, suppresses near-duplicate papers with `semantic_dedup` (`nomic-embed-text`, `min_similarity: 0.88`, `window: 7d`), ranks items for weekend-project practicality, applies the `paper-digest` skill, and renders a short intro: `arXiv: top papers today`.
+
+## What semantic dedup suppresses
+
+After URL dedup, `semantic_dedup` embeds each paper title and abstract with `nomic-embed-text` and suppresses papers that closely match something this feed already sent in the last 7 days.
+See [Semantic dedup](../../docs/concepts/semantic-dedup.md) for threshold tuning, window sizing, and model choices.
 
 ## Inspecting the structured JSONL
 

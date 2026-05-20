@@ -8,7 +8,12 @@ from typing import TYPE_CHECKING, Annotated, Literal, cast
 
 from fastapi import APIRouter, HTTPException, Query, Request, status
 
-from glean.api.models import FeedRunResponse, FeedStatusResponse, RunResultResponse
+from glean.api.models import (
+    FeedRunResponse,
+    FeedStatusResponse,
+    FeedSuppressedResponse,
+    RunResultResponse,
+)
 from glean.api_service.run_service import get_feed_status, list_feeds_with_status, run_feed_once
 from glean.config import Config, load_config
 from glean.config.loader import ConfigError
@@ -45,6 +50,31 @@ WHERE feed_name = ?
 )
   AND (? IS NULL OR status = ?)
 ORDER BY started_at DESC, id DESC
+LIMIT ?
+"""
+
+_FEED_SUPPRESSED_LIST_SQL = """
+WITH cursor_row AS (
+    SELECT suppressed_at, id
+    FROM semantic_dedup_log
+    WHERE id = ?
+)
+SELECT id, feed_name, suppressed_at, suppressed_url, suppressed_title, matched_url, matched_title,
+       similarity, trace_id
+FROM semantic_dedup_log
+WHERE feed_name = ?
+  AND (
+    ? IS NULL OR (
+        EXISTS(SELECT 1 FROM cursor_row) AND (
+            suppressed_at < (SELECT suppressed_at FROM cursor_row)
+            OR (
+                suppressed_at = (SELECT suppressed_at FROM cursor_row)
+                AND id < (SELECT id FROM cursor_row)
+            )
+        )
+    )
+)
+ORDER BY suppressed_at DESC, id DESC
 LIMIT ?
 """
 
@@ -95,6 +125,19 @@ async def list_feed_runs(
     _require_feed(cfg, name)
     state = cast(StateStore, request.app.state.glean_state)
     return await _fetch_feed_runs(state, feed_name=name, before=before, limit=limit, status=status)
+
+
+@router.get("/{name}/suppressed", response_model=list[FeedSuppressedResponse])
+async def list_feed_suppressed(
+    request: Request,
+    name: str,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    before: Annotated[int | None, Query(ge=1)] = None,
+) -> list[FeedSuppressedResponse]:
+    cfg = _load_or_400()
+    _require_feed(cfg, name)
+    state = cast(StateStore, request.app.state.glean_state)
+    return await _fetch_feed_suppressed(state, feed_name=name, before=before, limit=limit)
 
 
 @router.post("/{name}/test", response_model=RunResultResponse)
@@ -189,6 +232,36 @@ async def _fetch_feed_runs(
                 "error": row[10],
                 "trace_id": row[11],
                 "dry_run": bool(row[12]),
+            }
+        )
+        for row in rows
+    ]
+
+
+async def _fetch_feed_suppressed(
+    state: StateStore,
+    *,
+    feed_name: str,
+    before: int | None,
+    limit: int,
+) -> list[FeedSuppressedResponse]:
+    async with state.db.execute(
+        _FEED_SUPPRESSED_LIST_SQL,
+        (before, feed_name, before, limit),
+    ) as cur:
+        rows = await cur.fetchall()
+    return [
+        FeedSuppressedResponse.model_validate(
+            {
+                "id": row[0],
+                "feed_name": row[1],
+                "suppressed_at": row[2],
+                "suppressed_url": row[3],
+                "suppressed_title": row[4],
+                "matched_url": row[5],
+                "matched_title": row[6],
+                "similarity": row[7],
+                "trace_id": row[8],
             }
         )
         for row in rows

@@ -126,6 +126,7 @@ async def _clear_test_state(state: StateStore) -> None:
     await state.db.execute("DELETE FROM feed_runs")
     await state.db.execute("DELETE FROM etag_cache")
     await state.db.execute("DELETE FROM digests")
+    await state.db.execute("DELETE FROM semantic_dedup_log")
     await state.db.commit()
 
 
@@ -290,6 +291,89 @@ async def _seed_test_run_history(
         )
 
 
+async def _seed_test_suppressions(
+    state: StateStore,
+    *,
+    feed_name: str,
+    now: dt.datetime,
+) -> None:
+    """Seed semantic-dedup history for the primary Playwright feed."""
+    rows: list[tuple[str, str, str, str, str, str, float, str]] = []
+    for index in range(48):
+        rows.append(
+            (
+                feed_name,
+                (now - dt.timedelta(minutes=52 - index)).isoformat(),
+                f"https://duplicate.example/articles/{index:02d}",
+                f"Suppressed duplicate {index:02d}",
+                f"https://canonical.example/articles/{index:02d}",
+                f"Canonical story {index:02d}",
+                0.86 + (index % 3) * 0.03,
+                f"trace-auto-{index:02d}",
+            )
+        )
+
+    anchor_rows: list[tuple[str, str, str, str, str, str, float, str]] = [
+        (
+            feed_name,
+            (now - dt.timedelta(minutes=4)).isoformat(),
+            "https://hn.example/duplicate-1",
+            "OpenAI launches X — HN discussion",
+            "https://openai.example/x",
+            "Introducing X",
+            0.92,
+            "trace-001",
+        ),
+        (
+            feed_name,
+            (now - dt.timedelta(minutes=3)).isoformat(),
+            "https://anthropic.example/tool-use-recap",
+            "Anthropic ships tool use recap",
+            "https://anthropic.example/tool-use",
+            "Claude tool use announcement",
+            0.95,
+            "trace-002",
+        ),
+        (
+            feed_name,
+            (now - dt.timedelta(minutes=2)).isoformat(),
+            "https://news.example/benchmarks-weekly",
+            "Weekly benchmark roundup",
+            "https://news.example/benchmarks",
+            "AI benchmark roundup",
+            0.87,
+            "trace-003",
+        ),
+        (
+            feed_name,
+            (now - dt.timedelta(minutes=1)).isoformat(),
+            "https://papers.example/implementation-notes",
+            "Paper implementation notes",
+            "https://papers.example/implementation-guide",
+            "Paper implementation guide",
+            0.85,
+            "trace-004",
+        ),
+    ]
+    rows.extend(anchor_rows)
+    await state.db.executemany(
+        """
+        INSERT INTO semantic_dedup_log (
+            feed_name,
+            suppressed_at,
+            suppressed_url,
+            suppressed_title,
+            matched_url,
+            matched_title,
+            similarity,
+            trace_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        rows,
+    )
+    await state.db.commit()
+
+
 async def _seed_test_fixture(state: StateStore, fixture_name: str) -> None:
     """Seed deterministic Playwright fixture data after a /test/reset."""
     if fixture_name != "default":
@@ -321,6 +405,7 @@ async def _seed_test_fixture(state: StateStore, fixture_name: str) -> None:
         now=now,
     )
     await _seed_test_run_history(state, feed_name=primary_feed, now=now)
+    await _seed_test_suppressions(state, feed_name=primary_feed, now=now)
 
 
 class TestSeedDigestRequest(BaseModel):

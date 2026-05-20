@@ -11,7 +11,7 @@ Each example bundles its own `docker-compose.yml`, `feeds.yaml`, and setup scrip
 
 ### 01 — `web-search-local-llm`
 
-This example is the fastest path to a fully self-hosted glean stack: SearXNG finds fresh links, Ollama summarizes them with `qwen2.5:7b`, and glean writes the digest to a markdown file while also keeping it in the dashboard. Expect your first digest in about 10 minutes, mostly spent pulling the local model.
+This example is the fastest path to a fully self-hosted glean stack: SearXNG finds fresh links, Ollama suppresses near-duplicate hits with `nomic-embed-text`, summarizes them with `qwen2.5:7b`, and glean writes the digest to a markdown file while also keeping it in the dashboard. Expect your first digest in about 10 minutes, mostly spent pulling the local models.
 
 ```bash
 cd examples/01-web-search-local-llm && ./setup.sh
@@ -21,7 +21,7 @@ cd examples/01-web-search-local-llm && ./setup.sh
 
 ### 02 — `ai-news-discord`
 
-This setup turns three RSS feeds into a daily AI-news newsletter for a Discord channel, with Ollama handling the ranking and summaries locally and the dashboard preserving recent runs for review. Time to first digest is about 10 minutes once the model is available.
+This setup turns three RSS feeds into a daily AI-news newsletter for a Discord channel, with Ollama suppressing near-duplicate stories via `nomic-embed-text`, handling ranking and summaries locally with `qwen2.5:7b`, and the dashboard preserving recent runs for review. Time to first digest is about 10 minutes once the models are available.
 
 ```bash
 cd examples/02-ai-news-discord && ./setup.sh
@@ -41,7 +41,7 @@ cd examples/03-github-releases-slack && ./setup.sh
 
 ### 04 — `arxiv-skill-ntfy`
 
-This stack pulls arXiv RSS, runs a structured skill over each paper, sends phone-friendly push notifications through ntfy, and archives structured output to JSONL alongside the dashboard history. It uses Ollama locally, so plan on roughly 10 minutes to the first digest.
+This stack pulls arXiv RSS, suppresses near-duplicate papers with `nomic-embed-text`, runs a structured skill over each paper, sends phone-friendly push notifications through ntfy, and archives structured output to JSONL alongside the dashboard history. It uses Ollama locally, so plan on roughly 10 minutes to the first digest.
 
 ```bash
 cd examples/04-arxiv-skill-ntfy && ./setup.sh
@@ -67,17 +67,19 @@ See [`examples/README.md`](https://github.com/jaypetez/glean/tree/main/examples)
 
 ## What runs where
 
-| Example | Glean | Ollama? | External secrets required |
-|---------|-------|---------|----------------------------|
-| 01 | `glean-ex01-glean` :9091 | yes (qwen2.5:7b) | none (SearXNG self-hosted) |
-| 02 | `glean-ex02-glean` :9092 | yes (qwen2.5:7b) | `DISCORD_WEBHOOK_URL` |
-| 03 | `glean-ex03-glean` :9093 | **no** | `SLACK_WEBHOOK_URL` |
-| 04 | `glean-ex04-glean` :9094 | yes (qwen2.5:7b) | `NTFY_TOPIC` (no account needed) |
-| 05 | `glean-ex05-glean` :9095 | **no** | `OPENAI_API_KEY` (or `ANTHROPIC_API_KEY`) + Telegram bot |
+| Example | Glean | Ollama? | External secrets required | Highlights |
+|---------|-------|---------|----------------------------|------------|
+| 01 | `glean-ex01-glean` :9091 | yes (`qwen2.5:7b` + `nomic-embed-text`) | none (SearXNG self-hosted) | Self-hosted web search + semantic dedup |
+| 02 | `glean-ex02-glean` :9092 | yes (`qwen2.5:7b` + `nomic-embed-text`) | `DISCORD_WEBHOOK_URL` | RSS newsletter + semantic dedup |
+| 03 | `glean-ex03-glean` :9093 | **no** | `SLACK_WEBHOOK_URL` | No LLMs; exact dedup only |
+| 04 | `glean-ex04-glean` :9094 | yes (`qwen2.5:7b` + `nomic-embed-text`) | `NTFY_TOPIC` (no account needed) | Research feed + semantic dedup + skills |
+| 05 | `glean-ex05-glean` :9095 | **no** | `OPENAI_API_KEY` (or `ANTHROPIC_API_KEY`) + Telegram bot | Cloud LLM + exact dedup |
 
 ## GPU acceleration for Ollama
 
 Examples that include Ollama ([01](https://github.com/jaypetez/glean/blob/main/examples/01-web-search-local-llm/README.md), [02](https://github.com/jaypetez/glean/blob/main/examples/02-ai-news-discord/README.md), [04](https://github.com/jaypetez/glean/blob/main/examples/04-arxiv-skill-ntfy/README.md)) auto-detect your hardware and configure the stack accordingly. Run `./setup.sh` (or `./setup.ps1` on Windows) and the script tells you which mode it picked.
+
+Those three examples also pre-pull both `qwen2.5:7b` and `nomic-embed-text`, because they now showcase semantic dedup as well as local ranking/summarization.
 
 ### Detection order
 
@@ -104,7 +106,8 @@ Set `GLEAN_OLLAMA_GPU=none|nvidia|rocm|external` in the example's `.env` to forc
 ```bash
 brew install ollama
 ollama serve &              # in another terminal or as a service
-ollama pull qwen2.5:7b      # pre-pull the model
+ollama pull qwen2.5:7b      # ranking + summaries
+ollama pull nomic-embed-text # semantic dedup embeddings
 cd examples/01-web-search-local-llm && ./setup.sh
 ```
 

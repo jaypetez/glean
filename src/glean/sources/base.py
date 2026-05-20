@@ -30,6 +30,7 @@ class Item:
     # Per-source LLM routing key set by Runner._fetch_all when source has llm: override.
     # Format: "provider:model:base_url" matching Runner._llm_cache keys.
     llm_key: str | None = None
+    embedding: bytes | None = None  # FP16-packed semantic embedding for the item text
     # Structured-extraction output from apply_skill stage.
     # Maps a skill's output_schema field names to their extracted values.
     structured: dict[str, Any] = field(default_factory=dict)
