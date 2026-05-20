@@ -10,14 +10,14 @@ import secrets
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, ClassVar, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast
 
 import httpx
 from structlog.contextvars import bind_contextvars, reset_contextvars
 
 from glean.config.llm import LLMConfig
 from glean.config.schema import Config, FeedConfig, RenderConfig, StageSpec
-from glean.llm import build_provider
+from glean.llm import EmbeddingProvider, build_embedding_provider, build_provider
 from glean.llm.base import LLMProvider
 from glean.logging import get_logger
 from glean.pipeline.stages import (
@@ -26,6 +26,7 @@ from glean.pipeline.stages import (
     dedup_stage,
     digest_intro,
     rank_stage,
+    semantic_dedup_stage,
     summarize_stage,
 )
 from glean.security.scrub import scrub
@@ -81,6 +82,7 @@ class RunResult:
     sent: int = 0
     dropped: int = 0
     overflow: int = 0
+    suppressed_semantic: int = 0
     duration_ms: int = 0
     error: str | None = None
     skipped_reason: str | None = None
@@ -113,6 +115,7 @@ class Runner:
         self._event_bus = event_bus
         self._logger = get_logger(__name__)
         self._llm_cache: dict[str, LLMProvider] = {}
+        self._embedding_cache: dict[str, tuple[EmbeddingProvider, str]] = {}
         self._sinks_cache: dict[str, list[Sink]] = {}
 
     async def aclose(self) -> None:
@@ -123,6 +126,9 @@ class Runner:
         for provider in self._llm_cache.values():
             with contextlib.suppress(Exception):
                 await provider.aclose()
+        for embedding_provider, _model_name in self._embedding_cache.values():
+            with contextlib.suppress(Exception):
+                await embedding_provider.aclose()
         if self._owns_http:
             await self.http.aclose()
         if self._close_telegram and self.telegram is not None:
@@ -151,6 +157,28 @@ class Runner:
             return default
 
         return resolver
+
+    def _semantic_dedup_embedding_spec(
+        self,
+        feed: FeedConfig,
+        stage: StageSpec,
+    ) -> tuple[dict[str, Any], str]:
+        cfg = feed.effective_llm(self.config.defaults)
+        model_name = str(stage.params.get("embedding_model") or cfg.model)
+        spec = cfg.model_dump(exclude_none=True)
+        spec["model"] = model_name
+        return spec, model_name
+
+    def _get_embedding_provider(
+        self,
+        feed: FeedConfig,
+        stage: StageSpec,
+    ) -> tuple[EmbeddingProvider, str]:
+        spec, model_name = self._semantic_dedup_embedding_spec(feed, stage)
+        cache_key = f"{feed.name}:{spec['provider']}:{model_name}:{spec.get('base_url', '')}"
+        if cache_key not in self._embedding_cache:
+            self._embedding_cache[cache_key] = (build_embedding_provider(spec), model_name)
+        return self._embedding_cache[cache_key]
 
     def _build_sinks_for(self, feed: FeedConfig) -> list[Sink]:
         """Build (and cache) the list of sinks for a feed."""
@@ -280,6 +308,7 @@ class Runner:
             sent=result.sent,
             dropped=result.dropped,
             overflow=result.overflow,
+            suppressed_semantic=result.suppressed_semantic,
             duration_ms=result.duration_ms,
             dry_run=dry_run,
             error=result.error,
@@ -333,6 +362,7 @@ class Runner:
                     "run_feed.complete",
                     duration_ms=finalized.duration_ms,
                     sent=finalized.sent,
+                    suppressed_semantic=finalized.suppressed_semantic,
                 )
             return finalized
 
@@ -372,9 +402,10 @@ class Runner:
                     feed.effective_max_llm_calls_per_run(self.config.defaults)
                 )
                 intro: str = ""
+                semantic_embedding_model_name: str | None = None
 
                 for stage in feed.pipeline:
-                    new_items, intro = await self._run_stage(
+                    new_items, intro, stage_embedding_model_name = await self._run_stage(
                         feed,
                         stage,
                         new_items,
@@ -382,8 +413,11 @@ class Runner:
                         default_llm,
                         llm_counter,
                         intro,
+                        trace_id,
                         result,
                     )
+                    if stage_embedding_model_name is not None:
+                        semantic_embedding_model_name = stage_embedding_model_name
                     if not new_items:
                         break
 
@@ -411,7 +445,12 @@ class Runner:
                     log.info("dry_run", would_send=len(messages), items=ranked_count)
                 else:
                     await self._dispatch_sinks(feed, new_items, messages, intro, render_cfg)
-                    await self.state.mark_seen(name, new_items, sent=True)
+                    await self._mark_seen(
+                        name,
+                        new_items,
+                        sent=True,
+                        embedding_model=semantic_embedding_model_name,
+                    )
                     await self.state.set_bootstrapped(name)
                     recovery = await self.state.record_success(name)
                     if recovery:
@@ -468,6 +507,19 @@ class Runner:
                 )
         return out
 
+    async def _mark_seen(
+        self,
+        feed_name: str,
+        items: list[Item],
+        *,
+        sent: bool,
+        embedding_model: str | None,
+    ) -> None:
+        kwargs: dict[str, Any] = {"sent": sent}
+        if embedding_model is not None:
+            kwargs["embedding_model"] = embedding_model
+        await self.state.mark_seen(feed_name, items, **kwargs)
+
     async def _run_stage(
         self,
         feed: FeedConfig,
@@ -477,24 +529,27 @@ class Runner:
         default_llm: LLMProvider,
         llm_counter: LLMCallCounter,
         intro: str,
+        trace_id: str,
         result: RunResult,
-    ) -> tuple[list[Item], str]:
+    ) -> tuple[list[Item], str, str | None]:
         name = stage.name
         params = stage.params
+        next_items = items
+        next_intro = intro
+        embedding_model_name: str | None = None
 
         if name == "dedup":
             # Already deduped against state; this is a within-batch dedup by hash.
             seen: set[str] = set()
             unique: list[Item] = []
-            for i in items:
-                key = i.canonical_url or i.title
+            for item in items:
+                key = item.canonical_url or item.title
                 if key in seen:
                     continue
                 seen.add(key)
-                unique.append(i)
-            return unique, intro
-
-        if name == "rank":
+                unique.append(item)
+            next_items = unique
+        elif name == "rank":
             kept, dropped = await rank_stage(
                 feed.name,
                 items,
@@ -504,18 +559,16 @@ class Runner:
                 llm_counter=llm_counter,
             )
             result.dropped += len(dropped)
-            return kept, intro
-
-        if name == "summarize":
-            return await summarize_stage(
+            next_items = kept
+        elif name == "summarize":
+            next_items = await summarize_stage(
                 feed.name,
                 items,
                 llm_for,
                 prompt=params.get("prompt", ""),
                 llm_counter=llm_counter,
-            ), intro
-
-        if name == "digest":
+            )
+        elif name == "digest":
             base = params.get("intro", "")
             llm_prompt = params.get("prompt")
             if llm_prompt:
@@ -526,15 +579,86 @@ class Runner:
                     prompt=llm_prompt,
                     llm_counter=llm_counter,
                 )
-            return items, base
-
-        if name == "apply_skill":
-            return await self._run_apply_skill_stage(
-                feed, stage, items, llm_for, llm_counter, intro
+            next_intro = base
+        elif name == "semantic_dedup":
+            next_items, next_intro, embedding_model_name = await self._run_semantic_dedup_stage(
+                feed,
+                stage,
+                items,
+                llm_counter,
+                intro,
+                trace_id,
+                result,
             )
+        elif name == "apply_skill":
+            next_items, next_intro, embedding_model_name = await self._run_apply_skill_stage(
+                feed,
+                stage,
+                items,
+                llm_for,
+                llm_counter,
+                intro,
+            )
+        else:
+            logger.warning("unknown_stage", stage=name, feed=feed.name)
 
-        logger.warning("unknown_stage", stage=name, feed=feed.name)
-        return items, intro
+        return next_items, next_intro, embedding_model_name
+
+    async def _run_semantic_dedup_stage(
+        self,
+        feed: FeedConfig,
+        stage: StageSpec,
+        items: list[Item],
+        llm_counter: LLMCallCounter,
+        intro: str,
+        trace_id: str,
+        result: RunResult,
+    ) -> tuple[list[Item], str, str | None]:
+        try:
+            provider, embedding_model_name = self._get_embedding_provider(feed, stage)
+        except Exception as exc:
+            logger.warning(
+                "semantic_dedup_provider_failed",
+                feed=feed.name,
+                err_type=type(exc).__name__,
+                err=scrub(str(exc))[:500] or "(no message)",
+            )
+            return items, intro, None
+
+        kept, suppressed_records = await semantic_dedup_stage(
+            feed.name,
+            items,
+            provider,
+            self.state,
+            min_similarity=cast(float, stage.params["min_similarity"]),
+            window=cast(dt.timedelta, stage.params["window"]),
+            embedding_model_name=embedding_model_name,
+            trace_id=trace_id,
+            llm_counter=llm_counter,
+        )
+        result.suppressed_semantic += len(suppressed_records)
+
+        for record in suppressed_records:
+            try:
+                await self.state.log_suppression(
+                    feed_name=feed.name,
+                    suppressed_url=record.suppressed_url,
+                    suppressed_title=record.suppressed_title,
+                    matched_url=record.matched_url,
+                    matched_title=record.matched_title,
+                    similarity=record.similarity,
+                    trace_id=trace_id,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "semantic_dedup_log_write_failed",
+                    feed=feed.name,
+                    suppressed_url=record.suppressed_url,
+                    matched_url=record.matched_url,
+                    err_type=type(exc).__name__,
+                    err=scrub(str(exc))[:500] or "(no message)",
+                )
+        return kept, intro, embedding_model_name
 
     async def _run_apply_skill_stage(
         self,
@@ -544,12 +668,12 @@ class Runner:
         llm_for: Callable[[Item], LLMProvider],
         llm_counter: LLMCallCounter,
         intro: str,
-    ) -> tuple[list[Item], str]:
+    ) -> tuple[list[Item], str, str | None]:
         params = stage.params
         skill_name = params.get("skill")
         if not skill_name:
             logger.warning("apply_skill_missing_skill_param", feed=feed.name)
-            return items, intro
+            return items, intro, None
         try:
             skill = self.config.skill(skill_name)
         except KeyError:
@@ -558,7 +682,7 @@ class Runner:
                 feed=feed.name,
                 skill=skill_name,
             )
-            return items, intro
+            return items, intro, None
         skill_llm: LLMProvider | None = None
         if skill.llm:
             skill_llm = self._get_llm_from_config(skill.llm)
@@ -570,4 +694,4 @@ class Runner:
             skill_llm=skill_llm,
             llm_counter=llm_counter,
         )
-        return new_items, intro
+        return new_items, intro, None

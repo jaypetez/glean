@@ -77,6 +77,22 @@ class FeedRunResponse(BaseModel):
     dry_run: bool
 
 
+class FeedSuppressedResponse(BaseModel):
+    """Persisted semantic dedup suppression returned by the feed API."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    feed_name: str
+    suppressed_at: dt.datetime
+    suppressed_url: str
+    suppressed_title: str | None
+    matched_url: str
+    matched_title: str | None
+    similarity: float
+    trace_id: str | None
+
+
 class RunResultResponse(BaseModel):
     """Result of a feed run."""
 

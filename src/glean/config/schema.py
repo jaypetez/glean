@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+from datetime import timedelta
 from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
@@ -9,6 +11,50 @@ from glean.config.skills import SkillConfig
 from glean.security.ssrf import SSRFValidationError, validate_url
 
 _WEBHOOK_METHODS = {"POST", "PUT", "PATCH"}
+_DURATION_RE = re.compile(r"^\s*(\d+)\s*([mhd])\s*$", re.IGNORECASE)
+
+
+def _parse_duration(raw: Any) -> timedelta:
+    if isinstance(raw, timedelta):
+        return raw
+    if not isinstance(raw, str) or not raw.strip():
+        raise ValueError("must be a duration like '7d', '12h', or '30m'")
+    match = _DURATION_RE.match(raw)
+    if match is None:
+        raise ValueError("must be a duration like '7d', '12h', or '30m'")
+    count = int(match.group(1))
+    if count <= 0:
+        raise ValueError("must be greater than zero")
+    unit = match.group(2).lower()
+    multiplier = {"m": 60, "h": 3600, "d": 86400}[unit]
+    return timedelta(seconds=count * multiplier)
+
+
+def _normalize_semantic_dedup_params(params: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(params)
+    min_similarity_raw = normalized.get("min_similarity", 0.85)
+    try:
+        min_similarity = float(min_similarity_raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "semantic_dedup.min_similarity must be a float between 0.0 and 1.0"
+        ) from exc
+    if not 0.0 <= min_similarity <= 1.0:
+        raise ValueError("semantic_dedup.min_similarity must be between 0.0 and 1.0")
+    normalized["min_similarity"] = min_similarity
+
+    try:
+        normalized["window"] = _parse_duration(normalized.get("window", "7d"))
+    except ValueError as exc:
+        raise ValueError(f"semantic_dedup.window {exc}") from exc
+
+    embedding_model = normalized.get("embedding_model")
+    if embedding_model is not None:
+        if not isinstance(embedding_model, str) or not embedding_model.strip():
+            raise ValueError("semantic_dedup.embedding_model must be a non-empty string")
+        normalized["embedding_model"] = embedding_model.strip()
+
+    return normalized
 
 
 def _validate_url_field(value: Any, *, field: str, allow_private: bool = False) -> None:
@@ -133,7 +179,14 @@ class Defaults(BaseModel):
         return self
 
 
-StageName = Literal["dedup", "rank", "summarize", "digest", "apply_skill"]
+StageName = Literal[
+    "dedup",
+    "rank",
+    "summarize",
+    "digest",
+    "apply_skill",
+    "semantic_dedup",
+]
 
 
 class StageSpec(BaseModel):
@@ -151,6 +204,8 @@ class StageSpec(BaseModel):
         ((name, params),) = raw.items()
         if not isinstance(params, dict):
             params = {"value": params}
+        if name == "semantic_dedup":
+            params = _normalize_semantic_dedup_params(params)
         return cls(name=name, params=params)  # type: ignore[arg-type]
 
 
