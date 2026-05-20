@@ -11,6 +11,7 @@ Self-contained quickstart scenarios. Pick the one closest to your goal, run its 
 | 03 | [github-releases-slack](03-github-releases-slack/) | Glean (no LLM) → GitHub `releases.atom` × 5 → Slack + dashboard | ~2 min | DevOps teams |
 | 04 | [arxiv-skill-ntfy](04-arxiv-skill-ntfy/) | Glean + Ollama → arXiv RSS → ntfy push + JSONL + dashboard (uses skills) | ~10 min | Researchers |
 | 05 | [reddit-cloud-telegram](05-reddit-cloud-telegram/) | Glean (cloud LLM) → Reddit subs → Telegram + dashboard | ~3 min | Cloud-LLM users |
+| 06 | [weekly-newsletter](06-weekly-newsletter/) | Glean + Ollama → RSS → email (Mailpit) + dashboard | ~10 min | Email users |
 
 ## How to use
 
@@ -68,7 +69,7 @@ Examples that include Ollama (01, 02, 04) auto-detect the best mode for your mac
 
 Override the detection with `GLEAN_OLLAMA_GPU=none|nvidia|rocm|external` in the example's `.env`. **macOS users**: Docker on Mac can't access Metal, so the fastest path is `brew install ollama && ollama serve` on the host — setup auto-detects `external` mode and skips the Ollama container entirely.
 
-See each example's README for details: [01](./01-web-search-local-llm/README.md), [02](./02-ai-news-discord/README.md), and [04](./04-arxiv-skill-ntfy/README.md).
+See each example's README for details: [01](./01-web-search-local-llm/README.md), [02](./02-ai-news-discord/README.md), and [04](./04-arxiv-skill-ntfy/README.md). Example [06](./06-weekly-newsletter/README.md) currently uses the bundled Ollama container without auto-detection.
 
 ## Removing an example
 

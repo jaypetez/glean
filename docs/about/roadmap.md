@@ -14,7 +14,7 @@ No open GitHub issues currently carry the `roadmap` label. The items below come 
 - Stable feed pipeline: sources → dedup → rank → summarize → `apply_skill` → digest → sinks.
 - Four plugin layers: Source, Sink, LLM Provider, and Search Backend.
 - Built-in sources for RSS, scraper URLs, Hacker News, Reddit, and web search.
-- Built-in sinks for Telegram, Discord, Slack, ntfy, webhook, and file output.
+- Built-in sinks for email (SMTP), Telegram, Discord, Slack, ntfy, webhook, and file output.
 - LLM providers for Ollama, Anthropic, and OpenAI, with feed/source/skill-level model overrides.
 - Web UI and REST API for configuring feeds, editing skills, rotating the API key, and watching live status over SSE.
 - Security hardening from the v1.2 audit: SSRF protection, prompt-injection guards, output filtering, secret scrubbing, file path allowlists, HTTP hardening, container hardening, and SQLite PRAGMAs.
@@ -22,7 +22,7 @@ No open GitHub issues currently carry the `roadmap` label. The items below come 
 
 ## Next (planned for v1.4 / v2.0)
 
-- More first-party sinks, especially email (SMTP) and Matrix.
+- More first-party sinks, especially Matrix.
 - Inbound chat commands such as `/pause <feed>` and `/run <feed>` from Telegram or other chat surfaces.
 - Embedding-based semantic dedup so near-duplicate stories can be suppressed even when URLs differ.
 - Per-feed prompt versioning and A/B testing for ranking, summarization, and structured skills.

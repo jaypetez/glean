@@ -169,7 +169,19 @@ jobs:
         run: uv sync --locked --all-extras
 
       - name: Pip audit
-        run: uv run pip-audit --strict
+        run: |
+          uv run pip-audit --strict \
+            --ignore-vuln PYSEC-2026-89 \
+            --ignore-vuln PYSEC-2025-146 \
+            --ignore-vuln PYSEC-2025-144 \
+            --ignore-vuln PYSEC-2025-147 \
+            --ignore-vuln PYSEC-2025-145 \
+            --ignore-vuln PYSEC-2026-102 \
+            --ignore-vuln PYSEC-2026-101 \
+            --ignore-vuln PYSEC-2025-183
+        # Ignored: markdown 3.10.2 (PYSEC-2026-89), ollama 0.6.2 (5 PYSECs),
+        # pyjwt 2.12.1 (PYSEC-2025-183) — all at latest available version;
+        # no patches published yet. Remove ignores as fixes ship.
 
   trivy-fs:
     name: Trivy filesystem scan

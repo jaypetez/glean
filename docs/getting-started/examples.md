@@ -1,6 +1,6 @@
 ---
 title: "Examples — glean Getting Started"
-description: Five self-contained examples that spin up a working glean stack in one command.
+description: Six self-contained examples that spin up a working glean stack in one command.
 ---
 
 # Examples
@@ -59,9 +59,19 @@ cd examples/05-reddit-cloud-telegram && ./setup.sh
 
 **Best for:** Cloud-LLM users.
 
+### 06 — `weekly-newsletter`
+
+This example turns a weekly RSS digest into a styled HTML email, delivered locally through Mailpit for safe testing while the dashboard keeps a second copy for review. It uses Ollama for local ranking and summaries, so expect roughly 10 minutes to the first digest while models are pulled.
+
+```bash
+cd examples/06-weekly-newsletter && ./setup.sh
+```
+
+**Best for:** Email users.
+
 ## Conventions
 
-Every example follows the same shape so they can coexist on one host: container names prefixed `glean-exNN-*`, dedicated bridge networks `glean-exNN`, distinct host ports for the API (`9091`-`9095`), and relative `./data/` volumes that are gitignored per example.
+Every example follows the same shape so they can coexist on one host: container names prefixed `glean-exNN-*`, dedicated bridge networks `glean-exNN`, distinct host ports for the API (`9091`-`9096`), and relative `./data/` volumes that are gitignored per example.
 
 See [`examples/README.md`](https://github.com/jaypetez/glean/tree/main/examples) for the full add-an-example guide.
 
@@ -74,12 +84,13 @@ See [`examples/README.md`](https://github.com/jaypetez/glean/tree/main/examples)
 | 03 | `glean-ex03-glean` :9093 | **no** | `SLACK_WEBHOOK_URL` | No LLMs; exact dedup only |
 | 04 | `glean-ex04-glean` :9094 | yes (`qwen2.5:7b` + `nomic-embed-text`) | `NTFY_TOPIC` (no account needed) | Research feed + semantic dedup + skills |
 | 05 | `glean-ex05-glean` :9095 | **no** | `OPENAI_API_KEY` (or `ANTHROPIC_API_KEY`) + Telegram bot | Cloud LLM + exact dedup |
+| 06 | `glean-ex06-glean` :9096 | yes (`qwen2.5:7b`) | none (Mailpit local) | Weekly HTML email + dashboard |
 
 ## GPU acceleration for Ollama
 
-Examples that include Ollama ([01](https://github.com/jaypetez/glean/blob/main/examples/01-web-search-local-llm/README.md), [02](https://github.com/jaypetez/glean/blob/main/examples/02-ai-news-discord/README.md), [04](https://github.com/jaypetez/glean/blob/main/examples/04-arxiv-skill-ntfy/README.md)) auto-detect your hardware and configure the stack accordingly. Run `./setup.sh` (or `./setup.ps1` on Windows) and the script tells you which mode it picked.
+Examples that include Ollama ([01](https://github.com/jaypetez/glean/blob/main/examples/01-web-search-local-llm/README.md), [02](https://github.com/jaypetez/glean/blob/main/examples/02-ai-news-discord/README.md), and [04](https://github.com/jaypetez/glean/blob/main/examples/04-arxiv-skill-ntfy/README.md)) auto-detect your hardware and configure the stack accordingly. Run `./setup.sh` (or `./setup.ps1` on Windows) and the script tells you which mode it picked.
 
-Those three examples also pre-pull both `qwen2.5:7b` and `nomic-embed-text`, because they now showcase semantic dedup as well as local ranking/summarization.
+Examples [01](https://github.com/jaypetez/glean/blob/main/examples/01-web-search-local-llm/README.md), [02](https://github.com/jaypetez/glean/blob/main/examples/02-ai-news-discord/README.md), [04](https://github.com/jaypetez/glean/blob/main/examples/04-arxiv-skill-ntfy/README.md), and [06](https://github.com/jaypetez/glean/blob/main/examples/06-weekly-newsletter/README.md) all pre-pull `qwen2.5:7b`; examples [01](https://github.com/jaypetez/glean/blob/main/examples/01-web-search-local-llm/README.md), [02](https://github.com/jaypetez/glean/blob/main/examples/02-ai-news-discord/README.md), and [04](https://github.com/jaypetez/glean/blob/main/examples/04-arxiv-skill-ntfy/README.md) additionally pull `nomic-embed-text` because they showcase semantic dedup.
 
 ### Detection order
 
@@ -123,7 +134,7 @@ docker run --rm --gpus=all nvidia/cuda:12.4.0-base-ubuntu22.04 nvidia-smi
 
 **Linux with AMD ROCm** — see [Ollama AMD GPU docs](https://github.com/ollama/ollama/blob/main/docs/gpu.md#amd-radeon) for host setup details, then run the example normally.
 
-See the example READMEs for the per-stack details and caveats: [01 — web-search-local-llm](https://github.com/jaypetez/glean/blob/main/examples/01-web-search-local-llm/README.md), [02 — ai-news-discord](https://github.com/jaypetez/glean/blob/main/examples/02-ai-news-discord/README.md), and [04 — arxiv-skill-ntfy](https://github.com/jaypetez/glean/blob/main/examples/04-arxiv-skill-ntfy/README.md).
+See the example READMEs for the per-stack details and caveats: [01 — web-search-local-llm](https://github.com/jaypetez/glean/blob/main/examples/01-web-search-local-llm/README.md), [02 — ai-news-discord](https://github.com/jaypetez/glean/blob/main/examples/02-ai-news-discord/README.md), and [04 — arxiv-skill-ntfy](https://github.com/jaypetez/glean/blob/main/examples/04-arxiv-skill-ntfy/README.md). Example [06 — weekly-newsletter](https://github.com/jaypetez/glean/blob/main/examples/06-weekly-newsletter/README.md) currently uses the bundled Ollama container without GPU mode auto-detection.
 
 ## See also
 
