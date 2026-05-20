@@ -67,6 +67,14 @@ nav:
       - Sinks:
           - how-to/sinks/index.md
           - Dashboard sink: how-to/sinks/dashboard.md
+          - Email (SMTP) sink: how-to/sinks/email.md
+          - Telegram: how-to/sinks/telegram.md
+          - Discord: how-to/sinks/discord.md
+          - Slack: how-to/sinks/slack.md
+          - ntfy: how-to/sinks/ntfy.md
+          - Webhook: how-to/sinks/webhook.md
+          - File: how-to/sinks/file.md
+          - Fanout: how-to/sinks/fanout.md
       - LLM: how-to/llm/index.md
       - Ops: how-to/ops/index.md
       - Plugins: how-to/plugins/index.md

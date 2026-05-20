@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="./assets/glean-hero.svg" alt="glean: pluggable sources flow into a central LLM pipeline (dedup, rank, summarize, digest) which fans out scheduled digests to Dashboard, Telegram, Discord, Slack, ntfy, Webhook, and File sinks" width="100%">
+  <img src="./assets/glean-hero.svg" alt="glean: pluggable sources flow into a central LLM pipeline (dedup, rank, summarize, digest) which fans out scheduled digests to Dashboard, Email (SMTP), Telegram, Discord, Slack, ntfy, Webhook, and File sinks" width="100%">
 </p>
 
 <p align="center">
@@ -26,7 +26,7 @@
 
 ## Status
 
-**v1.1** — stable core + full management web UI. Seven shipped sinks (Dashboard, Telegram, Discord, Slack, ntfy.sh, Webhook, File), six search backends (SearXNG self-hosted + Brave / Tavily / Serper / Exa / MWMBL), three LLM providers (Ollama, Anthropic, OpenAI), per-source LLM dispatch (each source can use its own model), reusable structured **skills** that produce JSON output, a four-layer plugin system (Source, Sink, LLM Provider, Search Backend), and a built-in web UI with live SSE dashboard, visual feed/skill editors, first-run setup wizard, settings, and digest history — all behind an auto-generated API key.
+**v1.1** — stable core + full management web UI. Eight shipped sinks (Dashboard, Email (SMTP), Telegram, Discord, Slack, ntfy.sh, Webhook, File), six search backends (SearXNG self-hosted + Brave / Tavily / Serper / Exa / MWMBL), three LLM providers (Ollama, Anthropic, OpenAI), per-source LLM dispatch (each source can use its own model), reusable structured **skills** that produce JSON output, a four-layer plugin system (Source, Sink, LLM Provider, Search Backend), and a built-in web UI with live SSE dashboard, visual feed/skill editors, first-run setup wizard, settings, and digest history — all behind an auto-generated API key.
 
 See [DESIGN.md](./DESIGN.md) for the long view.
 
@@ -46,7 +46,7 @@ The longer game: any "periodically pull X, process with an LLM, deliver to Y" wo
 
 ### Pluggable layers
 - **Sources** — RSS/Atom, web scraping, Hacker News, Reddit, web search (SearXNG / Brave / Tavily / Serper / Exa / MWMBL). Add your own in one file. See [`docs/plugins/source.md`](./docs/plugins/source.md).
-- **Sinks** — Dashboard (built-in digest history), Telegram, Discord, Slack, ntfy.sh, generic Webhook, and File (text/JSONL/markdown). Fan out a single feed to multiple sinks; mark some as `required: false` to swallow non-critical failures. See [`docs/plugins/sink.md`](./docs/plugins/sink.md).
+- **Sinks** — Dashboard (built-in digest history), Email (SMTP), Telegram, Discord, Slack, ntfy.sh, generic Webhook, and File (text/JSONL/markdown). Fan out a single feed to multiple sinks; mark some as `required: false` to swallow non-critical failures. See [`docs/plugins/sink.md`](./docs/plugins/sink.md).
 - **LLM providers** — Ollama (default), Anthropic, OpenAI. Per-feed provider/model. See [`docs/plugins/llm.md`](./docs/plugins/llm.md).
 - **Web search backends** — six engines including the self-hosted [SearXNG](./docs/getting-started/search.md) for users who don't want cloud API keys. See [`docs/plugins/search.md`](./docs/plugins/search.md).
 
@@ -104,6 +104,7 @@ Pick the example closest to what you want:
 | **03** `github-releases-slack` | Track 5+ GitHub repos for new releases → Slack | `cd examples/03-github-releases-slack && ./setup.sh` |
 | **04** `arxiv-skill-ntfy` | Daily arXiv papers (structured) → phone push + JSONL | `cd examples/04-arxiv-skill-ntfy && ./setup.sh` |
 | **05** `reddit-cloud-telegram` | Hourly Reddit ML digests via cloud LLM → Telegram | `cd examples/05-reddit-cloud-telegram && ./setup.sh` |
+| **06** `weekly-newsletter` | Weekly AI digest → email (Mailpit local + Gmail/SES) | `cd examples/06-weekly-newsletter && ./setup.sh` |
 
 > **GPU support is automatic.** Examples that use Ollama detect your NVIDIA / AMD / native Ollama setup and configure the stack accordingly. See [examples/README.md → GPU acceleration](./examples/README.md#gpu-acceleration) for the full matrix.
 
