@@ -36,6 +36,10 @@ feeds:
 
     pipeline:
       - dedup
+      - semantic_dedup:
+          embedding_model: nomic-embed-text
+          min_similarity: 0.85
+          window: "7d"
       - rank:
           prompt: |
             Score 0-1 for practical, technical relevance to an AI engineer.

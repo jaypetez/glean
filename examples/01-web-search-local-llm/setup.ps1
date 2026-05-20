@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
 # Example 01 setup - fully self-contained glean stack:
-#   glean + ollama (qwen2.5:7b) + searxng -> file + dashboard sinks.
+#   glean + ollama (qwen2.5:7b + nomic-embed-text) + searxng -> file + dashboard sinks.
 #
 # Idempotent. Safe to re-run.
 
@@ -11,6 +11,7 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location -Path $ScriptDir
 
 $Model = 'qwen2.5:7b'
+$EmbeddingModel = 'nomic-embed-text'
 $ComposeArgs = @('compose', '-f', 'docker-compose.yml')
 
 function Log { param([string]$msg) Write-Host "[ex01] $msg" -ForegroundColor Cyan }
@@ -196,8 +197,8 @@ if ($Mode -eq 'nvidia') {
 # -- 5. Pull the LLM model ----------------------------------------------------
 
 if ($Mode -eq 'external') {
-    Log 'External Ollama mode - skipping model pull (host Ollama is expected to have qwen2.5:7b)'
-    Log 'If missing, pull on your host: ollama pull qwen2.5:7b'
+    Log "External Ollama mode - skipping model pull (host Ollama is expected to have $Model + $EmbeddingModel)"
+    Log "If missing, pull on your host: ollama pull $Model && ollama pull $EmbeddingModel"
 } else {
     $listed = (& docker @ComposeArgs exec -T ollama ollama list 2>$null) -split "`n"
     $hasModel = $listed | Where-Object { $_ -match "^$([regex]::Escape($Model))(\s|$)" }
@@ -208,6 +209,18 @@ if ($Mode -eq 'external') {
         & docker @ComposeArgs exec -T ollama ollama pull $Model
         if ($LASTEXITCODE -ne 0) { Die "Failed to pull $Model." }
         Ok "Model $Model pulled."
+    }
+
+    $hasEmbeddingModel = $listed | Where-Object {
+        $_ -match "^$([regex]::Escape($EmbeddingModel))(\s|$)"
+    }
+    if ($hasEmbeddingModel) {
+        Ok "Model $EmbeddingModel already present."
+    } else {
+        Log "Pulling $EmbeddingModel (~270 MB - first time only)..."
+        & docker @ComposeArgs exec -T ollama ollama pull $EmbeddingModel
+        if ($LASTEXITCODE -ne 0) { Die "Failed to pull $EmbeddingModel." }
+        Ok "Model $EmbeddingModel pulled."
     }
 }
 

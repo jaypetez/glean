@@ -242,6 +242,89 @@ skills: []
     ]
 
 
+async def test_test_reset_seeds_semantic_dedup_fixture_data_once_per_reset(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fixture_config = tmp_path / "fixture-feeds.yaml"
+    active_config = tmp_path / "active-feeds.yaml"
+    fixture_config.write_text(
+        """
+feeds:
+  - name: alpha
+    schedule: every 1h
+    chat_id: \"12345\"
+    sources:
+      - type: rss
+        url: https://example.com/alpha.xml
+    pipeline:
+      - dedup
+  - name: beta
+    schedule: daily 09:00
+    chat_id: \"67890\"
+    sources:
+      - type: rss
+        url: https://example.com/beta.xml
+    pipeline:
+      - dedup
+skills: []
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    active_config.write_text("feeds: []\nskills: []\n", encoding="utf-8")
+    monkeypatch.setenv("GLEAN_TEST_MODE", "1")
+    monkeypatch.setenv("GLEAN_CONFIG", str(active_config))
+    monkeypatch.setenv("GLEAN_TEST_CONFIG_FIXTURE", str(fixture_config))
+
+    state = StateStore(tmp_path / "state.db")
+    await state.open()
+    try:
+        app = make_app(state, tmp_path / "state.db")
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            first = await client.post(
+                "/api/v1/test/reset",
+                headers={"X-Glean-Api-Key": app.state.glean_api_key},
+            )
+            second = await client.post(
+                "/api/v1/test/reset",
+                headers={"X-Glean-Api-Key": app.state.glean_api_key},
+            )
+            total = await state.db.execute_fetchall(
+                "SELECT COUNT(*) FROM semantic_dedup_log"
+            )
+            distinct_timestamps = await state.db.execute_fetchall(
+                "SELECT COUNT(DISTINCT suppressed_at) FROM semantic_dedup_log"
+            )
+            sample_rows = await state.db.execute_fetchall(
+                "SELECT suppressed_title, matched_title, similarity, trace_id "
+                "FROM semantic_dedup_log WHERE trace_id LIKE 'trace-00_' ORDER BY trace_id"
+            )
+    finally:
+        await state.close()
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert total == [(52,)]
+    assert distinct_timestamps == [(52,)]
+    assert sample_rows == [
+        ("OpenAI launches X — HN discussion", "Introducing X", pytest.approx(0.92), "trace-001"),
+        (
+            "Anthropic ships tool use recap",
+            "Claude tool use announcement",
+            pytest.approx(0.95),
+            "trace-002",
+        ),
+        ("Weekly benchmark roundup", "AI benchmark roundup", pytest.approx(0.87), "trace-003"),
+        (
+            "Paper implementation notes",
+            "Paper implementation guide",
+            pytest.approx(0.85),
+            "trace-004",
+        ),
+    ]
+
+
 async def test_test_seed_digest_route_is_not_registered_outside_test_mode(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

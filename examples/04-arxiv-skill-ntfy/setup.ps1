@@ -10,6 +10,7 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location -Path $ScriptDir
 
 $Model = 'qwen2.5:7b'
+$EmbeddingModel = 'nomic-embed-text'
 
 function Log { param($msg) Write-Host "[ex04] $msg" -ForegroundColor Cyan }
 function Ok  { param($msg) Write-Host "[ex04] $msg" -ForegroundColor Green }
@@ -152,6 +153,7 @@ switch ($Mode) {
 
 if ($Mode -eq 'external') {
     Ok 'Using external Ollama; skipping model pull.'
+    Log "If missing, pull on your host: ollama pull $Model && ollama pull $EmbeddingModel"
 } else {
     $listed = (& docker compose @ComposeArgs exec -T ollama ollama list 2>$null) -split "`n"
     $hasModel = $listed | Where-Object { $_ -match '^qwen2\.5:7b\s' -or $_ -eq $Model }
@@ -162,6 +164,18 @@ if ($Mode -eq 'external') {
         & docker compose @ComposeArgs exec -T ollama ollama pull $Model
         if ($LASTEXITCODE -ne 0) { Die "Failed to pull $Model." }
         Ok "Model $Model pulled."
+    }
+
+    $hasEmbeddingModel = $listed | Where-Object {
+        $_ -match "^$([regex]::Escape($EmbeddingModel))(\s|$)"
+    }
+    if ($hasEmbeddingModel) {
+        Ok "Model $EmbeddingModel already present."
+    } else {
+        Log "Pulling $EmbeddingModel (~270 MB - first time only)..."
+        & docker compose @ComposeArgs exec -T ollama ollama pull $EmbeddingModel
+        if ($LASTEXITCODE -ne 0) { Die "Failed to pull $EmbeddingModel." }
+        Ok "Model $EmbeddingModel pulled."
     }
 }
 

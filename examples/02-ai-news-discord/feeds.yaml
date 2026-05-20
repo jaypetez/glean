@@ -35,6 +35,10 @@ feeds:
 
     pipeline:
       - dedup
+      - semantic_dedup:
+          embedding_model: nomic-embed-text
+          min_similarity: 0.82  # Aggregated AI-news feeds overlap heavily; bias slightly more aggressive.
+          window: "7d"
       - rank:
           prompt: |
             Score 0-1 for practical AI engineering relevance.

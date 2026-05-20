@@ -3,6 +3,7 @@
 A fully self-hosted glean stack that:
 
 - Searches the open web every hour via **SearXNG** (no API keys, no telemetry).
+- Suppresses near-duplicate search hits with `semantic_dedup` using **Ollama** `nomic-embed-text` embeddings.
 - Summarizes each result with **Ollama** running `qwen2.5:7b` (~5 GB RAM at Q4_K_M, fits comfortably under 16 GB).
 - Writes the rendered digest to `./data/digests/web-search.md` and stores recent digests in the built-in dashboard UI (no Telegram / Discord / Slack required).
 
@@ -13,7 +14,7 @@ Three containers: `glean-ex01-glean`, `glean-ex01-ollama`, `glean-ex01-searxng`.
 - Docker 24+ with `docker compose` v2
 - `openssl` (for generating SearXNG's secret)
 - `curl` (for verifying healthz)
-- ~10 GB free disk for the Ollama model + container images
+- ~10 GB free disk for the Ollama models + container images (`qwen2.5:7b` + `nomic-embed-text` still fit in the same budget)
 - >=16 GB RAM (8 GB is fine for the model; the rest is headroom)
 
 ## GPU acceleration
@@ -29,7 +30,7 @@ Three containers: `glean-ex01-glean`, `glean-ex01-ollama`, `glean-ex01-searxng`.
 
 **Override detection** by setting `GLEAN_OLLAMA_GPU=none|nvidia|rocm|external` in `.env`.
 
-**macOS**: macOS Docker Desktop runs in a Linux VM with no Metal access. Install Ollama natively (`brew install ollama && ollama serve`), pull the model (`ollama pull qwen2.5:7b`), then run `./setup.sh` - it auto-detects `external` mode.
+**macOS**: macOS Docker Desktop runs in a Linux VM with no Metal access. Install Ollama natively (`brew install ollama && ollama serve`), pull both models (`ollama pull qwen2.5:7b && ollama pull nomic-embed-text`), then run `./setup.sh` - it auto-detects `external` mode.
 
 **NVIDIA (Linux + Windows WSL2)**: install `nvidia-container-toolkit`, then `sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker` (Linux) or restart Docker Desktop (Windows). Sanity-check: `docker run --rm --gpus=all nvidia/cuda:12.4.0-base-ubuntu22.04 nvidia-smi`.
 
@@ -45,7 +46,7 @@ Three containers: `glean-ex01-glean`, `glean-ex01-ollama`, `glean-ex01-searxng`.
 ./setup.ps1       # Windows PowerShell
 ```
 
-The script generates `.env`, auto-detects the best Ollama mode for your machine, brings up the stack, pulls `qwen2.5:7b` when needed, runs a dry-run of the feed, and prints next steps.
+The script generates `.env`, auto-detects the best Ollama mode for your machine, brings up the stack, pulls `qwen2.5:7b` plus `nomic-embed-text` when needed, runs a dry-run of the feed, and prints next steps.
 
 It is idempotent - re-running just verifies the stack is healthy.
 
@@ -57,12 +58,18 @@ It is idempotent - re-running just verifies the stack is healthy.
 |---------|-------|
 | Schedule | `every 1h` |
 | Sources | SearXNG search for "open source AI news" (10 results / tick) |
-| Pipeline | `dedup -> rank (min 0.5) -> summarize -> digest` |
+| Pipeline | `dedup -> semantic_dedup -> rank (min 0.5) -> summarize -> digest` |
+| Semantic dedup | `ollama:nomic-embed-text`, `min_similarity: 0.85`, `window: 7d` |
 | LLM | `ollama:qwen2.5:7b` at `http://ollama:11434` |
 | Sink | `file` -> `/data/digests/web-search.md` (markdown) + `dashboard` -> last 50 digests in the web UI |
 | Bootstrap | `skip-and-mark` (first tick indexes silently; sends only from the second tick onward) |
 
 Change the search query by editing the `query:` field under `sources:` in `feeds.yaml`, then restart: `docker compose -f docker-compose.yml restart glean`.
+
+## What semantic dedup suppresses
+
+After URL dedup, `semantic_dedup` embeds each search hit with `nomic-embed-text` and suppresses stories that are highly similar to something this feed already sent in the last 7 days.
+See [Semantic dedup](../../docs/concepts/semantic-dedup.md) for threshold tuning, window sizing, and model choices.
 
 ## Browsing digests in a browser
 

@@ -59,6 +59,7 @@ nav:
       - Plugin layers: concepts/plugins.md
       - Skills: concepts/skills.md
       - Dedup and bootstrap: concepts/dedup-bootstrap.md
+      - Semantic dedup: concepts/semantic-dedup.md
       - LLM dispatch: concepts/llm-dispatch.md
       - Failure model: concepts/failure-model.md
   - How-to:

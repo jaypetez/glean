@@ -11,6 +11,8 @@ Dedup is how glean remembers old items; bootstrap is how a new feed avoids dumpi
 
 *This page is Explanation — read it to understand the model. For task-focused steps, see the [How-to guides](../how-to/index.md).*
 
+See also: [Semantic dedup](./semantic-dedup.md), which suppresses near-duplicates after ordinary URL/content dedup.
+
 This is the most common surprise in glean: **the default first run may send nothing on purpose**. That is not a broken Telegram bot, not a bad RSS URL, and not necessarily an LLM failure. It is bootstrap protection.
 
 Dedup starts with an identity. For each item, glean computes a SHA-256 hash of `canonical_url`. If `canonical_url` is empty, it hashes `title + body[:512]` instead. The hash is stored in SQLite's `seen_items` table with feed name and send status. The `sent=1` marker means the item has been treated as delivered for that feed's history, even if the delivery was a bootstrap mark rather than a visible message.
