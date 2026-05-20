@@ -1,0 +1,48 @@
+defaults:
+  llm:
+    provider: ollama
+    model: qwen2.5:7b
+    base_url: http://ollama:11434
+  render:
+    style: html
+    link_preview: false
+    max_items: 10
+  bootstrap: skip-and-mark
+  failure:
+    alert_after: 3
+
+feeds:
+  - name: weekly-digest
+    schedule: "0 9 * * 1"
+
+    sinks:
+      - type: email
+        smtp_host: mailpit
+        smtp_port: 1025
+        smtp_user: ""
+        smtp_password: ""
+        starttls: false
+        from: "glean <glean@localhost>"
+        to:
+          - me@localhost
+        subject_template: "[glean] {feed_name} — {date}"
+      - type: dashboard
+        keep_last_n: 25
+
+    sources:
+      - type: rss
+        url: https://simonwillison.net/atom/everything/
+      - type: rss
+        url: https://hnrss.org/newest?q=AI
+
+    pipeline:
+      - dedup
+      - rank:
+          prompt: |
+            Score 0-1 for practical AI engineering relevance.
+          min_relevance: 0.5
+      - summarize:
+          prompt: |
+            One sentence, ≤25 words. State the fact.
+      - digest:
+          intro: "<h2>Weekly AI Digest</h2>"
