@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime as dt
 import email.utils
 import importlib
+import ipaddress
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -358,6 +359,17 @@ async def test_email_sink_default_port_587() -> None:
     )
 
     assert sink.smtp_port == 587
+
+
+async def test_email_sink_allows_private_smtp_hosts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    ssrf_module = importlib.import_module("glean.security.ssrf")
+    monkeypatch.setattr(ssrf_module, "_resolve", lambda host: [ipaddress.ip_address("172.18.0.25")])
+
+    sink = _make_email_sink(smtp_host="mailpit.docker.internal")
+
+    assert sink.smtp_host == "mailpit.docker.internal"
 
 
 async def test_email_sink_rejects_metadata_smtp_host() -> None:

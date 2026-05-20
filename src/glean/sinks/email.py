@@ -44,6 +44,7 @@ class EmailSink:
         required: bool = True,
         **kwargs: object,
     ) -> None:
+        # `from` is a YAML-facing key, but `from` is a Python keyword.
         self.from_addr = from_addr or str(kwargs.get("from", ""))
         if not smtp_host:
             raise ValueError("email sink requires 'smtp_host'")
@@ -55,7 +56,7 @@ class EmailSink:
             raise ValueError("email sink: 'starttls' and 'use_ssl' cannot both be true")
         if smtp_port < 1 or smtp_port > 65535:
             raise ValueError(f"email sink: invalid smtp_port {smtp_port}")
-        validate_url(f"https://{smtp_host}:{smtp_port}/")
+        validate_url(f"https://{smtp_host}:{smtp_port}/", allow_private=True)
 
         self.smtp_host = smtp_host
         self.smtp_port = smtp_port
@@ -135,6 +136,7 @@ class EmailSink:
         return result
 
     async def aclose(self) -> None:
+        # SMTP connections are opened and closed per send(); no persistent resource to release.
         pass
 
 

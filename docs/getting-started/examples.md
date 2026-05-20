@@ -88,9 +88,9 @@ See [`examples/README.md`](https://github.com/jaypetez/glean/tree/main/examples)
 
 ## GPU acceleration for Ollama
 
-Examples that include Ollama ([01](https://github.com/jaypetez/glean/blob/main/examples/01-web-search-local-llm/README.md), [02](https://github.com/jaypetez/glean/blob/main/examples/02-ai-news-discord/README.md), [04](https://github.com/jaypetez/glean/blob/main/examples/04-arxiv-skill-ntfy/README.md), and [06](https://github.com/jaypetez/glean/blob/main/examples/06-weekly-newsletter/README.md)) auto-detect your hardware and configure the stack accordingly. Run `./setup.sh` (or `./setup.ps1` on Windows) and the script tells you which mode it picked.
+Examples that include Ollama ([01](https://github.com/jaypetez/glean/blob/main/examples/01-web-search-local-llm/README.md), [02](https://github.com/jaypetez/glean/blob/main/examples/02-ai-news-discord/README.md), and [04](https://github.com/jaypetez/glean/blob/main/examples/04-arxiv-skill-ntfy/README.md)) auto-detect your hardware and configure the stack accordingly. Run `./setup.sh` (or `./setup.ps1` on Windows) and the script tells you which mode it picked.
 
-Those four examples also pre-pull `qwen2.5:7b`; examples [01](https://github.com/jaypetez/glean/blob/main/examples/01-web-search-local-llm/README.md), [02](https://github.com/jaypetez/glean/blob/main/examples/02-ai-news-discord/README.md), and [04](https://github.com/jaypetez/glean/blob/main/examples/04-arxiv-skill-ntfy/README.md) additionally pull `nomic-embed-text` because they showcase semantic dedup.
+Examples [01](https://github.com/jaypetez/glean/blob/main/examples/01-web-search-local-llm/README.md), [02](https://github.com/jaypetez/glean/blob/main/examples/02-ai-news-discord/README.md), [04](https://github.com/jaypetez/glean/blob/main/examples/04-arxiv-skill-ntfy/README.md), and [06](https://github.com/jaypetez/glean/blob/main/examples/06-weekly-newsletter/README.md) all pre-pull `qwen2.5:7b`; examples [01](https://github.com/jaypetez/glean/blob/main/examples/01-web-search-local-llm/README.md), [02](https://github.com/jaypetez/glean/blob/main/examples/02-ai-news-discord/README.md), and [04](https://github.com/jaypetez/glean/blob/main/examples/04-arxiv-skill-ntfy/README.md) additionally pull `nomic-embed-text` because they showcase semantic dedup.
 
 ### Detection order
 
@@ -134,7 +134,7 @@ docker run --rm --gpus=all nvidia/cuda:12.4.0-base-ubuntu22.04 nvidia-smi
 
 **Linux with AMD ROCm** — see [Ollama AMD GPU docs](https://github.com/ollama/ollama/blob/main/docs/gpu.md#amd-radeon) for host setup details, then run the example normally.
 
-See the example READMEs for the per-stack details and caveats: [01 — web-search-local-llm](https://github.com/jaypetez/glean/blob/main/examples/01-web-search-local-llm/README.md), [02 — ai-news-discord](https://github.com/jaypetez/glean/blob/main/examples/02-ai-news-discord/README.md), [04 — arxiv-skill-ntfy](https://github.com/jaypetez/glean/blob/main/examples/04-arxiv-skill-ntfy/README.md), and [06 — weekly-newsletter](https://github.com/jaypetez/glean/blob/main/examples/06-weekly-newsletter/README.md).
+See the example READMEs for the per-stack details and caveats: [01 — web-search-local-llm](https://github.com/jaypetez/glean/blob/main/examples/01-web-search-local-llm/README.md), [02 — ai-news-discord](https://github.com/jaypetez/glean/blob/main/examples/02-ai-news-discord/README.md), and [04 — arxiv-skill-ntfy](https://github.com/jaypetez/glean/blob/main/examples/04-arxiv-skill-ntfy/README.md). Example [06 — weekly-newsletter](https://github.com/jaypetez/glean/blob/main/examples/06-weekly-newsletter/README.md) currently uses the bundled Ollama container without GPU mode auto-detection.
 
 ## See also
 

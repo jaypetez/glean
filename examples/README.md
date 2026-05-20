@@ -58,7 +58,7 @@ Rules:
 
 ## GPU acceleration
 
-Examples that include Ollama (01, 02, 04, 06) auto-detect the best mode for your machine:
+Examples that include Ollama (01, 02, 04) auto-detect the best mode for your machine:
 
 | Detected | When | Compose used |
 |----------|------|--------------|
@@ -69,7 +69,7 @@ Examples that include Ollama (01, 02, 04, 06) auto-detect the best mode for your
 
 Override the detection with `GLEAN_OLLAMA_GPU=none|nvidia|rocm|external` in the example's `.env`. **macOS users**: Docker on Mac can't access Metal, so the fastest path is `brew install ollama && ollama serve` on the host — setup auto-detects `external` mode and skips the Ollama container entirely.
 
-See each example's README for details: [01](./01-web-search-local-llm/README.md), [02](./02-ai-news-discord/README.md), [04](./04-arxiv-skill-ntfy/README.md), and [06](./06-weekly-newsletter/README.md).
+See each example's README for details: [01](./01-web-search-local-llm/README.md), [02](./02-ai-news-discord/README.md), and [04](./04-arxiv-skill-ntfy/README.md). Example [06](./06-weekly-newsletter/README.md) currently uses the bundled Ollama container without auto-detection.
 
 ## Removing an example
 
