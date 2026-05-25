@@ -1047,7 +1047,7 @@ requires-dist = [
     { name = "structlog", specifier = ">=25.5.0" },
     { name = "time-machine", marker = "extra == 'dev'", specifier = ">=2.16" },
     { name = "trafilatura", specifier = ">=2.0.0" },
-    { name = "typer", specifier = ">=0.15" },
+    { name = "typer", specifier = ">=0.25.1" },
     { name = "typer-cli", marker = "extra == 'dev'", specifier = ">=0.12" },
     { name = "types-pyyaml", marker = "extra == 'dev'" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
