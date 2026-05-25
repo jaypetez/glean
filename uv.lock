@@ -1023,7 +1023,7 @@ requires-dist = [
     { name = "mkdocs-swagger-ui-tag", marker = "extra == 'dev'", specifier = ">=0.6" },
     { name = "mkdocs-swagger-ui-tag", marker = "extra == 'docs'", specifier = ">=0.6" },
     { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = ">=1.0.4" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.13" },
+    { name = "mypy", marker = "extra == 'dev'", specifier = ">=2.1.0" },
     { name = "ollama", specifier = ">=0.6.2" },
     { name = "openai", specifier = ">=1.50.0" },
     { name = "pip-audit", marker = "extra == 'dev'", specifier = ">=2.9" },
