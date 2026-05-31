@@ -9,3 +9,14 @@ CVE-2025-69720
 
 # libsystemd0/libudev1 CVE-2026-29111 - unfixed in Debian 13; systemd/udev APIs are not used by glean
 CVE-2026-29111
+
+# perl-base CVEs - all unfixed in Debian 13; glean is a Python daemon and never invokes
+# perl, Archive::Tar, or IO-Compress at runtime. Remove entries as Debian ships fixes.
+# CVE-2026-42496 Archive::Tar <3.08 symlink extraction; CVE-2026-42497 hardlink extraction;
+# CVE-2026-9538 Archive::Tar <3.10 memory exhaustion; CVE-2026-48962 perl-IO-Compress RCE;
+# CVE-2026-8376 Perl <=5.43.10 heap buffer overflow.
+CVE-2026-42496
+CVE-2026-42497
+CVE-2026-9538
+CVE-2026-48962
+CVE-2026-8376
