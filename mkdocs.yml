@@ -85,6 +85,7 @@ nav:
       - Key Files Map: agents/key-files.md
       - Debug a Feed: agents/debug-feed.md
       - Add a New Plugin: agents/add-plugin.md
+      - Dependabot Backlog: agents/dependabot.md
       - Cut a Release: agents/release.md
   - Reference:
       - reference/index.md

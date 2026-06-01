@@ -13,6 +13,7 @@ This section is for AI coding agents (Claude Code, Cursor, Copilot, Aider, OpenC
 ## Common tasks
 - [Debug a feed that isn't sending](debug-feed.md)
 - [Add a new plugin (source/sink/LLM/search)](add-plugin.md)
+- [Process the Dependabot PR backlog](dependabot.md)
 - [Cut a release](release.md)
 
 ## Slash commands
@@ -22,6 +23,7 @@ Claude Code slash commands live in `.claude/commands/`:
 - `/add-sink` — scaffold and implement a new sink plugin, tests, docs, and PR.
 - `/add-llm` — scaffold and implement a new LLM provider and its protocol methods.
 - `/debug-feed` — follow the feed debugging runbook with MCP tooling and report state, logs, hypothesis, and fix.
+- `/dependabot` — triage, validate, and squash-merge the open Dependabot PR backlog, then recommend a release.
 - `/release` — follow the release runbook to cut a versioned release safely.
 - `/triage-issue` — inspect a GitHub issue, reproduce when needed, label it, and comment with next steps.
 
