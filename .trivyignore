@@ -20,3 +20,10 @@ CVE-2026-42497
 CVE-2026-9538
 CVE-2026-48962
 CVE-2026-8376
+
+# APScheduler CVE-2026-31072 (RCE via insecure deserialization) - no fixed release published
+# (4.0.0a6 is the latest). The vulnerable path is persistent data stores deserializing job
+# payloads; glean configures no data_store (src/glean/scheduler.py) and uses the default
+# in-memory store, so untrusted data never reaches the deserializer. Also ignored in the
+# pip-audit step (ci.yml). Remove both ignores when a fixed release ships.
+CVE-2026-31072
