@@ -178,10 +178,12 @@ jobs:
             --ignore-vuln PYSEC-2025-145 \
             --ignore-vuln PYSEC-2026-102 \
             --ignore-vuln PYSEC-2026-101 \
-            --ignore-vuln PYSEC-2025-183
+            --ignore-vuln PYSEC-2025-183 \
+            --ignore-vuln CVE-2026-31072
         # Ignored: markdown 3.10.2 (PYSEC-2026-89), ollama 0.6.2 (5 PYSECs),
-        # pyjwt 2.12.1 (PYSEC-2025-183) — all at latest available version;
-        # no patches published yet. Remove ignores as fixes ship.
+        # pyjwt 2.12.1 (PYSEC-2025-183),
+        # apscheduler 4.0.0a6 (CVE-2026-31072) — all at latest available
+        # version; no patches published yet. Remove ignores as fixes ship.
 
   trivy-fs:
     name: Trivy filesystem scan
@@ -211,7 +213,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -405,7 +407,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4
+        uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3 # v4
 
       - name: Set up Buildx
         uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4
