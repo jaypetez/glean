@@ -27,7 +27,7 @@
     "@tsconfig/svelte": "^5.0.0",
     "@types/node": "^25.9.2",
     "axe-core": "^4.12.0",
-    "prettier": "^3.4.0",
+    "prettier": "^3.8.4",
     "prettier-plugin-svelte": "^4.1.0",
     "sharp": "^0.34.5",
     "svelte-check": "^4.6.0",
