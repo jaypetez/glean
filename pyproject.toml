@@ -18,16 +18,16 @@ classifiers = [
     "Topic :: Communications :: Chat",
 ]
 dependencies = [
-    "python-telegram-bot>=22.7",
+    "python-telegram-bot>=22.8",
     "ollama>=0.6.2",
     "anthropic>=0.105.2",
-    "openai>=1.50.0",
+    "openai>=2.43.0",
     "feedparser>=6.0.12",
-    "trafilatura>=2.0.0",
+    "trafilatura>=2.1.0",
     "httpx>=0.28.1",
     "fastapi>=0.136.3",
     "uvicorn[standard]>=0.30",
-    "sse-starlette>=3.4.4",
+    "sse-starlette>=3.4.5",
     "apscheduler>=4.0.0a6",
     "pydantic>=2.9",
     "pydantic-settings>=2.14.1",
@@ -66,7 +66,7 @@ dev = [
     "mkdocs-swagger-ui-tag>=0.6",
     "mkdocs-git-revision-date-localized-plugin>=1.2",
     "mkdocs-minify-plugin>=0.8",
-    "typer-cli>=0.12",
+    "typer-cli>=0.24.0",
 ]
 docs = [
     "mkdocs-material[imaging]>=9.5",
