@@ -62,14 +62,14 @@ dev = [
     "mcp>=1.0",
     "schemathesis>=4.21.1",
     "types-PyYAML",
-    "mkdocs-material[imaging]>=9.5",
+    "mkdocs-material[imaging]>=9.7.6",
     "mkdocs-swagger-ui-tag>=0.6",
     "mkdocs-git-revision-date-localized-plugin>=1.2",
     "mkdocs-minify-plugin>=0.8",
     "typer-cli>=0.24.0",
 ]
 docs = [
-    "mkdocs-material[imaging]>=9.5",
+    "mkdocs-material[imaging]>=9.7.6",
     "mkdocs-swagger-ui-tag>=0.6",
     "mkdocs-git-revision-date-localized-plugin>=1.2",
     "mkdocs-minify-plugin>=0.8",
