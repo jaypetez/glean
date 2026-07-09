@@ -27,3 +27,17 @@ CVE-2026-8376
 # in-memory store, so untrusted data never reaches the deserializer. Also ignored in the
 # pip-audit step (ci.yml). Remove both ignores when a fixed release ships.
 CVE-2026-31072
+
+# util-linux CVE-2026-53615 (integer overflow/wraparound) - unfixed in Debian 13; affects the
+# util-linux family (bsdutils, login, mount, libblkid1, liblastlog2-2, libmount1, libsmartcols1,
+# libuuid1, util-linux). glean is a Python daemon, runs non-root, and never invokes these
+# mount/login utilities at runtime. Remove when Debian ships a fix.
+CVE-2026-53615
+
+# gzip CVE-2026-41992 (global buffer overflow) - unfixed in Debian 13; glean never shells out to
+# the gzip binary (Python compresses via the stdlib). Remove when Debian ships a fix.
+CVE-2026-41992
+
+# libacl1 CVE-2026-54369 (symlink traversal privilege escalation via libacl) - unfixed in
+# Debian 13; glean runs non-root and does not manipulate POSIX ACLs. Remove when Debian ships a fix.
+CVE-2026-54369
