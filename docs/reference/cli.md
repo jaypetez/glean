@@ -53,7 +53,7 @@ $ glean migrate [OPTIONS]
 
 **Options**:
 
-* `--db PATH`: Path to SQLite state DB  [env var: GLEAN_DB; default: /data/state.db]
+* `--db <path>`: Path to SQLite state DB  [env var: GLEAN_DB; default: /data/state.db]
 * `--help`: Show this message and exit.
 
 ## `glean validate-config`
@@ -68,8 +68,8 @@ $ glean validate-config [OPTIONS]
 
 **Options**:
 
-* `-c, --config PATH`: Path to feeds.yaml  [env var: GLEAN_CONFIG; default: /etc/glean/feeds.yaml]
-* `--log-level TEXT`: [env var: LOG_LEVEL; default: WARNING]
+* `-c, --config <path>`: Path to feeds.yaml  [env var: GLEAN_CONFIG; default: /etc/glean/feeds.yaml]
+* `--log-level <str>`: [env var: LOG_LEVEL; default: WARNING]
 * `--help`: Show this message and exit.
 
 ## `glean list-feeds`
@@ -84,9 +84,9 @@ $ glean list-feeds [OPTIONS]
 
 **Options**:
 
-* `-c, --config PATH`: Path to feeds.yaml  [env var: GLEAN_CONFIG; default: /etc/glean/feeds.yaml]
-* `--db PATH`: Path to SQLite state DB  [env var: GLEAN_DB; default: /data/state.db]
-* `--log-level TEXT`: [env var: LOG_LEVEL; default: WARNING]
+* `-c, --config <path>`: Path to feeds.yaml  [env var: GLEAN_CONFIG; default: /etc/glean/feeds.yaml]
+* `--db <path>`: Path to SQLite state DB  [env var: GLEAN_DB; default: /data/state.db]
+* `--log-level <str>`: [env var: LOG_LEVEL; default: WARNING]
 * `--help`: Show this message and exit.
 
 ## `glean test-feed`
@@ -96,19 +96,19 @@ Run a feed once. Default is dry-run (no Telegram, no state writes).
 **Usage**:
 
 ```console
-$ glean test-feed [OPTIONS] NAME
+$ glean test-feed [OPTIONS] {name}
 ```
 
 **Arguments**:
 
-* `NAME`: [required]
+* `name`: [required]
 
 **Options**:
 
-* `-c, --config PATH`: Path to feeds.yaml  [env var: GLEAN_CONFIG; default: /etc/glean/feeds.yaml]
-* `--db PATH`: Path to SQLite state DB  [env var: GLEAN_DB; default: /data/state.db]
+* `-c, --config <path>`: Path to feeds.yaml  [env var: GLEAN_CONFIG; default: /etc/glean/feeds.yaml]
+* `--db <path>`: Path to SQLite state DB  [env var: GLEAN_DB; default: /data/state.db]
 * `--send`: Actually send to Telegram.
-* `--log-level TEXT`: [env var: LOG_LEVEL; default: INFO]
+* `--log-level <str>`: [env var: LOG_LEVEL; default: INFO]
 * `--help`: Show this message and exit.
 
 ## `glean send-now`
@@ -118,18 +118,18 @@ Run a feed off-schedule and send via its configured sinks.
 **Usage**:
 
 ```console
-$ glean send-now [OPTIONS] NAME
+$ glean send-now [OPTIONS] {name}
 ```
 
 **Arguments**:
 
-* `NAME`: [required]
+* `name`: [required]
 
 **Options**:
 
-* `-c, --config PATH`: Path to feeds.yaml  [env var: GLEAN_CONFIG; default: /etc/glean/feeds.yaml]
-* `--db PATH`: Path to SQLite state DB  [env var: GLEAN_DB; default: /data/state.db]
-* `--log-level TEXT`: [env var: LOG_LEVEL; default: INFO]
+* `-c, --config <path>`: Path to feeds.yaml  [env var: GLEAN_CONFIG; default: /etc/glean/feeds.yaml]
+* `--db <path>`: Path to SQLite state DB  [env var: GLEAN_DB; default: /data/state.db]
+* `--log-level <str>`: [env var: LOG_LEVEL; default: INFO]
 * `--help`: Show this message and exit.
 
 ## `glean run`
@@ -144,8 +144,8 @@ $ glean run [OPTIONS]
 
 **Options**:
 
-* `-c, --config PATH`: Path to feeds.yaml  [env var: GLEAN_CONFIG; default: /etc/glean/feeds.yaml]
-* `--db PATH`: Path to SQLite state DB  [env var: GLEAN_DB; default: /data/state.db]
-* `--health-port INTEGER`: [env var: HEALTH_PORT; default: 9090]
-* `--log-level TEXT`: [env var: LOG_LEVEL; default: INFO]
+* `-c, --config <path>`: Path to feeds.yaml  [env var: GLEAN_CONFIG; default: /etc/glean/feeds.yaml]
+* `--db <path>`: Path to SQLite state DB  [env var: GLEAN_DB; default: /data/state.db]
+* `--health-port <int>`: [env var: HEALTH_PORT; default: 9090]
+* `--log-level <str>`: [env var: LOG_LEVEL; default: INFO]
 * `--help`: Show this message and exit.
