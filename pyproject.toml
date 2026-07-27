@@ -60,7 +60,7 @@ dev = [
     "pip-audit>=2.10.1",
     "hypothesis>=6.157.0",
     "mcp>=1.28.1",
-    "schemathesis>=4.22.4",
+    "schemathesis>=4.24.3",
     "types-PyYAML",
     "mkdocs-material[imaging]>=9.7.6",
     "mkdocs-swagger-ui-tag>=0.6",
