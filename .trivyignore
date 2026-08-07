@@ -14,12 +14,17 @@ CVE-2026-29111
 # perl, Archive::Tar, or IO-Compress at runtime. Remove entries as Debian ships fixes.
 # CVE-2026-42496 Archive::Tar <3.08 symlink extraction; CVE-2026-42497 hardlink extraction;
 # CVE-2026-9538 Archive::Tar <3.10 memory exhaustion; CVE-2026-48962 perl-IO-Compress RCE;
-# CVE-2026-8376 Perl <=5.43.10 heap buffer overflow.
+# CVE-2026-8376 Perl <=5.43.10 heap buffer overflow;
+# CVE-2026-13221 Perl <=5.43.9 silently incorrect results; CVE-2026-57433 Storable <3.41 signed
+# integer overflow; CVE-2026-57432 Perl information disclosure via integer overflow.
 CVE-2026-42496
 CVE-2026-42497
 CVE-2026-9538
 CVE-2026-48962
 CVE-2026-8376
+CVE-2026-13221
+CVE-2026-57433
+CVE-2026-57432
 
 # APScheduler CVE-2026-31072 (RCE via insecure deserialization) - no fixed release published
 # (4.0.0a6 is the latest). The vulnerable path is persistent data stores deserializing job
