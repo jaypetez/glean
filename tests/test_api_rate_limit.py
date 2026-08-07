@@ -30,12 +30,11 @@ async def test_healthz_is_exempt_from_rate_limiting(tmp_path: Path) -> None:
     await state.open()
     try:
         app = make_app(state, tmp_path / "state.db")
-        healthz_route = next(
-            route for route in app.routes if getattr(route, "path", None) == "/healthz"
-        )
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            statuses = [(await client.get("/healthz")).status_code for _ in range(15)]
     finally:
         await state.close()
 
-    exempt_routes = app.state.limiter._exempt_routes
-    route_name = f"{healthz_route.endpoint.__module__}.{healthz_route.endpoint.__name__}"
-    assert route_name in exempt_routes
+    # Well past the 10-per-period default the sibling test pins down, so a clean
+    # sweep here can only mean /healthz is exempt.
+    assert statuses == [200] * 15
