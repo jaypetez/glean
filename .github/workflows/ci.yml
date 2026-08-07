@@ -168,9 +168,19 @@ jobs:
       - name: Install deps
         run: uv sync --locked --all-extras
 
+      # Audit the locked dependency set, not the installed environment. `glean`
+      # is installed editable and shares its name with an unrelated PyPI
+      # package, so `pip-audit --strict` resolved our own version against that
+      # package and errored ("Dependency not found on PyPI") on any version it
+      # happens not to publish. --no-emit-project drops glean from the export.
+      - name: Export locked dependency set
+        # `requirements-txt` (not `requirements.txt`) is the spelling the pinned
+        # uv 0.5.13 accepts; newer uv accepts it too.
+        run: uv export --format requirements-txt --all-extras --no-emit-project -o requirements-audit.txt
+
       - name: Pip audit
         run: |
-          uv run pip-audit --strict \
+          uv run pip-audit --strict -r requirements-audit.txt \
             --ignore-vuln PYSEC-2026-89 \
             --ignore-vuln PYSEC-2025-146 \
             --ignore-vuln PYSEC-2025-144 \
