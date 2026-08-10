@@ -38,7 +38,7 @@ dependencies = [
     "typer>=0.27.0",
     "aiohttp>=3.14.3",
     "slowapi>=0.1.10",
-    "aiosmtplib>=5.1.1",
+    "aiosmtplib>=5.1.2",
 ]
 
 [project.optional-dependencies]
