@@ -7,7 +7,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 
 MAX_OUTPUT_CHARS = 4000
 READ_ONLY_SELECT_RE = re.compile(r"^\s*select\b", re.IGNORECASE)
@@ -31,7 +31,7 @@ ALLOWED_MAKE_TARGETS = {
     "docs-schema",
 }
 
-server = FastMCP("glean-dev", json_response=True)
+server = MCPServer("glean-dev")
 
 
 
