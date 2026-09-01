@@ -29,7 +29,7 @@
     "axe-core": "^4.13.0",
     "prettier": "^3.9.6",
     "prettier-plugin-svelte": "^4.1.1",
-    "sharp": "^0.35.3",
+    "sharp": "^0.35.4",
     "svelte-check": "^4.7.3",
     "tailwindcss": "^4.3.3",
     "tslib": "^2.8.0",
