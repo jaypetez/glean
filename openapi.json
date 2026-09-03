@@ -1,0 +1,2889 @@
+{
+  "components": {
+    "schemas": {
+      "Defaults": {
+        "additionalProperties": false,
+        "properties": {
+          "bootstrap": {
+            "default": "skip-and-mark",
+            "enum": [
+              "skip-and-mark",
+              "send-last-N",
+              "send-all"
+            ],
+            "title": "Bootstrap",
+            "type": "string"
+          },
+          "bootstrap_count": {
+            "default": 5,
+            "minimum": 1.0,
+            "title": "Bootstrap Count",
+            "type": "integer"
+          },
+          "failure": {
+            "$ref": "#/components/schemas/FailureConfig"
+          },
+          "llm": {
+            "$ref": "#/components/schemas/LLMConfig"
+          },
+          "max_llm_calls_per_run": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Default hard cap on total LLM calls per run. None = unlimited.",
+            "title": "Max Llm Calls Per Run"
+          },
+          "render": {
+            "$ref": "#/components/schemas/RenderConfig"
+          },
+          "sinks": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sinks"
+          },
+          "telegram": {
+            "$ref": "#/components/schemas/TelegramDefaults"
+          }
+        },
+        "title": "Defaults",
+        "type": "object"
+      },
+      "DigestResponse": {
+        "additionalProperties": false,
+        "description": "Stored digest fragment returned by API routes.",
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "feed_name": {
+            "title": "Feed Name",
+            "type": "string"
+          },
+          "fragment_index": {
+            "title": "Fragment Index",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "intro": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intro"
+          },
+          "item_count": {
+            "title": "Item Count",
+            "type": "integer"
+          },
+          "sent_at": {
+            "format": "date-time",
+            "title": "Sent At",
+            "type": "string"
+          },
+          "style": {
+            "enum": [
+              "html",
+              "markdown_v2",
+              "plain"
+            ],
+            "title": "Style",
+            "type": "string"
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Id"
+          }
+        },
+        "required": [
+          "id",
+          "feed_name",
+          "sent_at",
+          "style",
+          "intro",
+          "body",
+          "fragment_index",
+          "item_count",
+          "trace_id"
+        ],
+        "title": "DigestResponse",
+        "type": "object"
+      },
+      "EventTokenResponse": {
+        "additionalProperties": false,
+        "description": "Short-lived token for opening an authenticated EventSource stream.",
+        "properties": {
+          "expires_in": {
+            "title": "Expires In",
+            "type": "integer"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "expires_in"
+        ],
+        "title": "EventTokenResponse",
+        "type": "object"
+      },
+      "FailureConfig": {
+        "additionalProperties": false,
+        "properties": {
+          "alert_after": {
+            "default": 3,
+            "minimum": 1.0,
+            "title": "Alert After",
+            "type": "integer"
+          },
+          "ops_chat_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ops Chat Id"
+          }
+        },
+        "title": "FailureConfig",
+        "type": "object"
+      },
+      "FeedConfig": {
+        "additionalProperties": false,
+        "properties": {
+          "bootstrap": {
+            "anyOf": [
+              {
+                "enum": [
+                  "skip-and-mark",
+                  "send-last-N",
+                  "send-all"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bootstrap"
+          },
+          "bootstrap_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bootstrap Count"
+          },
+          "chat_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chat Id"
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FailureConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "llm": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LLMConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "max_llm_calls_per_run": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Hard cap on total LLM calls per run for this feed. None = unlimited (back-compat).",
+            "title": "Max Llm Calls Per Run"
+          },
+          "name": {
+            "minLength": 1,
+            "pattern": "^[a-z0-9][a-z0-9._-]*$",
+            "title": "Name",
+            "type": "string"
+          },
+          "pipeline": {
+            "items": {
+              "$ref": "#/components/schemas/StageSpec"
+            },
+            "minItems": 1,
+            "title": "Pipeline",
+            "type": "array"
+          },
+          "render": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RenderConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schedule": {
+            "title": "Schedule",
+            "type": "string"
+          },
+          "sinks": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sinks"
+          },
+          "sources": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "minItems": 1,
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "schedule",
+          "sources",
+          "pipeline"
+        ],
+        "title": "FeedConfig",
+        "type": "object"
+      },
+      "FeedListResponse": {
+        "additionalProperties": false,
+        "description": "List view of a feed (subset of FeedConfig).",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pipeline_stages": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Pipeline Stages",
+            "type": "array"
+          },
+          "schedule": {
+            "title": "Schedule",
+            "type": "string"
+          },
+          "sinks_count": {
+            "title": "Sinks Count",
+            "type": "integer"
+          },
+          "sources_count": {
+            "title": "Sources Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "schedule",
+          "sources_count",
+          "pipeline_stages",
+          "sinks_count"
+        ],
+        "title": "FeedListResponse",
+        "type": "object"
+      },
+      "FeedRunResponse": {
+        "additionalProperties": false,
+        "description": "Persisted feed run returned by the runs history API.",
+        "properties": {
+          "after_dedup": {
+            "title": "After Dedup",
+            "type": "integer"
+          },
+          "dropped": {
+            "title": "Dropped",
+            "type": "integer"
+          },
+          "dry_run": {
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "duration_ms": {
+            "title": "Duration Ms",
+            "type": "integer"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "feed_name": {
+            "title": "Feed Name",
+            "type": "string"
+          },
+          "fetched": {
+            "title": "Fetched",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "overflow": {
+            "title": "Overflow",
+            "type": "integer"
+          },
+          "sent": {
+            "title": "Sent",
+            "type": "integer"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "success",
+              "failure",
+              "skip"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Id"
+          }
+        },
+        "required": [
+          "id",
+          "feed_name",
+          "started_at",
+          "duration_ms",
+          "status",
+          "fetched",
+          "after_dedup",
+          "dropped",
+          "sent",
+          "overflow",
+          "error",
+          "trace_id",
+          "dry_run"
+        ],
+        "title": "FeedRunResponse",
+        "type": "object"
+      },
+      "FeedStatusResponse": {
+        "additionalProperties": false,
+        "description": "Status of a single feed (combines config + feed_runs row).",
+        "properties": {
+          "alert_active": {
+            "title": "Alert Active",
+            "type": "boolean"
+          },
+          "bootstrapped": {
+            "title": "Bootstrapped",
+            "type": "boolean"
+          },
+          "consecutive_failures": {
+            "title": "Consecutive Failures",
+            "type": "integer"
+          },
+          "last_attempt_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Attempt At"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "last_success_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success At"
+          },
+          "llm_model": {
+            "title": "Llm Model",
+            "type": "string"
+          },
+          "llm_provider": {
+            "title": "Llm Provider",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "schedule": {
+            "title": "Schedule",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "schedule",
+          "llm_provider",
+          "llm_model",
+          "last_success_at",
+          "last_attempt_at",
+          "last_error",
+          "consecutive_failures",
+          "alert_active",
+          "bootstrapped"
+        ],
+        "title": "FeedStatusResponse",
+        "type": "object"
+      },
+      "FeedSuppressedResponse": {
+        "additionalProperties": false,
+        "description": "Persisted semantic dedup suppression returned by the feed API.",
+        "properties": {
+          "feed_name": {
+            "title": "Feed Name",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "matched_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Title"
+          },
+          "matched_url": {
+            "title": "Matched Url",
+            "type": "string"
+          },
+          "similarity": {
+            "title": "Similarity",
+            "type": "number"
+          },
+          "suppressed_at": {
+            "format": "date-time",
+            "title": "Suppressed At",
+            "type": "string"
+          },
+          "suppressed_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suppressed Title"
+          },
+          "suppressed_url": {
+            "title": "Suppressed Url",
+            "type": "string"
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Id"
+          }
+        },
+        "required": [
+          "id",
+          "feed_name",
+          "suppressed_at",
+          "suppressed_url",
+          "suppressed_title",
+          "matched_url",
+          "matched_title",
+          "similarity",
+          "trace_id"
+        ],
+        "title": "FeedSuppressedResponse",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "InitializeResponse": {
+        "additionalProperties": false,
+        "description": "First-load UI initialization payload.",
+        "properties": {
+          "auth_disabled": {
+            "title": "Auth Disabled",
+            "type": "boolean"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "auth_disabled"
+        ],
+        "title": "InitializeResponse",
+        "type": "object"
+      },
+      "LLMConfig": {
+        "additionalProperties": false,
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Key"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "model": {
+            "default": "qwen2.5:7b",
+            "title": "Model",
+            "type": "string"
+          },
+          "provider": {
+            "default": "ollama",
+            "title": "Provider",
+            "type": "string"
+          },
+          "timeout_s": {
+            "default": 60.0,
+            "title": "Timeout S",
+            "type": "number"
+          }
+        },
+        "title": "LLMConfig",
+        "type": "object"
+      },
+      "RenderConfig": {
+        "additionalProperties": false,
+        "properties": {
+          "link_preview": {
+            "default": false,
+            "title": "Link Preview",
+            "type": "boolean"
+          },
+          "max_items": {
+            "default": 10,
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Max Items",
+            "type": "integer"
+          },
+          "style": {
+            "default": "html",
+            "enum": [
+              "html",
+              "markdown_v2",
+              "plain"
+            ],
+            "title": "Style",
+            "type": "string"
+          }
+        },
+        "title": "RenderConfig",
+        "type": "object"
+      },
+      "RotateResponse": {
+        "additionalProperties": false,
+        "description": "One-time API key rotation response.",
+        "properties": {
+          "api_key": {
+            "title": "Api Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "api_key"
+        ],
+        "title": "RotateResponse",
+        "type": "object"
+      },
+      "RunResultResponse": {
+        "additionalProperties": false,
+        "description": "Result of a feed run.",
+        "properties": {
+          "after_dedup": {
+            "title": "After Dedup",
+            "type": "integer"
+          },
+          "dropped": {
+            "title": "Dropped",
+            "type": "integer"
+          },
+          "duration_ms": {
+            "title": "Duration Ms",
+            "type": "integer"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "feed": {
+            "title": "Feed",
+            "type": "string"
+          },
+          "fetched": {
+            "title": "Fetched",
+            "type": "integer"
+          },
+          "messages": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Messages",
+            "type": "array"
+          },
+          "overflow": {
+            "title": "Overflow",
+            "type": "integer"
+          },
+          "sent": {
+            "title": "Sent",
+            "type": "integer"
+          },
+          "skipped_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skipped Reason"
+          }
+        },
+        "required": [
+          "feed",
+          "fetched",
+          "after_dedup",
+          "sent",
+          "dropped",
+          "overflow",
+          "duration_ms",
+          "error",
+          "skipped_reason"
+        ],
+        "title": "RunResultResponse",
+        "type": "object"
+      },
+      "SkillConfig": {
+        "additionalProperties": false,
+        "description": "A named, reusable LLM extraction skill defined in YAML.",
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "llm": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LLMConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "minLength": 1,
+            "pattern": "^[a-z0-9][a-z0-9._-]*$",
+            "title": "Name",
+            "type": "string"
+          },
+          "output_schema": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/components/schemas/SkillOutputField"
+                }
+              ]
+            },
+            "title": "Output Schema",
+            "type": "object"
+          },
+          "prompt": {
+            "title": "Prompt",
+            "type": "string"
+          },
+          "system_prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "System Prompt"
+          },
+          "version": {
+            "default": "1",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "prompt",
+          "output_schema"
+        ],
+        "title": "SkillConfig",
+        "type": "object"
+      },
+      "SkillOutputField": {
+        "additionalProperties": false,
+        "description": "Verbose form for a skill output field (alternative to bare type string).",
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "required": {
+            "default": true,
+            "title": "Required",
+            "type": "boolean"
+          },
+          "type": {
+            "default": "str",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "title": "SkillOutputField",
+        "type": "object"
+      },
+      "StageSpec": {
+        "additionalProperties": true,
+        "properties": {
+          "name": {
+            "enum": [
+              "dedup",
+              "rank",
+              "summarize",
+              "digest",
+              "apply_skill",
+              "semantic_dedup"
+            ],
+            "title": "Name",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": true,
+            "title": "Params",
+            "type": "object"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "StageSpec",
+        "type": "object"
+      },
+      "SystemInfoResponse": {
+        "additionalProperties": false,
+        "description": "Runtime system information for the About settings tab.",
+        "properties": {
+          "config_path": {
+            "title": "Config Path",
+            "type": "string"
+          },
+          "database_path": {
+            "title": "Database Path",
+            "type": "string"
+          },
+          "feeds_count": {
+            "title": "Feeds Count",
+            "type": "integer"
+          },
+          "hostname": {
+            "title": "Hostname",
+            "type": "string"
+          },
+          "llm_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Model"
+          },
+          "llm_provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Provider"
+          },
+          "platform": {
+            "title": "Platform",
+            "type": "string"
+          },
+          "python": {
+            "title": "Python",
+            "type": "string"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "uptime_seconds": {
+            "title": "Uptime Seconds",
+            "type": "number"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "hostname",
+          "python",
+          "platform",
+          "database_path",
+          "config_path",
+          "feeds_count",
+          "uptime_seconds",
+          "started_at",
+          "llm_provider",
+          "llm_model"
+        ],
+        "title": "SystemInfoResponse",
+        "type": "object"
+      },
+      "TelegramDefaults": {
+        "additionalProperties": false,
+        "properties": {
+          "bot_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bot Token"
+          },
+          "chat_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chat Id"
+          }
+        },
+        "title": "TelegramDefaults",
+        "type": "object"
+      },
+      "ValidateResponse": {
+        "additionalProperties": false,
+        "description": "Result of a config validation request.",
+        "properties": {
+          "errors": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "feeds_count": {
+            "title": "Feeds Count",
+            "type": "integer"
+          },
+          "skills_count": {
+            "title": "Skills Count",
+            "type": "integer"
+          },
+          "valid": {
+            "title": "Valid",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "valid",
+          "feeds_count",
+          "skills_count"
+        ],
+        "title": "ValidateResponse",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "WriteResponse": {
+        "additionalProperties": false,
+        "description": "Generic response for write endpoints.",
+        "properties": {
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "title": "WriteResponse",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Self-hosted content aggregation daemon \u2014 REST API",
+    "title": "glean",
+    "version": "1.4.7"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/auth/rotate": {
+      "post": {
+        "description": "Rotate the single-user API key and return it once.",
+        "operationId": "rotate_api_v1_auth_rotate_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RotateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rotate",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/config/defaults": {
+      "get": {
+        "operationId": "get_defaults_api_v1_config_defaults_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Defaults"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Defaults",
+        "tags": [
+          "config"
+        ]
+      },
+      "put": {
+        "operationId": "put_defaults_api_v1_config_defaults_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Defaults"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WriteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Defaults",
+        "tags": [
+          "config"
+        ]
+      }
+    },
+    "/api/v1/config/feeds": {
+      "get": {
+        "operationId": "list_feeds_api_v1_config_feeds_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FeedListResponse"
+                  },
+                  "title": "Response List Feeds Api V1 Config Feeds Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Feeds",
+        "tags": [
+          "config"
+        ]
+      },
+      "post": {
+        "operationId": "create_feed_api_v1_config_feeds_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WriteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Feed",
+        "tags": [
+          "config"
+        ]
+      }
+    },
+    "/api/v1/config/feeds/{name}": {
+      "delete": {
+        "operationId": "delete_feed_api_v1_config_feeds__name__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WriteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Feed",
+        "tags": [
+          "config"
+        ]
+      },
+      "get": {
+        "operationId": "get_feed_api_v1_config_feeds__name__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedConfig"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Feed",
+        "tags": [
+          "config"
+        ]
+      },
+      "put": {
+        "operationId": "update_feed_api_v1_config_feeds__name__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WriteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Feed",
+        "tags": [
+          "config"
+        ]
+      }
+    },
+    "/api/v1/config/skills": {
+      "get": {
+        "operationId": "list_skills_api_v1_config_skills_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SkillConfig"
+                  },
+                  "title": "Response List Skills Api V1 Config Skills Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Skills",
+        "tags": [
+          "config"
+        ]
+      },
+      "post": {
+        "operationId": "create_skill_api_v1_config_skills_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SkillConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WriteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Skill",
+        "tags": [
+          "config"
+        ]
+      }
+    },
+    "/api/v1/config/skills/{name}": {
+      "delete": {
+        "operationId": "delete_skill_api_v1_config_skills__name__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WriteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Skill",
+        "tags": [
+          "config"
+        ]
+      },
+      "get": {
+        "operationId": "get_skill_api_v1_config_skills__name__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillConfig"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Skill",
+        "tags": [
+          "config"
+        ]
+      },
+      "put": {
+        "operationId": "update_skill_api_v1_config_skills__name__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SkillConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WriteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Skill",
+        "tags": [
+          "config"
+        ]
+      }
+    },
+    "/api/v1/config/validate": {
+      "post": {
+        "description": "Validate a config dict, or the current on-disk config if no body is sent.",
+        "operationId": "validate_config_endpoint_api_v1_config_validate_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Validate Config Endpoint",
+        "tags": [
+          "config"
+        ]
+      }
+    },
+    "/api/v1/digests": {
+      "get": {
+        "operationId": "list_digests_api_v1_digests_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DigestResponse"
+                  },
+                  "title": "Response List Digests Api V1 Digests Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Digests",
+        "tags": [
+          "digests"
+        ]
+      }
+    },
+    "/api/v1/events": {
+      "get": {
+        "description": "Stream RunEvent records as SSE.\n\nThe connection is kept alive with a ': keepalive' comment every 30s\nso reverse proxies don't time out idle streams.",
+        "operationId": "events_stream_api_v1_events_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "api_key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Api Key"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Events Stream",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/v1/events/token": {
+      "post": {
+        "operationId": "create_event_token_api_v1_events_token_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "api_key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Api Key"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventTokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Event Token",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/v1/feeds": {
+      "get": {
+        "operationId": "list_feeds_api_v1_feeds_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FeedStatusResponse"
+                  },
+                  "title": "Response List Feeds Api V1 Feeds Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Feeds",
+        "tags": [
+          "feeds"
+        ]
+      }
+    },
+    "/api/v1/feeds/{name}/digests": {
+      "get": {
+        "operationId": "list_feed_digests_api_v1_feeds__name__digests_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DigestResponse"
+                  },
+                  "title": "Response List Feed Digests Api V1 Feeds  Name  Digests Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Feed Digests",
+        "tags": [
+          "digests"
+        ]
+      }
+    },
+    "/api/v1/feeds/{name}/run": {
+      "post": {
+        "description": "Run a feed off-schedule with real sends.",
+        "operationId": "run_feed_now_api_v1_feeds__name__run_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResultResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Run Feed Now",
+        "tags": [
+          "feeds"
+        ]
+      }
+    },
+    "/api/v1/feeds/{name}/runs": {
+      "get": {
+        "operationId": "list_feed_runs_api_v1_feeds__name__runs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "success",
+                    "failure",
+                    "skip"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FeedRunResponse"
+                  },
+                  "title": "Response List Feed Runs Api V1 Feeds  Name  Runs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Feed Runs",
+        "tags": [
+          "feeds"
+        ]
+      }
+    },
+    "/api/v1/feeds/{name}/status": {
+      "get": {
+        "operationId": "feed_status_api_v1_feeds__name__status_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Feed Status",
+        "tags": [
+          "feeds"
+        ]
+      }
+    },
+    "/api/v1/feeds/{name}/suppressed": {
+      "get": {
+        "operationId": "list_feed_suppressed_api_v1_feeds__name__suppressed_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FeedSuppressedResponse"
+                  },
+                  "title": "Response List Feed Suppressed Api V1 Feeds  Name  Suppressed Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Feed Suppressed",
+        "tags": [
+          "feeds"
+        ]
+      }
+    },
+    "/api/v1/feeds/{name}/test": {
+      "post": {
+        "description": "Dry-run a feed (no Telegram, no state writes for sending).",
+        "operationId": "test_feed_api_v1_feeds__name__test_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResultResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Test Feed",
+        "tags": [
+          "feeds"
+        ]
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "operationId": "api_health_api_v1_health_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Api Health Api V1 Health Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Health",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/api/v1/initialize": {
+      "get": {
+        "description": "Return bootstrap data for first-load UI initialization.",
+        "operationId": "initialize_api_v1_initialize_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InitializeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Initialize",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/system/info": {
+      "get": {
+        "description": "Return runtime information for the About page.",
+        "operationId": "info_api_v1_system_info_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Glean-Api-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Glean-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemInfoResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Info",
+        "tags": [
+          "system"
+        ]
+      }
+    },
+    "/healthz": {
+      "get": {
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Healthz Healthz Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Healthz",
+        "tags": [
+          "health"
+        ]
+      }
+    }
+  }
+}
