@@ -1,0 +1,44 @@
+<!--
+  glean — horizontal logo lockup
+  ==============================
+  Mark + lowercase wordmark, designed for app headers, README hero, and
+  link previews. The mark sits left of the wordmark, baseline-aligned.
+
+  - viewBox: 240x64 (3.75:1) — fits naturally in 200-300px wide headers
+  - Wordmark: Inter (system fallback), font-weight 600, tracking -0.02em
+  - All-cyan in the source; for color overrides, swap currentColor in
+    place of the hex (see glean-logo-mono.svg)
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 64" role="img" aria-label="glean">
+  <title>glean</title>
+
+  <!-- The mark (square, 64x64), positioned at left -->
+  <g>
+    <path
+      d="M 32 10 A 22 22 0 1 0 54 32"
+      fill="none"
+      stroke="#22d3ee"
+      stroke-width="6"
+      stroke-linecap="round"
+    />
+    <path
+      d="M 54 32 L 40 32"
+      fill="none"
+      stroke="#22d3ee"
+      stroke-width="6"
+      stroke-linecap="round"
+    />
+    <circle cx="28" cy="28" r="4" fill="#22d3ee" />
+  </g>
+
+  <!-- Wordmark — dark for use on light backgrounds (README, docs) -->
+  <text
+    x="76"
+    y="44"
+    font-family="Inter, 'Inter Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif"
+    font-size="36"
+    font-weight="600"
+    letter-spacing="-0.02em"
+    fill="#0e1730"
+  >glean</text>
+</svg>
