@@ -17,7 +17,7 @@
     "dompurify": "^3.4.14",
     "svelte": "^5.57.0",
     "svelte-routing": "^2.13.0",
-    "yaml": "^2.6.0"
+    "yaml": "^2.9.1"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
