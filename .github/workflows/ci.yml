@@ -75,6 +75,11 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # mkdocs-git-revision-date-localized-plugin >=1.6.0 warns on a shallow
+          # clone, and `mkdocs build --strict` turns that warning into an error.
+          # Full history also makes the rendered revision dates correct.
+          fetch-depth: 0
 
       - name: Vale (advisory)
         continue-on-error: true

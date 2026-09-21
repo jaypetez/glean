@@ -28,4 +28,5 @@ jobs:
             MPL-2.0, Python-2.0, Python-2.0.1, PSF-2.0, Unlicense, 0BSD, CC0-1.0
           allow-dependencies-licenses: >-
             pkg:pypi/gitdb@4.0.12,
-            pkg:pypi/lxml@6.1.1
+            pkg:pypi/lxml@6.1.1,
+            pkg:pypi/typing-extensions@4.16.0
