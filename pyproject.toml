@@ -59,7 +59,7 @@ dev = [
     "pre-commit>=4.6.2",
     "bandit>=1.9.4",
     "pip-audit>=2.10.1",
-    "hypothesis>=6.165.10",
+    "hypothesis>=6.168.3",
     "mcp>=2.2.0",
     "schemathesis>=4.27.3",
     "types-PyYAML",
