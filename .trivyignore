@@ -53,3 +53,16 @@ CVE-2026-54369
 # QUIC/HTTP-3 stack (no aioquic), and only uses OpenSSL as a TLS client. Remove when Debian ships
 # a fix.
 CVE-2026-14456
+
+# util-linux CVE-2026-76642, CVE-2026-78408, CVE-2026-78409, CVE-2026-78410 - unfixed in Debian 13;
+# same util-linux family as CVE-2026-53615 above (bsdutils, login, mount, libblkid1, liblastlog2-2,
+# libmount1, libsmartcols1, libuuid1, util-linux). glean is a Python daemon, runs non-root, and
+# never invokes these utilities at runtime. Remove when Debian ships a fix.
+CVE-2026-76642
+CVE-2026-78408
+CVE-2026-78409
+CVE-2026-78410
+
+# libsystemd0 CVE-2026-16742 (systemd-homed) - unfixed in Debian 13; glean does not use
+# systemd-homed or the libsystemd APIs. Remove when Debian ships a fix.
+CVE-2026-16742
