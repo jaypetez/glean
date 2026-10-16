@@ -29,4 +29,5 @@ jobs:
           allow-dependencies-licenses: >-
             pkg:pypi/gitdb@4.0.12,
             pkg:pypi/lxml@6.1.1,
-            pkg:pypi/typing-extensions@4.16.0
+            pkg:pypi/typing-extensions@4.16.0,
+            pkg:pypi/cairosvg@2.9.1
