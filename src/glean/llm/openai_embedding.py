@@ -3,13 +3,13 @@ from __future__ import annotations
 import os
 from typing import ClassVar
 
-import httpx
+import httpx2
 import openai
 from openai.types import CreateEmbeddingResponse
 
 from glean.llm.registry import register_embedding_provider
 from glean.security.ssrf import is_localhost_url, validate_provider_base_url
-from glean.security.ssrf_transport import SSRFGuardedTransport, outbound_timeout
+from glean.security.ssrf_transport import SSRFGuardedHttpx2Transport, outbound_timeout_httpx2
 
 
 @register_embedding_provider("openai")
@@ -32,11 +32,11 @@ class OpenAIEmbeddingProvider:
             validate_provider_base_url("openai", base_url) if base_url is not None else None
         )
         allow_private = bool(validated_base_url and is_localhost_url(validated_base_url))
-        timeout = outbound_timeout(read=timeout_s)
-        http_client = httpx.AsyncClient(
+        timeout = outbound_timeout_httpx2(read=timeout_s)
+        http_client = httpx2.AsyncClient(
             timeout=timeout,
             follow_redirects=False,
-            transport=SSRFGuardedTransport(allow_private=allow_private),
+            transport=SSRFGuardedHttpx2Transport(allow_private=allow_private),
         )
         self._client = openai.AsyncOpenAI(
             api_key=key,
