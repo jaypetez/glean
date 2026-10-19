@@ -1061,7 +1061,7 @@ wheels = [
 
 [[package]]
 name = "glean"
-version = "1.4.12"
+version = "1.4.13"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
