@@ -1,0 +1,25 @@
+<!--
+  glean — single-color mono mark
+  ==============================
+  Same shapes as glean-mark.svg but uses `currentColor` so it inherits
+  the surrounding text color. Use this when embedding inline in HTML/Svelte
+  and you want the mark to follow theme changes.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="glean">
+  <title>glean</title>
+  <path
+    d="M 32 10 A 22 22 0 1 0 54 32"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="6"
+    stroke-linecap="round"
+  />
+  <path
+    d="M 54 32 L 40 32"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="6"
+    stroke-linecap="round"
+  />
+  <circle cx="28" cy="28" r="4" fill="currentColor" />
+</svg>
