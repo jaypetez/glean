@@ -19,7 +19,7 @@ classifiers = [
 ]
 dependencies = [
     "python-telegram-bot>=22.8",
-    "ollama>=0.6.2",
+    "ollama>=0.6.3",
     "anthropic>=1.8.0",
     "openai>=3.31.0",
     "feedparser>=6.0.14",
