@@ -74,7 +74,7 @@ docs = [
     "mkdocs-swagger-ui-tag>=0.8.1",
     "mkdocs-git-revision-date-localized-plugin>=1.6.0",
     "mkdocs-minify-plugin>=0.8",
-    "mkdocstrings[python]>=1.0.6",
+    "mkdocstrings[python]>=1.0.8",
 ]
 
 [project.scripts]
