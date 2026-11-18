@@ -18,7 +18,7 @@ from glean.exceptions import (
     StateError,
 )
 
-__version__ = "1.4.15"
+__version__ = "1.4.16"
 
 __all__: list[str] = [
     "__version__",
