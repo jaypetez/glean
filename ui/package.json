@@ -23,7 +23,7 @@
     "@axe-core/playwright": "^4.14.0",
     "@playwright/test": "^1.65.0",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
-    "@tailwindcss/vite": "^4.3.3",
+    "@tailwindcss/vite": "^4.3.5",
     "@tsconfig/svelte": "^5.0.0",
     "@types/node": "^26.6.6",
     "axe-core": "^4.14.0",
